@@ -1,15 +1,13 @@
 use clap::{Parser, ValueHint};
 use std::path::PathBuf;
 use std::fs;
-use std::io::{stdout, Write, stdin, Read};
 use crossterm::{
     cursor, queue,
     style::{Color, Print, SetForegroundColor, Attribute, SetAttribute},
     terminal::{Clear, ClearType},
 };
+use std::io::{stdout, Write, stdin, Read};
 use std::time::Instant;
-
-
 
 #[derive(Parser)]
 #[command(
@@ -80,6 +78,113 @@ fn initial_display(reference: &str) {
 
 }
 
+fn display_results(elapsed: f64, accuracy: f64, wpm: f64) {
+    println!("\n\nTime: {:.2}s | Accuracy: {:.1}% | WPM: {:.1}",
+        elapsed,
+        accuracy,
+        wpm
+    );
+}
+
+fn type_loop(reference: &str) {
+    let ref_chars: Vec<char> = reference.chars().collect();
+
+    let mut stdout = stdout();
+    let mut stdin = stdin().bytes();
+    let _raw_guard = RawModeGuard::new();
+
+    initial_display(&reference);
+
+    let mut user_input = String::new();
+    let start_time = Instant::now();
+    let mut position = 0;
+    let mut error_positions = vec![false; ref_chars.len()];
+
+    loop {
+        let byte = match stdin.next() {
+            Some(Ok(b)) => b,
+            Some(Err(_)) | None => break,
+        };
+
+        match byte {
+            // Ctrl+c or Ctrl+d
+            3 | 4 => break,
+
+            // backspace
+            8 | 127 if position > 0 => {
+            position -= 1;
+                user_input.pop();
+
+                queue!(
+                    stdout,
+                    cursor::MoveLeft(1),
+                    SetAttribute(Attribute::Dim),
+                    Print(ref_chars[position]),
+                    SetAttribute(Attribute::Reset),
+                    cursor::MoveLeft(1),
+                    SetForegroundColor(Color::Reset)
+                ).unwrap();
+            }
+
+            _ if position < ref_chars.len() => {
+                let c = byte as char;
+                let ref_char = ref_chars[position];
+
+                if c == ref_char {
+                    if error_positions[position] {
+                    // Corrected an error: yellow
+                    queue!(
+                        stdout,
+                        SetForegroundColor(Color::Yellow),
+                        Print(c),
+                        SetForegroundColor(Color::Reset)
+                    ).unwrap();
+                } else {
+                    // Correct on first try: green
+                    queue!(
+                        stdout,
+                        SetForegroundColor(Color::Green),
+                        Print(c),
+                        SetForegroundColor(Color::Reset)
+                    ).unwrap();
+                }
+                    user_input.push(c);
+                    position += 1;
+                } else {
+                    error_positions[position] = true;
+                    queue!(
+                    stdout,
+                    SetForegroundColor(Color::Red),
+                    Print(ref_char),
+                    SetForegroundColor(Color::Reset)
+                    ).unwrap();
+                    user_input.push(c);
+                    position += 1;
+                }
+            }
+
+            _ => {}
+        }
+
+        stdout.flush().unwrap();
+
+        if position >= ref_chars.len() {
+            break;
+        }
+    }
+
+    let elapsed = start_time.elapsed().as_secs_f64();
+    let error_count = error_positions.iter().filter(|&&e| e).count();
+    let accuracy = 100.0 - (error_count as f64 / reference.len() as f64 * 100.0);
+    let wpm = (user_input.len() as f64 / 5.0) / (elapsed / 60.0);
+    queue!(
+        stdout,
+        cursor::MoveTo(0, 0)
+    ).unwrap();
+    stdout.flush().unwrap();
+    display_results(elapsed, accuracy, wpm);
+}
+
 fn custom_text(path: &PathBuf) {
     validate_custom_file(path).unwrap_or_else(|err| {
         eprintln!("{}", err);
@@ -92,86 +197,8 @@ fn custom_text(path: &PathBuf) {
             return;
         }
     };
-    let ref_chars: Vec<char> = reference.chars().collect();
-    let _raw_guard = RawModeGuard::new();
-    let mut stdout = stdout();
-    let mut stdin = stdin().bytes();
-
-    initial_display(&reference);
-
-    let mut user_input = String::new();
-    let start_time = Instant::now();
-    let mut position = 0;
-    let mut error_positions = vec![false; ref_chars.len()];
-
-
-    loop {
-        let byte = match stdin.next() {
-            Some(Ok(b)) => b,
-            Some(Err(_)) | None => break,
-        };
-
-        match byte {
-            // Ctrl+C or Ctrl+D
-            3 | 4 => break,
-
-            _ if position < ref_chars.len() => {
-                let c = byte as char;
-                let ref_char = ref_chars[position];
-
-                if error_positions[position] {
-                    if c == ref_char {
-                        queue!(
-                            stdout,
-                            SetForegroundColor(Color::Yellow),
-                            Print(c),
-                            SetForegroundColor(Color::Reset)
-                        ).unwrap();
-                        user_input.push(c);
-                        error_positions[position] = false;
-                    } else {
-                        queue!(
-                            stdout,
-                            SetForegroundColor(Color::Red),
-                            Print(ref_char),
-                            SetForegroundColor(Color::Reset)
-                        ).unwrap();
-                        user_input.push(c);
-                    }
-                    position += 1;
-                } else if c == ref_char {
-                    queue!(
-                        stdout,
-                        SetForegroundColor(Color::Green),
-                        Print(c),
-                        SetForegroundColor(Color::Reset)
-                    ).unwrap();
-                    user_input.push(c);
-                    position += 1;
-                } else {
-                    queue!(
-                        stdout,
-                        SetForegroundColor(Color::Red),
-                        Print(ref_char),
-                        SetForegroundColor(Color::Reset)
-                    ).unwrap();
-                    user_input.push(c);
-                    error_positions[position] = true;
-                    position += 1;
-                }
-            }
-
-            _ => {}
-        }
-        stdout.flush().unwrap();
-
-        if position >= ref_chars.len() {
-            break;
-        }
-    }
-
+    type_loop(reference.as_str());
 }
-
 
 fn main() {
     let args = Cli::parse();
