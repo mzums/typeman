@@ -82,18 +82,19 @@ fn validate_custom_file(path: &PathBuf) -> Result<(), String> {
     }
 }
 
-fn initial_display(reference: &str) {
+fn initial_display(reference: &str, timer_pos: (u16, u16)) {
     let mut stdout = stdout();
 
     queue!(
         stdout,
         Clear(ClearType::All),
-        cursor::MoveTo(0, 0),
-        SetAttribute(Attribute::Bold),
+        cursor::MoveTo(0, 2),
         SetAttribute(Attribute::Dim),
         Print(reference),
         SetAttribute(Attribute::Reset),
-        cursor::MoveTo(0, 0)
+        cursor::MoveTo(timer_pos.0, timer_pos.1),
+        Print("Time: 00:00"),
+        cursor::MoveTo(0, 2)
     ).unwrap();
     stdout.flush().unwrap();
 }
@@ -108,34 +109,50 @@ fn display_results(elapsed: f64, accuracy: f64, wpm: f64) {
 
 fn type_loop(reference: &str, time_limit: Option<u64>) {
     let ref_chars: Vec<char> = reference.chars().collect();
-
     let mut stdout = stdout();
     let _raw_guard = RawModeGuard::new();
 
-    initial_display(&reference);
+    let (width, _height) = crossterm::terminal::size().unwrap();
+    let timer_pos = (width.saturating_sub(15), 0);
+
+    initial_display(reference, timer_pos);
 
     let mut user_input = String::new();
     let start_time = Instant::now();
     let mut position = 0;
     let mut error_positions = vec![false; ref_chars.len()];
+    let mut last_update = Instant::now();
 
     loop {
-        if let Some(limit) = time_limit {
-            if start_time.elapsed().as_secs() >= limit {
-                break;
-            }
+            if last_update.elapsed().as_millis() > 100 {
+            let elapsed = start_time.elapsed();
+            let secs = elapsed.as_secs();
+            let display_secs = secs % 60;
+            let display_mins = secs / 60;
+            
+            queue!(
+                stdout,
+                cursor::MoveTo(timer_pos.0, timer_pos.1),
+                Clear(ClearType::UntilNewLine),
+                Print(format!("Time: {:02}:{:02}", display_mins, display_secs)),
+                cursor::MoveTo(position as u16 % width, position as u16 / width+2)
+            ).unwrap();
+            stdout.flush().unwrap();
+            last_update = Instant::now();
         }
 
         // non-blocking input
         let mut byte_opt = None;
 
         if event::poll(std::time::Duration::from_millis(10)).unwrap() {
-            if let Event::Key(KeyEvent { code, .. }) = event::read().unwrap() {
-                match code {
-                    KeyCode::Char(c) => byte_opt = Some(c as u8),
-                    KeyCode::Backspace => byte_opt = Some(8),
-                    KeyCode::Esc => break,
-                    KeyCode::Enter => byte_opt = Some(b'\n'),
+            if let Event::Key(KeyEvent { code, modifiers , kind: _ , state:_ }) = event::read().unwrap() {
+                match (code, modifiers) {
+                    (KeyCode::Char('c'), event::KeyModifiers::CONTROL) => break, // Ctrl+C
+                    (KeyCode::Char('d'), event::KeyModifiers::CONTROL) => break, // Ctrl+D
+                    (KeyCode::Char(c), _) => byte_opt = Some(c as u8),
+                    (KeyCode::Backspace, _) => byte_opt = Some(8),
+                    (KeyCode::Esc, _) => break,
+                    (KeyCode::Enter, _) => byte_opt = Some(b'\n'),
                     _ => {}
                 }
             }
