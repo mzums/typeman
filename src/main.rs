@@ -8,6 +8,10 @@ use crossterm::{
 };
 use std::io::{stdout, Write, stdin, Read};
 use std::time::Instant;
+use serde::Deserialize;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use rand::prelude::IndexedRandom;
 
 #[derive(Parser)]
 #[command(
@@ -15,28 +19,43 @@ use std::time::Instant;
     about = "Welcome to the type test!",
     version = "1.0",
     after_long_help = "Run examples:
-  type-test -r -t=30
+  type-test -t=30 -n=500
   type-test -c ./text.txt
-  type-test -q"
+  type-test -q
+  type-test -w=50 -n=500",
+    long_about = "\nRun 'type-test -t=30 -n=500' to test your typing on words picked from the top N most common English words (use -n to set N, default is 500); -t sets the time limit (default is 30 seconds)
+    Run 'type-test -w=50 -n=500' to test your typing on n most common English words, specify the -w for number of words (default is 50)
+    Run 'type-test -c <path/to/your/file>' to test your typing on a specified text
+    Run 'type-test -q' to test your typing on a random quote"
 )]
-struct Cli {
-    #[arg(short = 'r', long = "random", conflicts_with_all = &["custom_file", "random_quote"])]
-    common_words: bool,
 
+struct Cli {
     #[arg(
         short = 'c',
         long = "custom",
         value_name = "FILE",
         value_hint = ValueHint::FilePath,
-        conflicts_with_all = &["common_words", "random_quote", "time_limit"]
+        conflicts_with_all = &["random_quote", "time_limit"]
     )]
     custom_file: Option<PathBuf>,
 
-    #[arg(short = 'q', long = "quote", conflicts_with_all = &["common_words", "custom_file", "time_limit"])]
+    #[arg(short = 'q', long = "quote", conflicts_with_all = &["custom_file", "time_limit"])]
     random_quote: bool,
 
-    #[arg(short = 't', long = "time", value_name = "SECONDS", requires = "common_words")]
+    #[arg(short = 't', long = "time", value_name = "SECONDS")]
     time_limit: Option<u64>,
+
+    #[arg(short = 'n', long = "top_words", value_name = "WORDS", required_unless_present_any = &["time_limit", "word_number"])]
+    top_words: Option<i16>,
+
+    #[arg(short = 'w', long = "word_number", value_name = "WORDS")]
+    word_number: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Quote {
+    author: String,
+    text: String,
 }
 
 struct RawModeGuard;
@@ -69,13 +88,13 @@ fn initial_display(reference: &str) {
         stdout,
         Clear(ClearType::All),
         cursor::MoveTo(0, 0),
+        SetAttribute(Attribute::Bold),
         SetAttribute(Attribute::Dim),
         Print(reference),
         SetAttribute(Attribute::Reset),
         cursor::MoveTo(0, 0)
     ).unwrap();
     stdout.flush().unwrap();
-
 }
 
 fn display_results(elapsed: f64, accuracy: f64, wpm: f64) {
@@ -177,9 +196,13 @@ fn type_loop(reference: &str) {
     let error_count = error_positions.iter().filter(|&&e| e).count();
     let accuracy = 100.0 - (error_count as f64 / reference.len() as f64 * 100.0);
     let wpm = (user_input.len() as f64 / 5.0) / (elapsed / 60.0);
+
+    let term_width = crossterm::terminal::size().map(|(w, _)| w as usize).unwrap_or(80);
+    let lines = (reference.len() + term_width - 1) / term_width;
+
     queue!(
         stdout,
-        cursor::MoveTo(0, 0)
+        cursor::MoveTo(0, (lines as u16) + 1)
     ).unwrap();
     stdout.flush().unwrap();
     display_results(elapsed, accuracy, wpm);
@@ -200,26 +223,59 @@ fn custom_text(path: &PathBuf) {
     type_loop(reference.as_str());
 }
 
+fn quotes() {
+    let file = File::open("src/quotes.json").expect("Failed to open quotes file");
+    let reader = BufReader::new(file);
+    let quotes: Vec<Quote> = serde_json::from_reader(reader).expect("Failed to parse quotes");
+    let mut rng = rand::rng();
+    let random_quote = quotes.choose(&mut rng).expect("No quotes available");
+    let reference = format!("\"{}\" - {}", random_quote.text, random_quote.author);
+    type_loop(&reference);
+}
+
+fn read_first_n_words(n: usize) -> Vec<String> {
+    let file = File::open("src/common_eng_words.txt").expect("Failed to open file");
+    let reader = BufReader::new(file);
+    reader
+        .lines()
+        .take(n)
+        .filter_map(Result::ok)
+        .collect()
+}
+
 fn main() {
     let args = Cli::parse();
 
-    if args.common_words {
-        let time_limit = args.time_limit.unwrap_or(0);
-        
+    if let Some(path) = args.custom_file {
+        println!("Starting custom text test with file: {:?}", path);
+        custom_text(&path)
+    } else if args.random_quote {
+        println!("Starting random quote test");
+        quotes();
+    } else {
+        let time_limit = args.time_limit.unwrap_or(30);
+        let words = args.top_words.unwrap_or(500);
+        let word_number = args.word_number.unwrap_or(500);
+
         if time_limit > 0 {
             println!("Starting common words test with {} second time limit", time_limit);
         } else {
             println!("Starting common words test with 30s time limit");
         }
-    } else if let Some(path) = args.custom_file {
-        println!("Starting custom text test with file: {:?}", path);
-        custom_text(&path)
-    } else if args.random_quote {
-        println!("Starting random quote test");
-    } else {
-        println!("Welcome to the type test!");
-        println!("Run 'type-test -r -t=30' to test your typing on 100 most common english words, specify the -t flag for time, default is 30");
+        let word_list = read_first_n_words(words as usize);
+        let mut rng = rand::thread_rng();
+        let sample_size = word_number as usize;
+
+        let reference = (0..sample_size)
+            .map(|_| word_list.choose(&mut rng).unwrap().clone())
+            .collect::<Vec<_>>()
+            .join(" ")
+            .replace('\n', " ");
+        type_loop(&reference);
+        /*println!("Welcome to the type test!");
+        println!("Run 'type-test -t=30 -n=500' to test your typing on words picked from the top N most common English words (use -n to set N, default is 500); -t sets the time limit (default is 30 seconds)");
+        println!("Run 'type-test -w=50' to test your typing on 100 most common english words, specify the -w for number of words (default is 50)");
         println!("Run 'type-test -c <path/to/your/file>' to test your typing on a specified text");
-        println!("Run 'type-test -q' to test your typing on a random quote");
+        println!("Run 'type-test -q' to test your typing on a random quote");*/
     }
 }
