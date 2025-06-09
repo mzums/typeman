@@ -1,17 +1,18 @@
 use clap::{Parser, ValueHint};
-use std::path::PathBuf;
+use std::{path::PathBuf};
 use std::fs;
 use crossterm::{
     cursor, queue,
     style::{Color, Print, SetForegroundColor, Attribute, SetAttribute},
     terminal::{Clear, ClearType},
 };
-use std::io::{stdout, Write, stdin, Read};
+use std::io::{stdout, Write};
 use std::time::Instant;
 use serde::Deserialize;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use rand::prelude::IndexedRandom;
+use crossterm::event::{self, Event, KeyCode, KeyEvent};
 
 #[derive(Parser)]
 #[command(
@@ -43,13 +44,13 @@ struct Cli {
     random_quote: bool,
 
     #[arg(short = 't', long = "time", value_name = "SECONDS")]
-    time_limit: Option<u64>,
+    time_limit: Option<Option<u64>>,
 
-    #[arg(short = 'n', long = "top_words", value_name = "WORDS", required_unless_present_any = &["time_limit", "word_number"])]
+    #[arg(short = 'n', long = "top_words", value_name = "WORDS", required_unless_present_any = &["time_limit", "word_number", "random_quote"])]
     top_words: Option<i16>,
 
-    #[arg(short = 'w', long = "word_number", value_name = "WORDS")]
-    word_number: Option<i32>,
+    #[arg(short = 'w', long = "word_number", value_name = "WORDS", num_args = 0..=1)]
+    word_number: Option<Option<i32>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -105,11 +106,10 @@ fn display_results(elapsed: f64, accuracy: f64, wpm: f64) {
     );
 }
 
-fn type_loop(reference: &str) {
+fn type_loop(reference: &str, time_limit: Option<u64>) {
     let ref_chars: Vec<char> = reference.chars().collect();
 
     let mut stdout = stdout();
-    let mut stdin = stdin().bytes();
     let _raw_guard = RawModeGuard::new();
 
     initial_display(&reference);
@@ -120,10 +120,37 @@ fn type_loop(reference: &str) {
     let mut error_positions = vec![false; ref_chars.len()];
 
     loop {
-        let byte = match stdin.next() {
-            Some(Ok(b)) => b,
-            Some(Err(_)) | None => break,
-        };
+        if let Some(limit) = time_limit {
+            if start_time.elapsed().as_secs() >= limit {
+                break;
+            }
+        }
+
+        // non-blocking input
+        let mut byte_opt = None;
+
+        if event::poll(std::time::Duration::from_millis(10)).unwrap() {
+            if let Event::Key(KeyEvent { code, .. }) = event::read().unwrap() {
+                match code {
+                    KeyCode::Char(c) => byte_opt = Some(c as u8),
+                    KeyCode::Backspace => byte_opt = Some(8),
+                    KeyCode::Esc => break,
+                    KeyCode::Enter => byte_opt = Some(b'\n'),
+                    _ => {}
+                }
+            }
+        }
+        if byte_opt.is_none() {
+            if let Some(limit) = time_limit {
+                if start_time.elapsed().as_secs() >= limit {
+                    break;
+                }
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            continue;
+        }
+
+        let byte = byte_opt.unwrap();
 
         match byte {
             // Ctrl+c or Ctrl+d
@@ -131,7 +158,7 @@ fn type_loop(reference: &str) {
 
             // backspace
             8 | 127 if position > 0 => {
-            position -= 1;
+                position -= 1;
                 user_input.pop();
 
                 queue!(
@@ -151,31 +178,31 @@ fn type_loop(reference: &str) {
 
                 if c == ref_char {
                     if error_positions[position] {
-                    // Corrected an error: yellow
-                    queue!(
-                        stdout,
-                        SetForegroundColor(Color::Yellow),
-                        Print(c),
-                        SetForegroundColor(Color::Reset)
-                    ).unwrap();
-                } else {
-                    // Correct on first try: green
-                    queue!(
-                        stdout,
-                        SetForegroundColor(Color::Green),
-                        Print(c),
-                        SetForegroundColor(Color::Reset)
-                    ).unwrap();
-                }
+                        // Corrected an error: yellow
+                        queue!(
+                            stdout,
+                            SetForegroundColor(Color::Yellow),
+                            Print(c),
+                            SetForegroundColor(Color::Reset)
+                        ).unwrap();
+                    } else {
+                        // Correct on first try: green
+                        queue!(
+                            stdout,
+                            SetForegroundColor(Color::Green),
+                            Print(c),
+                            SetForegroundColor(Color::Reset)
+                        ).unwrap();
+                    }
                     user_input.push(c);
                     position += 1;
                 } else {
                     error_positions[position] = true;
                     queue!(
-                    stdout,
-                    SetForegroundColor(Color::Red),
-                    Print(ref_char),
-                    SetForegroundColor(Color::Reset)
+                        stdout,
+                        SetForegroundColor(Color::Red),
+                        Print(ref_char),
+                        SetForegroundColor(Color::Reset)
                     ).unwrap();
                     user_input.push(c);
                     position += 1;
@@ -220,7 +247,7 @@ fn custom_text(path: &PathBuf) {
             return;
         }
     };
-    type_loop(reference.as_str());
+    type_loop(reference.as_str(), None);
 }
 
 fn quotes() {
@@ -230,7 +257,7 @@ fn quotes() {
     let mut rng = rand::rng();
     let random_quote = quotes.choose(&mut rng).expect("No quotes available");
     let reference = format!("\"{}\" - {}", random_quote.text, random_quote.author);
-    type_loop(&reference);
+    type_loop(&reference, None);
 }
 
 fn read_first_n_words(n: usize) -> Vec<String> {
@@ -252,18 +279,16 @@ fn main() {
     } else if args.random_quote {
         println!("Starting random quote test");
         quotes();
-    } else {
-        let time_limit = args.time_limit.unwrap_or(30);
-        let words = args.top_words.unwrap_or(500);
-        let word_number = args.word_number.unwrap_or(500);
+    } else if args.word_number.is_some() {
+        let top_words = args.top_words.unwrap_or(500);
+        let word_number = match args.word_number {
+            Some(Some(n)) => n,
+            Some(None) => 50,
+            None => 50,
+        };
 
-        if time_limit > 0 {
-            println!("Starting common words test with {} second time limit", time_limit);
-        } else {
-            println!("Starting common words test with 30s time limit");
-        }
-        let word_list = read_first_n_words(words as usize);
-        let mut rng = rand::thread_rng();
+        let word_list = read_first_n_words(top_words as usize);
+        let mut rng = rand::rng();
         let sample_size = word_number as usize;
 
         let reference = (0..sample_size)
@@ -271,11 +296,40 @@ fn main() {
             .collect::<Vec<_>>()
             .join(" ")
             .replace('\n', " ");
-        type_loop(&reference);
-        /*println!("Welcome to the type test!");
-        println!("Run 'type-test -t=30 -n=500' to test your typing on words picked from the top N most common English words (use -n to set N, default is 500); -t sets the time limit (default is 30 seconds)");
-        println!("Run 'type-test -w=50' to test your typing on 100 most common english words, specify the -w for number of words (default is 50)");
-        println!("Run 'type-test -c <path/to/your/file>' to test your typing on a specified text");
-        println!("Run 'type-test -q' to test your typing on a random quote");*/
+        type_loop(&reference, None);
+    }
+    else {
+        let time_limit = args.time_limit.unwrap_or(Some(30)).unwrap_or(30);
+        let top_words = args.top_words.unwrap_or(500);
+        println!("Starting common words test with {} second time limit", time_limit);
+        let word_list = read_first_n_words(top_words as usize);
+        let mut rng = rand::rng();
+        let batch_size = 5;
+        let start_time = Instant::now();
+
+        'outer: while start_time.elapsed().as_secs() < time_limit {
+            let reference = (0..batch_size)
+            .map(|_| word_list.choose(&mut rng).unwrap().clone())
+            .collect::<Vec<_>>()
+            .join(" ")
+            .replace('\n', " ");
+
+            let elapsed = start_time.elapsed().as_secs();
+            let remaining_time = if time_limit > elapsed {
+            Some(time_limit - elapsed)
+            } else {
+            Some(0)
+            };
+
+            if remaining_time == Some(0) {
+            break;
+            }
+
+            type_loop(&reference, remaining_time);
+
+            if start_time.elapsed().as_secs() >= time_limit {
+            break 'outer;
+            }
+        }
     }
 }
