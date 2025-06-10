@@ -40,7 +40,7 @@ struct Cli {
     )]
     custom_file: Option<PathBuf>,
 
-    #[arg(short = 'q', long = "quote", conflicts_with_all = &["custom_file", "time_limit"])]
+    #[arg(short = 'q', long = "quote", conflicts_with_all = &["custom_file", "time_limit", "top_words"])]
     random_quote: bool,
 
     #[arg(short = 't', long = "time", value_name = "SECONDS")]
@@ -107,7 +107,7 @@ fn display_results(elapsed: f64, accuracy: f64, wpm: f64) {
     );
 }
 
-fn type_loop(reference: &str, time_limit: Option<u64>) {
+fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant) {
     let ref_chars: Vec<char> = reference.chars().collect();
     let mut stdout = stdout();
     let _raw_guard = RawModeGuard::new();
@@ -118,13 +118,12 @@ fn type_loop(reference: &str, time_limit: Option<u64>) {
     initial_display(reference, timer_pos);
 
     let mut user_input = String::new();
-    let start_time = Instant::now();
     let mut position = 0;
     let mut error_positions = vec![false; ref_chars.len()];
     let mut last_update = Instant::now();
 
     loop {
-            if last_update.elapsed().as_millis() > 100 {
+        if last_update.elapsed().as_millis() > 100 {
             let elapsed = start_time.elapsed();
             let secs = elapsed.as_secs();
             let display_secs = secs % 60;
@@ -264,7 +263,8 @@ fn custom_text(path: &PathBuf) {
             return;
         }
     };
-    type_loop(reference.as_str(), None);
+    let start_time = Instant::now();
+    type_loop(reference.as_str(), None, start_time);
 }
 
 fn quotes() {
@@ -274,7 +274,8 @@ fn quotes() {
     let mut rng = rand::rng();
     let random_quote = quotes.choose(&mut rng).expect("No quotes available");
     let reference = format!("\"{}\" - {}", random_quote.text, random_quote.author);
-    type_loop(&reference, None);
+    let start_time = Instant::now();
+    type_loop(&reference, None, start_time);
 }
 
 fn read_first_n_words(n: usize) -> Vec<String> {
@@ -285,6 +286,27 @@ fn read_first_n_words(n: usize) -> Vec<String> {
         .take(n)
         .filter_map(Result::ok)
         .collect()
+}
+
+fn _practice() {
+    const TYPING_LEVELS: [&[char]; 16] = [
+        &['f', 'j'],
+        &['d', 'k'],
+        &['s', 'l'],
+        &['a', ';'],
+        &['g', 'h'],
+        &['r', 'u'],
+        &['t', 'y'],
+        &['e', 'i'],
+        &['w', 'o'],
+        &['q', 'p'],
+        &['v', 'b', 'n'],
+        &['c', 'm'],
+        &['x', ','],
+        &['z', '.', '/'],
+        &['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
+        &['-', '=', '[', ']', '\'', ';', ',', '.', '/', '`'],
+    ];
 }
 
 fn main() {
@@ -313,7 +335,8 @@ fn main() {
             .collect::<Vec<_>>()
             .join(" ")
             .replace('\n', " ");
-        type_loop(&reference, None);
+        let start_time = Instant::now();
+        type_loop(&reference, None, start_time);
     }
     else {
         let time_limit = args.time_limit.unwrap_or(Some(30)).unwrap_or(30);
@@ -326,26 +349,26 @@ fn main() {
 
         'outer: while start_time.elapsed().as_secs() < time_limit {
             let reference = (0..batch_size)
-            .map(|_| word_list.choose(&mut rng).unwrap().clone())
-            .collect::<Vec<_>>()
-            .join(" ")
-            .replace('\n', " ");
+                .map(|_| word_list.choose(&mut rng).unwrap().clone())
+                .collect::<Vec<_>>()
+                .join(" ")
+                .replace('\n', " ");
 
             let elapsed = start_time.elapsed().as_secs();
             let remaining_time = if time_limit > elapsed {
-            Some(time_limit - elapsed)
+                Some(time_limit - elapsed)
             } else {
-            Some(0)
+                Some(0)
             };
 
-            if remaining_time == Some(0) {
-            break;
+            if remaining_time <= Some(0) {
+                break;
             }
 
-            type_loop(&reference, remaining_time);
+            type_loop(&reference, Some(time_limit), start_time);
 
             if start_time.elapsed().as_secs() >= time_limit {
-            break 'outer;
+                break 'outer;
             }
         }
     }
