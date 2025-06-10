@@ -13,6 +13,8 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use rand::prelude::IndexedRandom;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
+use rand::Rng;
+use rand::prelude::SliceRandom;
 
 #[derive(Parser)]
 #[command(
@@ -20,14 +22,26 @@ use crossterm::event::{self, Event, KeyCode, KeyEvent};
     about = "Welcome to the type test!",
     version = "1.0",
     after_long_help = "Run examples:
-  type-test -t=30 -n=500
-  type-test -c ./text.txt
-  type-test -q
-  type-test -w=50 -n=500",
-    long_about = "\nRun 'type-test -t=30 -n=500' to test your typing on words picked from the top N most common English words (use -n to set N, default is 500); -t sets the time limit (default is 30 seconds)
-    Run 'type-test -w=50 -n=500' to test your typing on n most common English words, specify the -w for number of words (default is 50)
-    Run 'type-test -c <path/to/your/file>' to test your typing on a specified text
-    Run 'type-test -q' to test your typing on a random quote"
+type-test -c ./text.txt
+type-test -q
+type-test -t=30 -n=500
+type-test -w=50 -n=500
+type-test -w=50 -n=500 -p -d
+type_test",
+    long_about = "\n
+Run 'type-test -c <path/to/your/file>' to test your typing on a specified text
+Run 'type-test -q' to test your typing on a random quote
+Run 'type-test -w=50 (-n=500 -p -d)' to test your typing on n most common English words, specify the -w for number of words (default is 50)
+Run 'type-test (-t=30 -n=500 -p -d)' to test your typing on random words for t seconds; -t sets the time limit (default is 30 seconds)
+
+Optional:
+  - Use -p to include punctuation, -d to include digits
+  - Use -n to specify the number of words to type (default is 50, max is 500)
+  - Use -t to set a time limit for the test (default is 30 seconds, use 0 for no limit)
+  - Use -n to specify the number of top words to use (default is 500, max is 500)
+
+Default behavior is to test typing on random words for 30 seconds with 500 most common English words.
+    "
 )]
 
 struct Cli {
@@ -43,10 +57,16 @@ struct Cli {
     #[arg(short = 'q', long = "quote", conflicts_with_all = &["custom_file", "time_limit", "top_words"])]
     random_quote: bool,
 
+    #[arg(short = 'p', long = "punctuation", conflicts_with_all = &["custom_file", "random_quote"])]
+    punctuation: bool,
+
+    #[arg(short = 'd', long = "digits", conflicts_with_all = &["custom_file", "random_quote"])]
+    digits: bool,
+
     #[arg(short = 't', long = "time", value_name = "SECONDS")]
     time_limit: Option<Option<u64>>,
 
-    #[arg(short = 'n', long = "top_words", value_name = "WORDS", required_unless_present_any = &["time_limit", "word_number", "random_quote"])]
+    #[arg(short = 'n', long = "top_words", value_name = "WORDS")]
     top_words: Option<i16>,
 
     #[arg(short = 'w', long = "word_number", value_name = "WORDS", num_args = 0..=1)]
@@ -107,7 +127,7 @@ fn display_results(elapsed: f64, accuracy: f64, wpm: f64) {
     );
 }
 
-fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant) {
+fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant) -> i32 {
     let ref_chars: Vec<char> = reference.chars().collect();
     let mut stdout = stdout();
     let _raw_guard = RawModeGuard::new();
@@ -146,8 +166,22 @@ fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant) {
         if event::poll(std::time::Duration::from_millis(10)).unwrap() {
             if let Event::Key(KeyEvent { code, modifiers , kind: _ , state:_ }) = event::read().unwrap() {
                 match (code, modifiers) {
-                    (KeyCode::Char('c'), event::KeyModifiers::CONTROL) => break, // Ctrl+C
-                    (KeyCode::Char('d'), event::KeyModifiers::CONTROL) => break, // Ctrl+D
+                    (KeyCode::Char('c'), event::KeyModifiers::CONTROL) => { // Ctrl+C
+                        queue!(
+                            stdout,
+                            Clear(ClearType::All),
+                            cursor::MoveTo(0, 0)
+                        ).unwrap();
+                        return 1
+                    },
+                    (KeyCode::Char('d'), event::KeyModifiers::CONTROL) => { // Ctrl+D
+                        queue!(
+                            stdout,
+                            Clear(ClearType::All),
+                            cursor::MoveTo(0, 0)
+                        ).unwrap();
+                        return 1
+                    },
                     (KeyCode::Char(c), _) => byte_opt = Some(c as u8),
                     (KeyCode::Backspace, _) => byte_opt = Some(8),
                     (KeyCode::Esc, _) => break,
@@ -169,9 +203,6 @@ fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant) {
         let byte = byte_opt.unwrap();
 
         match byte {
-            // Ctrl+c or Ctrl+d
-            3 | 4 => break,
-
             // backspace
             8 | 127 if position > 0 => {
                 position -= 1;
@@ -249,6 +280,8 @@ fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant) {
     ).unwrap();
     stdout.flush().unwrap();
     display_results(elapsed, accuracy, wpm);
+
+    return 0;
 }
 
 fn custom_text(path: &PathBuf) {
@@ -309,6 +342,55 @@ fn _practice() {
     ];
 }
 
+fn get_reference(args: &Cli, word_list: &[String], batch_size: usize, rng: &mut impl Rng) -> String {
+    let mut items = Vec::new();
+
+    let num_digits = if args.digits {
+        let max_digits = batch_size.min(batch_size / 3).max(1);
+        rng.random_range((batch_size / 6).max(1)..=max_digits)
+    } else {
+        0
+    };
+
+    let num_words = batch_size - num_digits;
+
+    for _ in 0..num_words {
+        let mut word = word_list.choose(rng).unwrap().clone();
+        if args.punctuation {
+            let punctuations = [".", ",", "!", "?", ";", ":"];
+            if rng.random_bool(0.2) {
+                let mut chars = word.chars();
+                if let Some(first) = chars.next() {
+                    word = format!("{}{}", first.to_uppercase(), chars.as_str());
+                }
+            }
+            if rng.random_bool(0.2) {
+                word.push_str(punctuations.choose(rng).unwrap());
+            }
+        }
+        items.push(word);
+    }
+
+    for _ in 0..num_digits {
+        let choice = rng.random_range(0..4);
+        let number;
+        if choice == 0 {
+            number = rng.random_range(1..10000).to_string();
+        } else if choice == 1 {
+            number = format!("{:04}", rng.random_range(0..10000));
+        }
+        else {
+            number = rng.random_range(1..100).to_string();
+        }
+        items.push(number);
+        continue;
+    }
+
+    items.shuffle(rng);
+
+    items.join(" ").replace('\n', " ")
+}
+
 fn main() {
     let args = Cli::parse();
 
@@ -328,13 +410,8 @@ fn main() {
 
         let word_list = read_first_n_words(top_words as usize);
         let mut rng = rand::rng();
-        let sample_size = word_number as usize;
 
-        let reference = (0..sample_size)
-            .map(|_| word_list.choose(&mut rng).unwrap().clone())
-            .collect::<Vec<_>>()
-            .join(" ")
-            .replace('\n', " ");
+        let reference = get_reference(&args, &word_list, word_number as usize, &mut rng);
         let start_time = Instant::now();
         type_loop(&reference, None, start_time);
     }
@@ -344,16 +421,12 @@ fn main() {
         println!("Starting common words test with {} second time limit", time_limit);
         let word_list = read_first_n_words(top_words as usize);
         let mut rng = rand::rng();
-        let batch_size = 5;
+        let batch_size = 20;
         let start_time = Instant::now();
-
+        
         'outer: while start_time.elapsed().as_secs() < time_limit {
-            let reference = (0..batch_size)
-                .map(|_| word_list.choose(&mut rng).unwrap().clone())
-                .collect::<Vec<_>>()
-                .join(" ")
-                .replace('\n', " ");
-
+            let reference = get_reference(&args, &word_list, batch_size, &mut rng);
+            
             let elapsed = start_time.elapsed().as_secs();
             let remaining_time = if time_limit > elapsed {
                 Some(time_limit - elapsed)
@@ -365,7 +438,11 @@ fn main() {
                 break;
             }
 
-            type_loop(&reference, Some(time_limit), start_time);
+            let res = type_loop(&reference, Some(time_limit), start_time);
+            if res != 0 {
+                println!("Test interrupted by user.");
+                break;
+            }
 
             if start_time.elapsed().as_secs() >= time_limit {
                 break 'outer;
