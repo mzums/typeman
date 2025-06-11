@@ -6,6 +6,7 @@ use rand::Rng;
 use rand::prelude::SliceRandom;
 mod game;
 mod modes;
+mod practice;
 
 #[derive(Parser)]
 #[command(
@@ -36,13 +37,7 @@ Default behavior is to test typing on random words for 30 seconds with 500 most 
 )]
 
 struct Cli {
-    #[arg(
-        short = 'c',
-        long = "custom",
-        value_name = "FILE",
-        value_hint = ValueHint::FilePath,
-        conflicts_with_all = &["random_quote", "time_limit"]
-    )]
+    #[arg(short = 'c', long = "custom", value_name = "FILE", value_hint = ValueHint::FilePath, conflicts_with_all = &["random_quote", "time_limit"], conflicts_with_all = &["top_words", "word_number"])]
     custom_file: Option<PathBuf>,
 
     #[arg(short = 'q', long = "quote", conflicts_with_all = &["custom_file", "time_limit", "top_words"])]
@@ -58,37 +53,19 @@ struct Cli {
     time_limit: Option<Option<u64>>,
 
     #[arg(short = 'n', long = "top_words", value_name = "WORDS")]
-    top_words: Option<i16>,
+    top_words: Option<usize>,
 
     #[arg(short = 'w', long = "word_number", value_name = "WORDS", num_args = 0..=1)]
-    word_number: Option<Option<i32>>,
+    word_number: Option<Option<usize>>,
+
+    #[arg(short = 'l', long = "level", conflicts_with_all = &["custom_file", "random_quote", "time_limit", "top_words"])]
+    level: Option<usize>,
 }
 
 #[derive(Debug, Deserialize)]
 struct Quote {
     author: String,
     text: String,
-}
-
-fn _practice() {
-    const TYPING_LEVELS: [&[char]; 16] = [
-        &['f', 'j'],
-        &['d', 'k'],
-        &['s', 'l'],
-        &['a', ';'],
-        &['g', 'h'],
-        &['r', 'u'],
-        &['t', 'y'],
-        &['e', 'i'],
-        &['w', 'o'],
-        &['q', 'p'],
-        &['v', 'b', 'n'],
-        &['c', 'm'],
-        &['x', ','],
-        &['z', '.', '/'],
-        &['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
-        &['-', '=', '[', ']', '\'', ';', ',', '.', '/', '`'],
-    ];
 }
 
 fn get_reference(args: &Cli, word_list: &[String], batch_size: usize, rng: &mut impl Rng) -> String {
@@ -149,7 +126,9 @@ fn main() {
     } else if args.random_quote {
         println!("Starting random quote test");
         modes::quotes();
-    } else if args.word_number.is_some() {
+    } else if args.level.is_some() {
+        practice::practice(&args);
+    } else if args.word_number.is_some() &&  !args.time_limit.is_some() {
         modes::word_mode(&args);
     }
     else {

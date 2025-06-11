@@ -12,46 +12,42 @@ use crate::Quote;
 
 
 pub fn word_mode(args: &Cli) {
-        println!("Starting common words test with specified word number");
-        if args.top_words.is_some() && args.top_words.unwrap() > 1000 {
-            eprintln!("The maximum number of top words is 1000.");
-            return;
-        }
-        if args.word_number.is_some() && args.word_number.unwrap().is_none() {
-            eprintln!("Please specify a valid word number.");
-            return;
-        }
-        if args.word_number.is_some() && args.word_number.unwrap().unwrap() < 1 {
-            eprintln!("Word number must be at least 1.");
-            return;
-        }
-        if args.word_number.is_some() && args.word_number.unwrap().unwrap() > 1000 {
-            eprintln!("The maximum word number is 1000.");
-            return;
-        }
-        println!("Starting common words test with specified word number");
-        
-        let top_words = args.top_words.unwrap_or(500);
-        let word_number = match args.word_number {
-            Some(Some(n)) => n,
-            Some(None) => 50,
-            None => 50,
-        };
+    println!("Starting common words test with specified word number");
+    if args.top_words.is_some() && args.top_words.unwrap() > 1000 {
+        eprintln!("The maximum number of top words is 1000.");
+        return;
+    }
+    if args.word_number.is_some() && args.word_number.unwrap().is_none() {
+        eprintln!("Please specify a valid word number.");
+        return;
+    }
+    if args.word_number.is_some() && args.word_number.unwrap().unwrap() < 1 {
+        eprintln!("Word number must be at least 1.");
+        return;
+    }
+    if args.word_number.is_some() && args.word_number.unwrap().unwrap() > 1000 {
+        eprintln!("The maximum word number is 1000.");
+        return;
+    }
+    println!("Starting common words test with specified word number");
+    
+    let top_words = args.top_words.unwrap_or(500);
+    let word_number = match args.word_number {
+        Some(Some(n)) => n,
+        Some(None) => 50,
+        None => 50,
+    };
 
-        let word_list = read_first_n_words(top_words as usize);
-        let mut rng = rand::rng();
+    let word_list = read_first_n_words(top_words as usize);
+    let mut rng = rand::rng();
 
-        let reference = get_reference(&args, &word_list, word_number as usize, &mut rng);
-        let start_time = Instant::now();
-        type_loop(&reference, None, start_time);
+    let reference = get_reference(&args, &word_list, word_number as usize, &mut rng);
+    let start_time = Instant::now();
+    type_loop(&reference, None, start_time);
 }
 
 pub fn time_mode(args: &Cli) {
     println!("Starting random words test with time limit");
-    if args.time_limit.is_none() {
-        eprintln!("Please specify a valid time limit.");
-        return;
-    }
     if args.time_limit.unwrap().is_none() {
         eprintln!("Time limit must be at least 1 second.");
         return;
@@ -70,7 +66,7 @@ pub fn time_mode(args: &Cli) {
     let start_time = Instant::now();
     
     'outer: while start_time.elapsed().as_secs() < time_limit {
-        let reference = get_reference(&args, &word_list, batch_size, &mut rng);
+        let reference = get_reference(&args, &word_list, batch_size, &mut rng) + " ";
         
         let elapsed = start_time.elapsed().as_secs();
         let remaining_time = if time_limit > elapsed {
@@ -95,7 +91,7 @@ pub fn time_mode(args: &Cli) {
     }
 }
 
-pub fn validate_custom_file(path: &PathBuf) -> Result<(), String> {
+fn validate_custom_file(path: &PathBuf) -> Result<(), String> {
     if path.exists() && path.is_file() {
         Ok(())
     } else {
@@ -130,7 +126,7 @@ pub fn quotes() {
     game::type_loop(&reference, None, start_time);
 }
 
-pub fn read_first_n_words(n: usize) -> Vec<String> {
+fn read_first_n_words(n: usize) -> Vec<String> {
     let file = File::open("src/common_eng_words.txt").expect("Failed to open file");
     let reader = BufReader::new(file);
     reader
