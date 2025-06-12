@@ -121,17 +121,14 @@ fn main() {
     let args = Cli::parse();
 
     if let Some(path) = args.custom_file {
-        println!("Starting custom text test with file: {:?}", path);
         modes::custom_text(&path)
     } else if args.random_quote {
-        println!("Starting random quote test");
         modes::quotes();
     } else if args.level.is_some() {
         practice::practice(&args);
     } else if args.word_number.is_some() &&  !args.time_limit.is_some() {
         modes::word_mode(&args);
-    }
-    else {
+    } else {
         modes::time_mode(&args);
     }
 }

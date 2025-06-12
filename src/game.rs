@@ -30,7 +30,6 @@ fn display_results(elapsed: f64, accuracy: f64, wpm: f64) {
     );
 }
 
-
 fn initial_display(reference: &str, timer_pos: (u16, u16)) {
     let mut stdout = stdout();
 
@@ -98,7 +97,6 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant) 
             break;
         }
     }
-
     show_final_results(reference, &user_input, &error_positions, start_time);
 
     0

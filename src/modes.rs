@@ -100,6 +100,7 @@ fn validate_custom_file(path: &PathBuf) -> Result<(), String> {
 }
 
 pub fn custom_text(path: &PathBuf) {
+    println!("Starting custom text test with file: {:?}", path);
     validate_custom_file(path).unwrap_or_else(|err| {
         eprintln!("{}", err);
         std::process::exit(1);
@@ -116,6 +117,7 @@ pub fn custom_text(path: &PathBuf) {
 }
 
 pub fn quotes() {
+    println!("Starting random quote test");
     let file = File::open("src/quotes.json").expect("Failed to open quotes file");
     let reader = BufReader::new(file);
     let quotes: Vec<Quote> = serde_json::from_reader(reader).expect("Failed to parse quotes");
