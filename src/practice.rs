@@ -1,7 +1,9 @@
-use crate::game::type_loop;
 use crate::Cli;
 use rand::prelude::IndexedRandom;
 use std::time::Instant;
+
+use crate::ui::cli;
+
 
 const TYPING_LEVELS: [&[char]; 16] = [
         &['f', 'j'],
@@ -60,7 +62,7 @@ pub fn practice(args: &Cli) {
         }
         let reference = create_words(&chars, args);
         let start_time = Instant::now();
-        let res = type_loop(&reference, None, start_time);
+        let res = cli::type_loop(&reference, None, start_time);
         if res == 1 {
             println!("Exiting practice mode.");
             return;

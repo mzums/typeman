@@ -2,10 +2,12 @@ use clap::{Parser, ValueHint};
 use std::{path::PathBuf};
 use serde::Deserialize;
 
-mod game;
+mod ui {
+    pub mod cli;
+    pub mod gui;
+}
 mod modes;
 mod practice;
-mod gui;
 mod utils;
 
 #[derive(Parser)]

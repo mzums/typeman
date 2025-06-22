@@ -5,11 +5,10 @@ use std::fs::File;
 use std::io::BufReader;
 use rand::prelude::IndexedRandom;
 
-use crate::game::*;
-use crate::game;
+use crate::ui::cli;
+use crate::ui::gui;
 use crate::Cli;
 use crate::Quote;
-use crate::gui;
 use crate::utils;
 
 
@@ -19,25 +18,17 @@ pub fn gui_main() {
 
 pub fn word_mode(args: &Cli) {
     println!("Starting common words test with specified word number");
-    if args.top_words.is_some() && args.top_words.unwrap() > 1000 {
-        eprintln!("The maximum number of top words is 1000.");
-        return;
-    }
-    if args.word_number.is_some() && args.word_number.unwrap().is_none() {
-        eprintln!("Please specify a valid word number.");
-        return;
-    }
-    if args.word_number.is_some() && args.word_number.unwrap().unwrap() < 1 {
-        eprintln!("Word number must be at least 1.");
-        return;
-    }
-    if args.word_number.is_some() && args.word_number.unwrap().unwrap() > 1000 {
-        eprintln!("The maximum word number is 1000.");
-        return;
-    }
+
+    let punctuation = args.punctuation;
+    let digits = args.digits;
+
     println!("Starting common words test with specified word number");
     
     let top_words = args.top_words.unwrap_or(500);
+    if top_words < 1 || top_words > 1000 {
+        eprintln!("Top words must be between 1 and 1000.");
+        return;
+    }
     let word_number = match args.word_number {
         Some(Some(n)) => n,
         Some(None) => 50,
@@ -45,11 +36,10 @@ pub fn word_mode(args: &Cli) {
     };
 
     let word_list = utils::read_first_n_words(top_words as usize);
-    let mut rng = rand::rng();
 
-    let reference = utils::get_reference(&args, &word_list, word_number as usize, &mut rng);
+    let reference = utils::get_reference(punctuation, digits, &word_list, word_number as usize);
     let start_time = Instant::now();
-    type_loop(&reference, None, start_time);
+    cli::type_loop(&reference, None, start_time);
 }
 
 pub fn time_mode(args: &Cli) {
@@ -68,12 +58,14 @@ pub fn time_mode(args: &Cli) {
     let top_words = args.top_words.unwrap_or(500);
     println!("Starting common words test with {} second time limit", time_limit);
     let word_list = utils::read_first_n_words(top_words as usize);
-    let mut rng = rand::rng();
     let batch_size = 20;
     let start_time = Instant::now();
+
+    let punctuation = args.punctuation;
+    let digits = args.punctuation;
     
     'outer: while start_time.elapsed().as_secs() < time_limit {
-        let reference = utils::get_reference(&args, &word_list, batch_size, &mut rng) + " ";
+        let reference = utils::get_reference(punctuation, digits, &word_list, batch_size) + " ";
         
         let elapsed = start_time.elapsed().as_secs();
         let remaining_time = if time_limit > elapsed {
@@ -86,7 +78,7 @@ pub fn time_mode(args: &Cli) {
             break;
         }
 
-        let res = game::type_loop(&reference, Some(time_limit), start_time);
+        let res = cli::type_loop(&reference, Some(time_limit), start_time);
         if res != 0 {
             println!("Test interrupted by user.");
             break;
@@ -112,17 +104,17 @@ pub fn custom_text(path: &PathBuf) {
         }
     };
     let start_time = Instant::now();
-    game::type_loop(reference.as_str(), None, start_time);
+    cli::type_loop(reference.as_str(), None, start_time);
 }
 
 pub fn quotes() {
     println!("Starting random quote test");
-    let file = File::open("src/quotes.json").expect("Failed to open quotes file");
+    let file = File::open("assets/quotes.json").expect("Failed to open quotes file");
     let reader = BufReader::new(file);
     let quotes: Vec<Quote> = serde_json::from_reader(reader).expect("Failed to parse quotes");
     let mut rng = rand::rng();
     let random_quote = quotes.choose(&mut rng).expect("No quotes available");
     let reference = format!("\"{}\" - {}", random_quote.text, random_quote.author);
     let start_time = Instant::now();
-    game::type_loop(&reference, None, start_time);
+    cli::type_loop(&reference, None, start_time);
 }

@@ -1,14 +1,13 @@
 use std::io::{BufRead, BufReader};
 use std::fs::File;
 use std::path::PathBuf;
-use crate::Cli;
 use rand::Rng;
 use rand::prelude::IndexedRandom;
 use rand::prelude::SliceRandom;
 
 
 pub fn read_first_n_words(n: usize) -> Vec<String> {
-    let file = File::open("src/common_eng_words.txt").expect("Failed to open file");
+    let file = File::open("assets/common_eng_words.txt").expect("Failed to open file");
     let reader = BufReader::new(file);
     reader
         .lines()
@@ -25,10 +24,11 @@ pub fn validate_custom_file(path: &PathBuf) -> Result<(), String> {
     }
 }
 
-pub fn get_reference(args: &Cli, word_list: &[String], batch_size: usize, rng: &mut impl Rng) -> String {
+pub fn get_reference(punctuation: bool, digits: bool, word_list: &[String], batch_size: usize) -> String {
     let mut items = Vec::new();
+    let mut rng = rand::rng();
 
-    let num_digits = if args.digits {
+    let num_digits = if digits {
         let max_digits = batch_size.min(batch_size / 3).max(1);
         rng.random_range((batch_size / 6).max(1)..=max_digits)
     } else {
@@ -38,8 +38,8 @@ pub fn get_reference(args: &Cli, word_list: &[String], batch_size: usize, rng: &
     let num_words = batch_size - num_digits;
 
     for _ in 0..num_words {
-        let mut word = word_list.choose(rng).unwrap().clone();
-        if args.punctuation {
+        let mut word = word_list.choose(&mut rng).unwrap().clone();
+        if punctuation {
             let punctuations = [".", ",", "!", "?", ";", ":"];
             if rng.random_bool(0.2) {
                 let mut chars = word.chars();
@@ -48,7 +48,7 @@ pub fn get_reference(args: &Cli, word_list: &[String], batch_size: usize, rng: &
                 }
             }
             if rng.random_bool(0.2) {
-                word.push_str(punctuations.choose(rng).unwrap());
+                word.push_str(punctuations.choose(&mut rng).unwrap());
             }
         }
         items.push(word);
@@ -69,7 +69,7 @@ pub fn get_reference(args: &Cli, word_list: &[String], batch_size: usize, rng: &
         continue;
     }
 
-    items.shuffle(rng);
+    items.shuffle(&mut rng);
 
     items.join(" ").replace('\n', " ")
 }
