@@ -17,3 +17,4 @@ Cli tool for typing learning and tests
 ### Sources:  
 - https://github.com/dwyl/quotes  
 - https://github.com/JackShannon/1000-most-common-words/blob/master/1000-common-english-words.txt
+- https://fonts.google.com/specimen/Roboto+Mono?preview.text=Whereas%20recognition%20of%20the%20inherent%20dignity

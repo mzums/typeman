@@ -1,12 +1,12 @@
 use clap::{Parser, ValueHint};
 use std::{path::PathBuf};
 use serde::Deserialize;
-use rand::prelude::IndexedRandom;
-use rand::Rng;
-use rand::prelude::SliceRandom;
+
 mod game;
 mod modes;
 mod practice;
+mod gui;
+mod utils;
 
 #[derive(Parser)]
 #[command(
@@ -60,6 +60,9 @@ struct Cli {
 
     #[arg(short = 'l', long = "level", conflicts_with_all = &["custom_file", "random_quote", "time_limit", "top_words"])]
     level: Option<usize>,
+
+    #[arg(long = "gui", conflicts_with_all = &["custom_file", "random_quote", "time_limit", "top_words", "word_number", "level"])]
+    gui: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -68,57 +71,13 @@ struct Quote {
     text: String,
 }
 
-fn get_reference(args: &Cli, word_list: &[String], batch_size: usize, rng: &mut impl Rng) -> String {
-    let mut items = Vec::new();
-
-    let num_digits = if args.digits {
-        let max_digits = batch_size.min(batch_size / 3).max(1);
-        rng.random_range((batch_size / 6).max(1)..=max_digits)
-    } else {
-        0
-    };
-
-    let num_words = batch_size - num_digits;
-
-    for _ in 0..num_words {
-        let mut word = word_list.choose(rng).unwrap().clone();
-        if args.punctuation {
-            let punctuations = [".", ",", "!", "?", ";", ":"];
-            if rng.random_bool(0.2) {
-                let mut chars = word.chars();
-                if let Some(first) = chars.next() {
-                    word = format!("{}{}", first.to_uppercase(), chars.as_str());
-                }
-            }
-            if rng.random_bool(0.2) {
-                word.push_str(punctuations.choose(rng).unwrap());
-            }
-        }
-        items.push(word);
-    }
-
-    for _ in 0..num_digits {
-        let choice = rng.random_range(0..4);
-        let number;
-        if choice == 0 {
-            number = rng.random_range(1..10000).to_string();
-        } else if choice == 1 {
-            number = format!("{:04}", rng.random_range(0..10000));
-        }
-        else {
-            number = rng.random_range(1..100).to_string();
-        }
-        items.push(number);
-        continue;
-    }
-
-    items.shuffle(rng);
-
-    items.join(" ").replace('\n', " ")
-}
-
 fn main() {
     let args = Cli::parse();
+
+    if args.gui {
+        modes::gui_main();
+        return;
+    }
 
     if let Some(path) = args.custom_file {
         modes::custom_text(&path)

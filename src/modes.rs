@@ -2,14 +2,20 @@ use std::{path::PathBuf};
 use std::fs;
 use std::time::Instant;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::BufReader;
 use rand::prelude::IndexedRandom;
+
 use crate::game::*;
 use crate::game;
-use crate::get_reference;
 use crate::Cli;
 use crate::Quote;
+use crate::gui;
+use crate::utils;
 
+
+pub fn gui_main() {
+    macroquad::Window::new("Hello World", async { gui::gui_main_async().await });
+}
 
 pub fn word_mode(args: &Cli) {
     println!("Starting common words test with specified word number");
@@ -38,10 +44,10 @@ pub fn word_mode(args: &Cli) {
         None => 50,
     };
 
-    let word_list = read_first_n_words(top_words as usize);
+    let word_list = utils::read_first_n_words(top_words as usize);
     let mut rng = rand::rng();
 
-    let reference = get_reference(&args, &word_list, word_number as usize, &mut rng);
+    let reference = utils::get_reference(&args, &word_list, word_number as usize, &mut rng);
     let start_time = Instant::now();
     type_loop(&reference, None, start_time);
 }
@@ -61,13 +67,13 @@ pub fn time_mode(args: &Cli) {
 
     let top_words = args.top_words.unwrap_or(500);
     println!("Starting common words test with {} second time limit", time_limit);
-    let word_list = read_first_n_words(top_words as usize);
+    let word_list = utils::read_first_n_words(top_words as usize);
     let mut rng = rand::rng();
     let batch_size = 20;
     let start_time = Instant::now();
     
     'outer: while start_time.elapsed().as_secs() < time_limit {
-        let reference = get_reference(&args, &word_list, batch_size, &mut rng) + " ";
+        let reference = utils::get_reference(&args, &word_list, batch_size, &mut rng) + " ";
         
         let elapsed = start_time.elapsed().as_secs();
         let remaining_time = if time_limit > elapsed {
@@ -92,17 +98,9 @@ pub fn time_mode(args: &Cli) {
     }
 }
 
-fn validate_custom_file(path: &PathBuf) -> Result<(), String> {
-    if path.exists() && path.is_file() {
-        Ok(())
-    } else {
-        Err(format!("Custom file does not exist or is not a file: {:?}", path))
-    }
-}
-
 pub fn custom_text(path: &PathBuf) {
     println!("Starting custom text test with file: {:?}", path);
-    validate_custom_file(path).unwrap_or_else(|err| {
+    utils::validate_custom_file(path).unwrap_or_else(|err| {
         eprintln!("{}", err);
         std::process::exit(1);
     });
@@ -127,14 +125,4 @@ pub fn quotes() {
     let reference = format!("\"{}\" - {}", random_quote.text, random_quote.author);
     let start_time = Instant::now();
     game::type_loop(&reference, None, start_time);
-}
-
-fn read_first_n_words(n: usize) -> Vec<String> {
-    let file = File::open("src/common_eng_words.txt").expect("Failed to open file");
-    let reader = BufReader::new(file);
-    reader
-        .lines()
-        .take(n)
-        .filter_map(Result::ok)
-        .collect()
 }
