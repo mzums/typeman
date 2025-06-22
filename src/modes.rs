@@ -48,16 +48,17 @@ pub fn word_mode(args: &Cli) {
 
 pub fn time_mode(args: &Cli) {
     println!("Starting random words test with time limit");
-    if args.time_limit.unwrap().is_none() {
+    let time_limit = args.time_limit.unwrap_or(Some(30)).unwrap_or(30);
+
+    if time_limit == 0 {
         eprintln!("Time limit must be at least 1 second.");
         return;
     }
-    if args.time_limit.unwrap().unwrap() > 300 {
+    if time_limit > 300 {
         eprintln!("The maximum time limit is 300 seconds.");
         return;
     }
 
-    let time_limit = args.time_limit.unwrap_or(Some(30)).unwrap_or(30);
     let top_words = args.top_words.unwrap_or(500);
     println!("Starting common words test with {} second time limit", time_limit);
     let word_list = read_first_n_words(top_words as usize);
