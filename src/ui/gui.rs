@@ -1,4 +1,6 @@
-use macroquad::{color, prelude::*};
+use std::collections::VecDeque;
+
+use macroquad::prelude::*;
 
 use crate::utils;
 
@@ -83,11 +85,12 @@ pub async fn gui_main_async() {
     let lines: Vec<String> = create_lines(&reference, font.clone(), font_size, max_width);
 
     let mut pressed_vec: Vec<char>  = vec![];
-    let mut is_correct: Vec<i8> = vec![]; // 1 - correct, 0 - corrected, -1 - incorrect
-    let mut pos: usize = 0;
+    let mut is_correct: VecDeque<i8> = VecDeque::from(vec![0; reference.len()]); // 2 - correct, 1 - corrected, 0 - not typed, -1 - incorrect
+    let mut pos: usize;
+    let mut pos1: usize = 0;
     
     loop {
-        clear_background(Color::from_rgba(26, 23, 20, 255));
+        clear_background(Color::from_rgba(20, 17, 15, 255));
         
         let total_height = lines.len() as f32 * font_size * 1.2;
         let start_y = screen_height() / 2.0 - total_height / 2.0 + font_size;
@@ -95,37 +98,51 @@ pub async fn gui_main_async() {
         
         let pressed = get_char_pressed();
         if pressed.is_some() {
-            println!("{:?}", reference);
-            println!("{:?} {:?}", pressed, reference.chars().nth(pos as usize));
-            if pressed == reference.chars().nth(pos as usize) {
-                is_correct.push(1);
+            //println!("{:?}", reference);
+            //println!("{:?} {:?} {:?}", pressed, reference.chars().nth(pos1 as usize), pos1);
+            println!("Pressed: {:?}", pressed);
+            if pressed == Some('\u{8}') {
+                pressed_vec.pop();
+                if pos1 > 0 {
+                    pos1 -= 1;
+                }
+            } else {
+                if pressed == reference.chars().nth(pos1 as usize) && is_correct[pos1] != -1 && is_correct[pos1] != 1 {
+                    is_correct[pos1] = 2; // Correct
+                } else if pressed == reference.chars().nth(pos1 as usize) && is_correct[pos1] == -1 {
+                    is_correct[pos1] = 1; // Corrected
+                } else {
+                    is_correct[pos1] = -1; // Incorrect
+                }
+                //println!("is_correct: {:?}", is_correct);
+                pos1 += 1;
+                pressed_vec.push(pressed.unwrap());
             }
-            else {
-                is_correct.push(-1);
-            }
-            println!("is_correct: {:?}", is_correct);
-            pos += 1;
-            pressed_vec.push(pressed.unwrap());
         }
         pos = 0;
-        let mut type_height = 0.0;
-        let mut type_width = 0.0;
+        let mut type_height: f32;
+        let mut type_width: f32;
         let mut pos_y = 0.0;
+        //println!("pos1: {}", pos1);
         
-        for (i, line) in lines.iter().enumerate() {
+        for line in lines.iter() {
             let mut pos_x = 0;
             for char in line.chars() {
-                let color = if is_correct.get(pos).is_none() {
-                    Color::from_rgba(255, 255, 255, 100) // Green for correct
-                } else  if is_correct.get(pos).is_some() && is_correct[pos] == 1 {
-                    Color::from_rgba(0, 255, 0, 255) // Green for correct
+                let mut curr_char = char;
+                let color = if pos + 1 > pressed_vec.len() || is_correct[pos] == 0 {
+                    Color::from_rgba(255, 255, 255, 80) // not typed
+                } else if is_correct.get(pos).is_some() && is_correct[pos] == 2 {
+                    Color::from_rgba(255, 255, 255, 200) // correct
+                } else if is_correct.get(pos).is_some() && is_correct[pos] == 1 {
+                    Color::from_rgba(255, 165, 0, 255) // corrected
                 } else {
-                    //println!("Incorrect character: {}", char);
-                    Color::from_rgba(255, 0, 0, 255) // Red for incorrect
+                    if char == ' ' {
+                        curr_char = '_';
+                    }
+                    Color::from_rgba(255, 50, 50, 180) // incorrect
                 };
-                
                 draw_text_ex(
-                    &char.to_string(),
+                    &curr_char.to_string(),
                     pos_x as f32 + 50.0,
                     pos_y + start_y,
                     TextParams {
@@ -140,7 +157,7 @@ pub async fn gui_main_async() {
                 pos += 1;
             }
             type_height = measure_text(line, font.as_ref(), font_size as u16, 1.0).height;
-            pos_y += type_height * 1.2;
+            pos_y += type_height * 1.6;
         }
 
         if is_key_down(KeyCode::Escape) {
