@@ -6,7 +6,7 @@ use std::io::BufReader;
 use rand::prelude::IndexedRandom;
 
 use crate::ui::cli;
-use crate::ui::gui;
+use crate::ui::gui::main as gui;
 use crate::Cli;
 use crate::Quote;
 use crate::utils;

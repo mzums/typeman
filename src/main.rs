@@ -4,7 +4,11 @@ use serde::Deserialize;
 
 mod ui {
     pub mod cli;
-    pub mod gui;
+    pub mod gui {
+        pub mod main;
+        pub mod results;
+        pub mod config;
+    }
 }
 mod modes;
 mod practice;

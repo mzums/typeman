@@ -1,12 +1,16 @@
 use core::time;
 use std::collections::VecDeque;
 use macroquad::prelude::*;
+use miniquad::window::set_mouse_cursor;
+use miniquad::CursorIcon;
 use std::time::Instant;
 
 use crate::utils;
+use crate::ui::gui::results;
+use crate::ui::gui::config;
 
 
-const MAIN_COLOR: Color = Color::from_rgba(255, 155, 0, 255);
+pub const MAIN_COLOR: Color = Color::from_rgba(255, 155, 0, 255);
 
 fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32) {
     let (type_text, man_text) = ("Type", "Man");
@@ -64,7 +68,7 @@ async fn load_font_async(path: &str) -> Option<Font> {
     }
 }
     
-fn handle_input(
+pub fn handle_input(
     reference: &str,
     pressed_vec: &mut Vec<char>,
     is_correct: &mut VecDeque<i8>,
@@ -160,143 +164,6 @@ fn draw_reference_text(
     }
 }
 
-fn get_typed_words(reference: &str, typed_chars: usize) -> usize {
-    let mut res = 0;
-    for c in reference[..typed_chars].chars() {
-        if c.is_whitespace() {
-            res += 1;
-        }
-    }
-    res
-}
-
-fn write_wpm(
-    reference: &str,
-    typed_chars: usize,
-    font: Option<&Font>,
-    test_time: f32,
-    font_size: f32,
-    x: f32,
-    y: f32,
-) {
-    let typed_words = get_typed_words(reference, typed_chars);
-    let wpm = typed_words as f32 * 60.0 / test_time;
-    let wpm_text = format!("WPM: {:.0}", wpm);
-    draw_text_ex(
-        &wpm_text,
-        x,
-        y,
-        TextParams {
-            font,
-            font_size: font_size as u16,
-            color: Color::from_rgba(255, 155, 0, 255),
-            ..Default::default()
-        },
-    );
-}
-
-fn write_acc(is_correct: &VecDeque<i8>, typed_chars: usize, font: Option<&Font>, font_size: f32, x: f32, y: f32) {
-    let correct_count = is_correct.iter().filter(|&&x| x == 2 || x == 1).count();
-    let accuracy = if typed_chars > 0 {
-        (correct_count as f32 / typed_chars as f32 * 100.0).round()
-    } else {
-        0.0
-    };
-    let acc_text = format!("Accuracy: {:.0}%", accuracy);
-    draw_text_ex(
-        &acc_text,
-        x,
-        y,
-        TextParams {
-            font,
-            font_size: font_size as u16,
-            color: Color::from_rgba(255, 155, 0, 255),
-            ..Default::default()
-        },
-    );
-}
-
-fn write_err_rate(is_correct: &VecDeque<i8>, typed_chars: usize, font: Option<&Font>, font_size: f32, x: f32, y: f32) {
-    let error_count = is_correct.iter().filter(|&&x| x == -1 || x == 1).count();
-    let error_rate = if typed_chars > 0 {
-        (error_count as f32 / typed_chars as f32 * 100.0).round()
-    } else {
-        0.0
-    };
-    let acc_text = format!("Error rate: {:.0}%", error_rate);
-    draw_text_ex(
-        &acc_text,
-        x,
-        y,
-        TextParams {
-            font,
-            font_size: font_size as u16,
-            color: Color::from_rgba(255, 155, 0, 255),
-            ..Default::default()
-        },
-    );
-}
-
-fn restart(
-    pressed_vec: &mut Vec<char>,
-    is_correct: &mut VecDeque<i8>,
-    pos1: &mut usize,
-    timer: &mut time::Duration,
-    start_time: &mut Instant,
-    game_started: &mut bool,
-    game_over: &mut bool,
-    reference: &str,
-) {
-    pressed_vec.clear();
-    is_correct.clear();
-    is_correct.extend(vec![0; reference.len()]);
-    *pos1 = 0;
-    *timer = time::Duration::from_secs(0);
-    *start_time = Instant::now();
-    *game_started = false;
-    *game_over = false;
-}
-
-fn draw_toggle_button(
-    x: f32,
-    y: f32,
-    label: &str,
-    font: &Option<Font>,
-    is_active: bool,
-    inactive_color: Color,
-) -> bool {
-    let font_size = 22;
-    let padding = 20.0;
-        
-    let text_dims = measure_text(&label, Some(font.as_ref().unwrap()), font_size, 1.0);
-    let btn_width = text_dims.width + padding * 2.0;
-    let btn_height = text_dims.height + padding * 2.0;
-
-    let rect = Rect::new(x, y, btn_width, btn_height);
-    let (mx, my) = mouse_position();
-    let hovered = rect.contains(vec2(mx, my));
-    let clicked = hovered && is_mouse_button_pressed(MouseButton::Left);
-
-    let text_color = if is_active { MAIN_COLOR } else { inactive_color };
-    let bg_color = Color::from_rgba(0, 0, 0, 0);
-    
-    draw_rectangle(x, y, btn_width, btn_height, bg_color);
-    draw_text_ex(
-        &label,
-        x + padding,
-        y + btn_height - padding,
-        TextParams {
-            font: font.as_ref(),
-            font_size,
-            font_scale: 1.0,
-            color: text_color,
-            ..Default::default()
-        },
-    );
-
-    clicked
-}
-
 pub async fn gui_main_async() {
     let mut punctuation = false;
     let font = load_font_async("assets/font/RobotoMono-VariableFont_wght.ttf").await;
@@ -321,48 +188,40 @@ pub async fn gui_main_async() {
     loop {
         clear_background(Color::from_rgba(20, 17, 15, 255));
         
-        let inactive_color = Color::from_rgba(255, 255, 255, 80);
+        let any_button_hovered = config::handle_settings_buttons(
+            &font,
+            &word_list,
+            batch_size,
+            &mut punctuation,
+            &mut numbers,
+            &mut pressed_vec,
+            &mut is_correct,
+            &mut pos1,
+            &mut timer,
+            &mut start_time,
+            &mut game_started,
+            &mut game_over,
+            &mut reference,
+            test_time,
+        );
 
-        let btn_y = 200.0;
-        let btn_x1 = 50.0;
-        let btn_font_size = 22;
-        let btn_padding = 20.0;
+        set_mouse_cursor(if any_button_hovered {
+            CursorIcon::Pointer
+        } else {
+            CursorIcon::Default
+        });
 
-        let btn1_label = "! punctuation";
-        let btn1_width = measure_text(
-            btn1_label,
-            Some(font.as_ref().unwrap()),
-            btn_font_size,
-            1.0,
-        ).width + btn_padding * 2.0;
-
-        let mut button_states = vec![
-            ("! punctuation", punctuation),
-            ("# numbers", numbers),
-        ];
-
-        for (i, (label, state_val)) in button_states.iter_mut().enumerate() {
-            let x = btn_x1 + i as f32 * (btn1_width + 20.0);
-            let is_active = *state_val;
-            if draw_toggle_button(x, btn_y, label, &font, is_active, inactive_color) {
-                match *label {
-                    "! punctuation" => punctuation = !punctuation,
-                    "# numbers" => numbers = !numbers,
-                    _ => {}
-                }
-                reference = utils::get_reference(punctuation, numbers, &word_list, batch_size);
-                restart(
-                    &mut pressed_vec,
-                    &mut is_correct,
-                    &mut pos1,
-                    &mut timer,
-                    &mut start_time,
-                    &mut game_started,
-                    &mut game_over,
-                    &reference,
-                );
-            }
-        }
+        config::update_game_state(
+            &reference,
+            &mut pressed_vec,
+            &mut is_correct,
+            &mut pos1,
+            &mut timer,
+            &mut start_time,
+            &mut game_started,
+            &mut game_over,
+            test_time,
+        );
 
 
         if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1) {
@@ -412,30 +271,15 @@ pub async fn gui_main_async() {
             }
         }  
         else if game_over {
-            write_wpm(
+            results::write_results(
+                &is_correct,
+                &pressed_vec,
+                screen_width(),
+                screen_height(),
                 &reference,
-                pressed_vec.len(),
                 font.as_ref(),
                 test_time,
-                40.0,
-                screen_width() / 2.0 - 100.0,
                 screen_height() / 2.0 + 100.0,
-            );
-            write_acc(
-                &is_correct,
-                pressed_vec.len(),
-                font.as_ref(),
-                40.0,
-                screen_width() / 2.0 - 100.0,
-                screen_height() / 2.0 + 150.0,
-            );
-            write_err_rate(
-                &is_correct,
-                pressed_vec.len(),
-                font.as_ref(),
-                40.0,
-                screen_width() / 2.0 - 100.0,
-                screen_height() / 2.0 + 200.0,
             );
         }
         next_frame().await;
