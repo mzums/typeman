@@ -5,6 +5,8 @@ use rand::Rng;
 use rand::prelude::IndexedRandom;
 use rand::prelude::SliceRandom;
 
+use crate::Quote;
+
 
 pub fn read_first_n_words(n: usize) -> Vec<String> {
     let file = File::open("assets/common_eng_words.txt").expect("Failed to open file");
@@ -72,4 +74,27 @@ pub fn get_reference(punctuation: bool, digits: bool, word_list: &[String], batc
     items.shuffle(&mut rng);
 
     items.join(" ").replace('\n', " ")
+}
+
+pub fn get_random_quote() -> String {
+    let file = match File::open("assets/quotes.json") {
+        Ok(f) => f,
+        Err(_) => {
+            return "\"Welcome to TypeMan!\" - mzums".to_string();
+        }
+    };
+    let reader = BufReader::new(file);
+    let quotes: Vec<Quote> = match serde_json::from_reader(reader) {
+        Ok(q) => q,
+        Err(_) => {
+            return "\"Welcome to TypeMan!\" - mzums".to_string();
+        }
+    };
+    let mut rng = rand::rng();
+    let fallback = Quote {
+        text: "Welcome to TypeMan!".to_string(),
+        author: "mzums".to_string(),
+    };
+    let random_quote = quotes.choose(&mut rng).unwrap_or(&fallback);
+    format!("\"{}\" - {}", random_quote.text, random_quote.author)
 }

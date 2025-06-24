@@ -34,7 +34,7 @@ fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32) {
     }    
 }
     
-fn create_lines(reference: &str, font: Option<Font>, font_size: f32, max_width: f32) -> Vec<String> {
+pub fn create_lines(reference: &str, font: Option<Font>, font_size: f32, max_width: f32, quote: bool) -> Vec<String> {
     let mut lines = Vec::new();
     let mut current_line = String::new();
     for word in reference.split_whitespace() {
@@ -46,18 +46,24 @@ fn create_lines(reference: &str, font: Option<Font>, font_size: f32, max_width: 
         let dims = measure_text(&test_line, font.as_ref(), font_size as u16, 1.0);
         if dims.width > max_width && !current_line.is_empty() {
             current_line += " ";
-            lines.push(current_line);
+            lines.push(current_line.clone());
+            if lines.len() >= 4 {
+                return lines;
+            }
             current_line = word.to_string();
         } else {
             current_line = test_line;
         }    
+        if lines.len() >= 4 && !quote {
+            break;
+        }
     }    
     if !current_line.is_empty() {
         lines.push(current_line);
     }    
     if let Some(last) = lines.last_mut() {
         *last = last.trim_end().to_string();
-    }        
+    }
     lines
 }    
     
@@ -166,12 +172,15 @@ fn draw_reference_text(
 
 pub async fn gui_main_async() {
     let mut punctuation = false;
+    let mut numbers = false;
+    let mut quote = false;
+
     let font = load_font_async("assets/font/RobotoMono-VariableFont_wght.ttf").await;
     let title_font = load_font_async("assets/font/static/RobotoMono-Medium.ttf").await;
 
     let top_words = 500;
     let word_list = utils::read_first_n_words(top_words as usize);
-    let batch_size = 50;
+    let batch_size = 500;
     let mut reference = utils::get_reference(punctuation, false, &word_list, batch_size);
 
     let mut pressed_vec: Vec<char> = vec![];
@@ -183,10 +192,13 @@ pub async fn gui_main_async() {
     let mut game_started = false;
     let mut game_over = false;
 
-    let mut numbers = false;
+    let mut lines: Vec<String>;
 
     loop {
         clear_background(Color::from_rgba(20, 17, 15, 255));
+        let max_width = f32::min(screen_width() * 0.9, 1700.0);
+        let font_size = 40.0;
+        lines = create_lines(&reference, font.clone(), font_size, max_width, quote);
         
         let any_button_hovered = config::handle_settings_buttons(
             &font,
@@ -194,6 +206,7 @@ pub async fn gui_main_async() {
             batch_size,
             &mut punctuation,
             &mut numbers,
+            &mut quote,
             &mut pressed_vec,
             &mut is_correct,
             &mut pos1,
@@ -203,6 +216,7 @@ pub async fn gui_main_async() {
             &mut game_over,
             &mut reference,
             test_time,
+            screen_width() / 2.0 - max_width / 2.0,
         );
 
         set_mouse_cursor(if any_button_hovered {
@@ -237,9 +251,7 @@ pub async fn gui_main_async() {
         }
 
         if !game_over {
-            let font_size = 40.0;
-            let max_width = f32::min(screen_width() * 0.9, 1700.0);
-            let lines = create_lines(&reference, font.clone(), font_size, max_width);
+            
     
             let total_height = lines.len() as f32 * font_size * 1.2;
             let start_y = screen_height() / 2.0 - total_height / 2.0 + font_size;
@@ -279,7 +291,7 @@ pub async fn gui_main_async() {
                 &reference,
                 font.as_ref(),
                 test_time,
-                screen_height() / 2.0 + 100.0,
+                40.0,
             );
         }
         next_frame().await;

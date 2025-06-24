@@ -72,7 +72,7 @@ struct Cli {
 }
 
 #[derive(Debug, Deserialize)]
-struct Quote {
+pub struct Quote {
     author: String,
     text: String,
 }
