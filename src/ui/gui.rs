@@ -1,18 +1,19 @@
 use core::time;
 use std::collections::VecDeque;
 use macroquad::prelude::*;
-use macroquad::ui::{hash, root_ui, widgets, Skin, Style};
 use std::time::Instant;
 
 use crate::utils;
 
+
+const MAIN_COLOR: Color = Color::from_rgba(255, 155, 0, 255);
 
 fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32) {
     let (type_text, man_text) = ("Type", "Man");
     let type_width = measure_text(type_text, font.as_ref(), font_size as u16, 1.0).width;
     
     for (text, color, dx) in [
-        (type_text, Color::from_rgba(255, 155, 0, 255), 0.0),
+        (type_text, MAIN_COLOR, 0.0),
         (man_text, Color::from_rgba(255, 255, 255, 220), type_width),
         ] {
             draw_text_ex(
@@ -236,6 +237,66 @@ fn write_err_rate(is_correct: &VecDeque<i8>, typed_chars: usize, font: Option<&F
     );
 }
 
+fn restart(
+    pressed_vec: &mut Vec<char>,
+    is_correct: &mut VecDeque<i8>,
+    pos1: &mut usize,
+    timer: &mut time::Duration,
+    start_time: &mut Instant,
+    game_started: &mut bool,
+    game_over: &mut bool,
+    reference: &str,
+) {
+    pressed_vec.clear();
+    is_correct.clear();
+    is_correct.extend(vec![0; reference.len()]);
+    *pos1 = 0;
+    *timer = time::Duration::from_secs(0);
+    *start_time = Instant::now();
+    *game_started = false;
+    *game_over = false;
+}
+
+fn draw_toggle_button(
+    x: f32,
+    y: f32,
+    label: &str,
+    font: &Option<Font>,
+    is_active: bool,
+    inactive_color: Color,
+) -> bool {
+    let font_size = 22;
+    let padding = 20.0;
+        
+    let text_dims = measure_text(&label, Some(font.as_ref().unwrap()), font_size, 1.0);
+    let btn_width = text_dims.width + padding * 2.0;
+    let btn_height = text_dims.height + padding * 2.0;
+
+    let rect = Rect::new(x, y, btn_width, btn_height);
+    let (mx, my) = mouse_position();
+    let hovered = rect.contains(vec2(mx, my));
+    let clicked = hovered && is_mouse_button_pressed(MouseButton::Left);
+
+    let text_color = if is_active { MAIN_COLOR } else { inactive_color };
+    let bg_color = Color::from_rgba(0, 0, 0, 0);
+    
+    draw_rectangle(x, y, btn_width, btn_height, bg_color);
+    draw_text_ex(
+        &label,
+        x + padding,
+        y + btn_height - padding,
+        TextParams {
+            font: font.as_ref(),
+            font_size,
+            font_scale: 1.0,
+            color: text_color,
+            ..Default::default()
+        },
+    );
+
+    clicked
+}
+
 pub async fn gui_main_async() {
     let mut punctuation = false;
     let font = load_font_async("assets/font/RobotoMono-VariableFont_wght.ttf").await;
@@ -260,44 +321,48 @@ pub async fn gui_main_async() {
     loop {
         clear_background(Color::from_rgba(20, 17, 15, 255));
         
-        let button_text = "Punctuation";
-        let font_size = 30;
-        let padding = 20.0;
-                
-        let text_dims = measure_text(button_text, font.as_ref(), font_size, 1.0);
-        let btn_width = text_dims.width + padding * 2.0;
-        let btn_height = text_dims.height + padding * 2.0;
+        let inactive_color = Color::from_rgba(255, 255, 255, 80);
 
-        let btn_x = 50.0;
         let btn_y = 200.0;
+        let btn_x1 = 50.0;
+        let btn_font_size = 22;
+        let btn_padding = 20.0;
 
-        let btn_rect = Rect::new(btn_x, btn_y, btn_width, btn_height);
+        let btn1_label = "! punctuation";
+        let btn1_width = measure_text(
+            btn1_label,
+            Some(font.as_ref().unwrap()),
+            btn_font_size,
+            1.0,
+        ).width + btn_padding * 2.0;
 
-        let (mx, my) = mouse_position();
-        let mouse_vec = vec2(mx, my);
-        let is_hovered = btn_rect.contains(mouse_vec);
-        let is_clicked = is_hovered && is_mouse_button_pressed(MouseButton::Left);
+        let mut button_states = vec![
+            ("! punctuation", punctuation),
+            ("# numbers", numbers),
+        ];
 
-        if is_clicked {
-            punctuation = !punctuation;
-            println!("Punctuation: {}", punctuation);
-            reference = utils::get_reference(punctuation, false, &word_list, batch_size);
+        for (i, (label, state_val)) in button_states.iter_mut().enumerate() {
+            let x = btn_x1 + i as f32 * (btn1_width + 20.0);
+            let is_active = *state_val;
+            if draw_toggle_button(x, btn_y, label, &font, is_active, inactive_color) {
+                match *label {
+                    "! punctuation" => punctuation = !punctuation,
+                    "# numbers" => numbers = !numbers,
+                    _ => {}
+                }
+                reference = utils::get_reference(punctuation, numbers, &word_list, batch_size);
+                restart(
+                    &mut pressed_vec,
+                    &mut is_correct,
+                    &mut pos1,
+                    &mut timer,
+                    &mut start_time,
+                    &mut game_started,
+                    &mut game_over,
+                    &reference,
+                );
+            }
         }
-
-        draw_rectangle(btn_x, btn_y, btn_width, btn_height, Color::from_rgba(20, 17, 15, 255));
-
-        draw_text_ex(
-            button_text,
-            btn_x + padding,
-            btn_y + btn_height - padding,
-            TextParams {
-                font: font.as_ref(),
-                font_size,
-                font_scale: 1.0,
-                color: WHITE,
-                ..Default::default()
-            },
-        );
 
 
         if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1) {
