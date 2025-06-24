@@ -1,6 +1,7 @@
 use core::time;
 use std::collections::VecDeque;
 use macroquad::prelude::*;
+use macroquad::ui::{hash, root_ui, widgets, Skin, Style};
 use std::time::Instant;
 
 use crate::utils;
@@ -26,7 +27,7 @@ fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32) {
             },    
         );
     }    
-}    
+}
     
 fn create_lines(reference: &str, font: Option<Font>, font_size: f32, max_width: f32) -> Vec<String> {
     let mut lines = Vec::new();
@@ -67,7 +68,7 @@ fn handle_input(
     pressed_vec: &mut Vec<char>,
     is_correct: &mut VecDeque<i8>,
     pos1: &mut usize,
-) {
+) -> bool {
     let pressed = get_char_pressed();
     if let Some(ch) = pressed {
         if ch == '\u{8}' {
@@ -87,7 +88,9 @@ fn handle_input(
             *pos1 += 1;
             pressed_vec.push(ch);
         }
+        return true;
     }
+    false
 }
     
 fn draw_timer(font: Option<&Font>, font_size: f32, start_x: f32, start_y: f32, timer: time::Duration, test_time: f32) {
@@ -234,24 +237,82 @@ fn write_err_rate(is_correct: &VecDeque<i8>, typed_chars: usize, font: Option<&F
 }
 
 pub async fn gui_main_async() {
+    let mut punctuation = false;
     let font = load_font_async("assets/font/RobotoMono-VariableFont_wght.ttf").await;
     let title_font = load_font_async("assets/font/static/RobotoMono-Medium.ttf").await;
 
     let top_words = 500;
     let word_list = utils::read_first_n_words(top_words as usize);
     let batch_size = 50;
-    let reference = utils::get_reference(false, false, &word_list, batch_size);
+    let mut reference = utils::get_reference(punctuation, false, &word_list, batch_size);
 
     let mut pressed_vec: Vec<char> = vec![];
     let mut is_correct: VecDeque<i8> = VecDeque::from(vec![0; reference.len()]);
     let mut pos1: usize = 0;
     let mut timer = time::Duration::from_secs(0);
-    let start_time = Instant::now();
+    let mut start_time: Instant = Instant::now();
     let test_time = 10.0;
+    let mut game_started = false;
+    let mut game_over = false;
+
+    let mut numbers = false;
 
     loop {
         clear_background(Color::from_rgba(20, 17, 15, 255));
-        if timer.as_secs_f32() < test_time {
+        
+        let button_text = "Punctuation";
+        let font_size = 30;
+        let padding = 20.0;
+                
+        let text_dims = measure_text(button_text, font.as_ref(), font_size, 1.0);
+        let btn_width = text_dims.width + padding * 2.0;
+        let btn_height = text_dims.height + padding * 2.0;
+
+        let btn_x = 50.0;
+        let btn_y = 200.0;
+
+        let btn_rect = Rect::new(btn_x, btn_y, btn_width, btn_height);
+
+        let (mx, my) = mouse_position();
+        let mouse_vec = vec2(mx, my);
+        let is_hovered = btn_rect.contains(mouse_vec);
+        let is_clicked = is_hovered && is_mouse_button_pressed(MouseButton::Left);
+
+        if is_clicked {
+            punctuation = !punctuation;
+            println!("Punctuation: {}", punctuation);
+            reference = utils::get_reference(punctuation, false, &word_list, batch_size);
+        }
+
+        draw_rectangle(btn_x, btn_y, btn_width, btn_height, Color::from_rgba(20, 17, 15, 255));
+
+        draw_text_ex(
+            button_text,
+            btn_x + padding,
+            btn_y + btn_height - padding,
+            TextParams {
+                font: font.as_ref(),
+                font_size,
+                font_scale: 1.0,
+                color: WHITE,
+                ..Default::default()
+            },
+        );
+
+
+        if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1) {
+            game_started = true;
+            start_time = Instant::now();
+        }
+        
+        if game_started && !game_over {
+            timer = start_time.elapsed();
+            if timer.as_secs_f32() >= test_time {
+                game_over = true;
+            }
+        }
+
+        if !game_over {
             let font_size = 40.0;
             let max_width = f32::min(screen_width() * 0.9, 1700.0);
             let lines = create_lines(&reference, font.clone(), font_size, max_width);
@@ -265,7 +326,7 @@ pub async fn gui_main_async() {
                 50.0,
                 start_x,
                 screen_height() / 15.0,
-            );    
+            );
     
             handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1);
     
@@ -283,11 +344,9 @@ pub async fn gui_main_async() {
     
             if is_key_down(KeyCode::Escape) {
                 break;
-            }    
-    
-            timer += start_time.elapsed() - timer;
+            }
         }  
-        else {
+        else if game_over {
             write_wpm(
                 &reference,
                 pressed_vec.len(),
@@ -316,4 +375,4 @@ pub async fn gui_main_async() {
         }
         next_frame().await;
     }
-}    
+}
