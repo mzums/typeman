@@ -62,6 +62,7 @@ pub fn update_game_state(
     game_started: &mut bool,
     game_over: &mut bool,
     test_time: f32,
+    time_mode: bool,
 ) {
     if !*game_started && main::handle_input(reference, pressed_vec, is_correct, pos1) {
         *game_started = true;
@@ -70,13 +71,14 @@ pub fn update_game_state(
     
     if *game_started && !*game_over {
         *timer = start_time.elapsed();
-        if timer.as_secs_f32() >= test_time {
+        if (timer.as_secs_f32() >= test_time && time_mode) || *pos1 >= reference.chars().count() {
+            *game_started = false;
             *game_over = true;
         }
     }
 }
 
-fn reset_game_state(
+pub fn reset_game_state(
     pressed_vec: &mut Vec<char>,
     is_correct: &mut VecDeque<i8>,
     pos1: &mut usize,
@@ -85,13 +87,34 @@ fn reset_game_state(
     game_started: &mut bool,
     game_over: &mut bool,
 ) {
+    *is_correct = VecDeque::from(vec![0; is_correct.len()]);
     pressed_vec.clear();
-    is_correct.clear();
     *pos1 = 0;
     *timer = Duration::new(0, 0);
     *start_time = Instant::now();
     *game_started = false;
     *game_over = false;
+}
+
+pub fn show_popup(message: &str, font: &Option<Font>, font_size: f32, color: Color) {
+    let screen_width = screen_width();
+    let screen_height = screen_height();
+    let text_dims = measure_text(message, Some(font.as_ref().unwrap()), font_size as u16, 1.0);
+    let x = (screen_width - text_dims.width) / 2.0;
+    let y = (screen_height - text_dims.height) / 2.0;
+
+    draw_rectangle(0.0, 0.0, screen_width, screen_height, Color::from_rgba(0, 0, 0, 150));
+    draw_text_ex(
+        message,
+        x,
+        y + text_dims.height,
+        TextParams {
+            font: font.as_ref(),
+            font_size: font_size as u16,
+            color,
+            ..Default::default()
+        },
+    );
 }
 
 pub fn handle_settings_buttons(
@@ -113,6 +136,7 @@ pub fn handle_settings_buttons(
     test_time: &mut f32,
     batch_size: &mut usize,
     start_x: f32,
+    popup: &mut bool,
 ) -> bool {
     let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = 200.0;
@@ -135,6 +159,7 @@ pub fn handle_settings_buttons(
         ("25", *batch_size == 25, *word_mode),
         ("50", *batch_size == 50, *word_mode),
         ("100", *batch_size == 100, *word_mode),
+        ("...", false, true),
     ];
 
     let mut any_button_hovered = false;
@@ -206,6 +231,9 @@ pub fn handle_settings_buttons(
                 "100" => {
                     *batch_size = 100;
                 },
+                "..." => {
+                    *popup = true;
+                }
                 _ => {}
             }
             if *quote {

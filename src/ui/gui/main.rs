@@ -89,7 +89,7 @@ pub fn handle_input(
             }
         } else {
             let ref_char = reference.chars().nth(*pos1);
-            if ref_char == Some(ch) && is_correct[*pos1] != -1 && is_correct[*pos1] != 1 {
+            if is_correct.len() > *pos1 && ref_char == Some(ch) && is_correct[*pos1] != -1 && is_correct[*pos1] != 1 {
                 is_correct[*pos1] = 2; // Correct
             } else if ref_char == Some(ch) && is_correct[*pos1] == -1 {
                 is_correct[*pos1] = 1; // Corrected
@@ -177,6 +177,8 @@ pub async fn gui_main_async() {
     let mut time_mode = true;
     let mut word_mode = false;
 
+    let mut popup = false;
+
     let font = load_font_async("assets/font/RobotoMono-VariableFont_wght.ttf").await;
     let title_font = load_font_async("assets/font/static/RobotoMono-Medium.ttf").await;
 
@@ -196,6 +198,8 @@ pub async fn gui_main_async() {
     let mut test_time = 15.0;
     let mut game_started = false;
     let mut game_over = false;
+    let mut whole_test_time: f32;
+    let mut time_input: String = test_time.to_string();
 
     let mut lines: Vec<String>;
 
@@ -205,78 +209,84 @@ pub async fn gui_main_async() {
         let font_size = 40.0;
         lines = create_lines(&reference, font.clone(), font_size, max_width, quote, word_mode);
         
-        let any_button_hovered = config::handle_settings_buttons(
-            &font,
-            &word_list,
-            &mut punctuation,
-            &mut numbers,
-            &mut quote,
-            &mut time_mode,
-            &mut word_mode,
-            &mut pressed_vec,
-            &mut is_correct,
-            &mut pos1,
-            &mut timer,
-            &mut start_time,
-            &mut game_started,
-            &mut game_over,
-            &mut reference,
-            &mut test_time,
-            &mut batch_size,
-            screen_width() / 2.0 - max_width / 2.0,
-        );
-
-        set_mouse_cursor(if any_button_hovered {
-            CursorIcon::Pointer
-        } else {
-            CursorIcon::Default
-        });
-
-        config::update_game_state(
-            &reference,
-            &mut pressed_vec,
-            &mut is_correct,
-            &mut pos1,
-            &mut timer,
-            &mut start_time,
-            &mut game_started,
-            &mut game_over,
-            test_time,
-        );
-
-
-        if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1) {
-            game_started = true;
-            start_time = Instant::now();
-        }
-        
-        if game_started && !game_over {
-            timer = start_time.elapsed();
-            if timer.as_secs_f32() >= test_time {
-                game_over = true;
-            }
-        }
 
         if !game_over {
+            let any_button_hovered = config::handle_settings_buttons(
+                &font,
+                &word_list,
+                &mut punctuation,
+                &mut numbers,
+                &mut quote,
+                &mut time_mode,
+                &mut word_mode,
+                &mut pressed_vec,
+                &mut is_correct,
+                &mut pos1,
+                &mut timer,
+                &mut start_time,
+                &mut game_started,
+                &mut game_over,
+                &mut reference,
+                &mut test_time,
+                &mut batch_size,
+                screen_width() / 2.0 - max_width / 2.0,
+                &mut popup,
+            );
+
             
-    
+            set_mouse_cursor(if any_button_hovered {
+                CursorIcon::Pointer
+            } else {
+                CursorIcon::Default
+            });
+            
+            config::update_game_state(
+                &reference,
+                &mut pressed_vec,
+                &mut is_correct,
+                &mut pos1,
+                &mut timer,
+                &mut start_time,
+                &mut game_started,
+                &mut game_over,
+                test_time,
+                time_mode,
+            );
+            
+            if !game_started {
+                pos1 = 0;
+            }
+            
+            if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1) {
+                game_started = true;
+                start_time = Instant::now();
+            }
+            
+            if game_started && !game_over {
+                timer = start_time.elapsed();
+                if (timer.as_secs_f32() >= test_time && time_mode) || pos1 >= reference.chars().count() {
+                    game_over = true;
+                }
+            }
+            
+            
             let total_height = lines.len() as f32 * font_size * 1.2;
             let start_y = screen_height() / 2.0 - total_height / 2.0 + font_size;
             let start_x = screen_width() / 2.0 - max_width / 2.0;
-    
+            
             write_title(
                 title_font.clone(),
                 50.0,
                 start_x,
                 screen_height() / 15.0,
             );
-    
+            
             handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1);
-    
+            
             if time_mode {
                 draw_timer(font.as_ref(), font_size, start_x, start_y, timer, test_time);
             }
-    
+            
             draw_reference_text(
                 &lines,
                 &pressed_vec,
@@ -286,12 +296,33 @@ pub async fn gui_main_async() {
                 start_x,
                 start_y,
             );    
-    
+            
             if is_key_down(KeyCode::Escape) {
                 break;
             }
+            if is_key_down(KeyCode::Tab) && is_key_down(KeyCode::Enter) {
+                config::reset_game_state(
+                    &mut pressed_vec,
+                    &mut is_correct,
+                    &mut pos1,
+                    &mut timer,
+                    &mut start_time,
+                    &mut game_started,
+                    &mut game_over,
+                );
+                reference = utils::get_reference(punctuation, false, &word_list, batch_size);
+            }
+            if popup {
+                config::show_popup(
+                    "Popup",
+                    &font,
+                    font_size,
+                    Color::from_rgba(255, 255, 255, 220),
+                );
+            }
         }  
         else if game_over {
+            whole_test_time = timer.as_secs_f32();
             results::write_results(
                 &is_correct,
                 &pressed_vec,
@@ -299,7 +330,7 @@ pub async fn gui_main_async() {
                 screen_height(),
                 &reference,
                 font.as_ref(),
-                test_time,
+                whole_test_time,
                 40.0,
             );
         }
