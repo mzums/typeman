@@ -170,6 +170,26 @@ fn draw_reference_text(
     }
 }
 
+fn draw_cursor(cursor_x: usize, cursor_y: usize, start_x: f32, start_y: f32, line_h: f32, char_w: f32) {
+    let cursor_x = start_x + cursor_x as f32 * char_w;
+    let cursor_y = start_y + cursor_y as f32 * line_h;
+    draw_line(cursor_x, cursor_y - line_h * 0.9, cursor_x, cursor_y + line_h * 0.4, 2.0, Color::from_rgba(255, 155, 0, 255));
+}
+
+fn calc_pos(chars_in_line: &[i32], pos1: usize) -> (usize, usize) {
+    let mut total = 0;
+    for (i, &count) in chars_in_line.iter().enumerate() {
+        if pos1 < total + count as usize {
+            return (pos1 - total, i);
+        }
+        total += count as usize;
+    }
+    if let Some((i, &count)) = chars_in_line.iter().enumerate().last() {
+        return (count as usize, i);
+    }
+    (0, 0)
+}
+
 pub async fn gui_main_async() {
     let mut punctuation = false;
     let mut numbers = false;
@@ -199,14 +219,20 @@ pub async fn gui_main_async() {
     let mut whole_test_time: f32;
 
     let mut lines: Vec<String>;
-
+    
     loop {
         clear_background(Color::from_rgba(20, 17, 15, 255));
         let max_width = f32::min(screen_width() * 0.9, 1700.0);
         let font_size = 40.0;
+        let line_h = measure_text("Gy", font.as_ref(), font_size as u16, 1.0).height * 1.2;
+        let char_w = measure_text("G", font.as_ref(), font_size as u16, 1.0).width;
         lines = create_lines(&reference, font.clone(), font_size, max_width, quote, word_mode);
-        
 
+        let mut chars_in_line: Vec<i32> = vec![];
+        for line in &lines {
+            chars_in_line.push(line.chars().count() as i32);
+        }
+        
         if !game_over {
             let any_button_hovered = config::handle_settings_buttons(
                 &font,
@@ -291,7 +317,18 @@ pub async fn gui_main_async() {
                 font_size,
                 start_x,
                 start_y,
-            );    
+            );
+            let (calc_pos_x, calc_pos_y) = calc_pos(&chars_in_line, pos1);
+            if !game_started {
+                let blink_interval = 0.5;
+                let show_cursor = ((get_time() / blink_interval) as i32) % 2 == 0;
+                if show_cursor && !game_over {
+                    draw_cursor(calc_pos_x, calc_pos_y, start_x, start_y, line_h, char_w);
+                }
+            } else {
+                
+                draw_cursor(calc_pos_x, calc_pos_y, start_x, start_y, line_h, char_w);
+            }
             
             if is_key_down(KeyCode::Escape) {
                 break;
