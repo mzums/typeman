@@ -177,8 +177,6 @@ pub async fn gui_main_async() {
     let mut time_mode = true;
     let mut word_mode = false;
 
-    let mut popup = false;
-
     let font = load_font_async("assets/font/RobotoMono-VariableFont_wght.ttf").await;
     let title_font = load_font_async("assets/font/static/RobotoMono-Medium.ttf").await;
 
@@ -199,7 +197,6 @@ pub async fn gui_main_async() {
     let mut game_started = false;
     let mut game_over = false;
     let mut whole_test_time: f32;
-    let mut time_input: String = test_time.to_string();
 
     let mut lines: Vec<String>;
 
@@ -230,7 +227,6 @@ pub async fn gui_main_async() {
                 &mut test_time,
                 &mut batch_size,
                 screen_width() / 2.0 - max_width / 2.0,
-                &mut popup,
             );
 
             
@@ -311,14 +307,6 @@ pub async fn gui_main_async() {
                     &mut game_over,
                 );
                 reference = utils::get_reference(punctuation, false, &word_list, batch_size);
-            }
-            if popup {
-                config::show_popup(
-                    "Popup",
-                    &font,
-                    font_size,
-                    Color::from_rgba(255, 255, 255, 220),
-                );
             }
         }  
         else if game_over {

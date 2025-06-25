@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use macroquad::prelude::*;
 use std::time::{Instant, Duration};
 
+
 use crate::ui::gui::main;
 use crate::utils;
 
@@ -96,27 +97,6 @@ pub fn reset_game_state(
     *game_over = false;
 }
 
-pub fn show_popup(message: &str, font: &Option<Font>, font_size: f32, color: Color) {
-    let screen_width = screen_width();
-    let screen_height = screen_height();
-    let text_dims = measure_text(message, Some(font.as_ref().unwrap()), font_size as u16, 1.0);
-    let x = (screen_width - text_dims.width) / 2.0;
-    let y = (screen_height - text_dims.height) / 2.0;
-
-    draw_rectangle(0.0, 0.0, screen_width, screen_height, Color::from_rgba(0, 0, 0, 150));
-    draw_text_ex(
-        message,
-        x,
-        y + text_dims.height,
-        TextParams {
-            font: font.as_ref(),
-            font_size: font_size as u16,
-            color,
-            ..Default::default()
-        },
-    );
-}
-
 pub fn handle_settings_buttons(
     font: &Option<Font>,
     word_list: &[String],
@@ -136,7 +116,6 @@ pub fn handle_settings_buttons(
     test_time: &mut f32,
     batch_size: &mut usize,
     start_x: f32,
-    popup: &mut bool,
 ) -> bool {
     let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = 200.0;
@@ -159,7 +138,6 @@ pub fn handle_settings_buttons(
         ("25", *batch_size == 25, *word_mode),
         ("50", *batch_size == 50, *word_mode),
         ("100", *batch_size == 100, *word_mode),
-        ("...", false, true),
     ];
 
     let mut any_button_hovered = false;
@@ -231,11 +209,9 @@ pub fn handle_settings_buttons(
                 "100" => {
                     *batch_size = 100;
                 },
-                "..." => {
-                    *popup = true;
-                }
                 _ => {}
             }
+
             if *quote {
                 *reference = utils::get_random_quote();
                 *punctuation = false;
@@ -243,8 +219,6 @@ pub fn handle_settings_buttons(
             } else {
                 *reference = utils::get_reference(*punctuation, *numbers, word_list, *batch_size);
             }
-            //*start_time = Instant::now();
-            //*pos1 = 0;
             reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over);
         }
     }
