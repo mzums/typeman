@@ -3,11 +3,8 @@ use std::collections::VecDeque;
 use macroquad::prelude::*;
 use miniquad::window::set_mouse_cursor;
 use miniquad::CursorIcon;
-use std::time::Instant;
-
-use eframe::egui;
-use egui::{Color32,  Area, pos2};
-use egui_plot::{Line, Plot};
+use std::time::{Duration, Instant};
+use std::thread;
 
 use crate::utils;
 use crate::ui::gui::results;
@@ -177,7 +174,7 @@ fn draw_reference_text(
 fn draw_cursor(cursor_x: usize, cursor_y: usize, start_x: f32, start_y: f32, line_h: f32, char_w: f32) {
     let cursor_x = start_x + cursor_x as f32 * char_w;
     let cursor_y = start_y + cursor_y as f32 * line_h;
-    draw_line(cursor_x, cursor_y - line_h * 0.9, cursor_x, cursor_y + line_h * 0.4, 2.0, macroquad::color::Color::from_rgba(255, 155, 0, 255));
+    draw_line(cursor_x, cursor_y - line_h * 0.7, cursor_x, cursor_y + line_h * 0.3, 2.0, macroquad::color::Color::from_rgba(255, 155, 0, 255));
 }
 
 fn calc_pos(chars_in_line: &[i32], pos1: usize) -> (usize, usize) {
@@ -217,18 +214,29 @@ pub async fn gui_main_async() {
     let mut pos1: usize = 0;
     let mut timer = time::Duration::from_secs(0);
     let mut start_time: Instant = Instant::now();
-    let mut test_time = 1.0;
+    let mut test_time = 30.0;
     let mut game_started = false;
     let mut game_over = false;
     let mut whole_test_time: f32;
 
+    let mut speed_per_second: Vec<f64> = vec![];
+    let mut char_number = 0;
+
     let mut lines: Vec<String>;
+    let mut last_recorded_time = Instant::now();
+
+    let words: Vec<&str> = reference.split_whitespace().collect();
+    let average_word_length: f64 = if !words.is_empty() {
+        words.iter().map(|w| w.len()).sum::<usize>() as f64 / words.len() as f64
+    } else {
+        5.0
+    };
     
     loop {
         clear_background(macroquad::color::Color::from_rgba(20, 17, 15, 255));
         let max_width = f32::min(screen_width() * 0.9, 1700.0);
         let font_size = 40.0;
-        let line_h = measure_text("Gy", font.as_ref(), font_size as u16, 1.0).height * 1.2;
+        let line_h = measure_text("Gy", font.as_ref(), font_size as u16, 1.0).height * 1.6;
         let char_w = measure_text("G", font.as_ref(), font_size as u16, 1.0).width;
         lines = create_lines(&reference, font.clone(), font_size, max_width, quote, word_mode);
 
@@ -257,6 +265,7 @@ pub async fn gui_main_async() {
                 &mut test_time,
                 &mut batch_size,
                 screen_width() / 2.0 - max_width / 2.0,
+                &mut speed_per_second,
             );
 
             
@@ -312,6 +321,7 @@ pub async fn gui_main_async() {
             if time_mode {
                 draw_timer(font.as_ref(), font_size, start_x, start_y, timer, test_time);
             }
+
             
             draw_reference_text(
                 &lines,
@@ -346,22 +356,30 @@ pub async fn gui_main_async() {
                     &mut start_time,
                     &mut game_started,
                     &mut game_over,
+                    &mut speed_per_second,
                 );
                 reference = utils::get_reference(punctuation, false, &word_list, batch_size);
+                thread::sleep(time::Duration::from_millis(50));
             }
+
+            let now = Instant::now();
+            let time_since_last = now.duration_since(last_recorded_time);
+
+            if time_since_last >= Duration::from_secs(1) {
+                let total_typed = pressed_vec.len();
+                let chars_in_this_second = total_typed.saturating_sub(char_number);
+                let cpm = chars_in_this_second as f64 * 60.0;
+
+                speed_per_second.push(cpm);
+
+                char_number = total_typed;
+                last_recorded_time += Duration::from_secs(1);
+            }
+
+
         }  
         else if game_over {
-            let show_chart: bool;
-            let chart_points: Vec<[f64; 2]>;
-
             whole_test_time = timer.as_secs_f32();
-            
-            chart_points = (-100..=100)
-                .map(|i| {
-                    let x = i as f64 * 0.1;
-                    [x, x * x]
-                })
-                .collect();
             
             results::write_results(
                 &is_correct,
@@ -372,44 +390,12 @@ pub async fn gui_main_async() {
                 font.as_ref(),
                 whole_test_time,
                 40.0,
+                &speed_per_second,
+                average_word_length,
             );
-
-            
-            show_chart = true;
-            if show_chart {
-                draw_chart(&chart_points);
-                egui_macroquad::draw();
-            }
-    }
+        }
 
         next_frame().await;
     }
 }
 
-
-fn draw_chart(points: &[[f64; 2]]) {
-    egui_macroquad::ui(|ctx| {
-        Area::new("chart_area".into())
-            .fixed_pos(pos2(30.0, 30.0))
-            .show(ctx, |ui| {
-                let size = egui::Vec2::new(1000.0, 500.0);
-                let (rect, _response) = ui.allocate_exact_size(size, egui::Sense::hover());
-                ui.painter().rect_filled(rect, 5.0, Color32::from_rgb(20, 17, 15));
-
-                let mut child_ui = ui.child_ui(rect, *ui.layout(), None);
-
-                Plot::new("performance_plot")
-                    .view_aspect(2.0)
-                    .show_background(false)
-                    .show_axes([true, true])
-                    .show_grid(true)
-                    .show(&mut child_ui, |plot_ui| {
-                        let line = Line::new("Performance", points.to_vec())
-                            .color(Color32::from_rgb(255, 155, 0))
-                            .highlight(true)
-                            .name("");
-                        plot_ui.line(line);
-                    });
-            });
-    });
-}

@@ -1,5 +1,8 @@
 use std::collections::VecDeque;
 use macroquad::prelude::*;
+use eframe::egui;
+use egui::{Color32,  Area, pos2};
+use egui_plot::{Line, Plot};
 
 
 fn get_typed_words(reference: &str, typed_chars: usize) -> usize {
@@ -21,6 +24,8 @@ pub fn write_results(
     font: Option<&Font>,
     test_time: f32,
     font_size: f32,
+    speed_per_second: &Vec<f64>,
+    average_word_length: f64,
 ) {
     write_wpm(
         &reference,
@@ -47,6 +52,16 @@ pub fn write_results(
         screen_width / 2.0 - 100.0,
         screen_height / 2.0 + 200.0,
     );
+    let smoothed_speeds = smooth(&speed_per_second, 4, average_word_length);
+
+    let chart_points: Vec<[f64; 2]> = smoothed_speeds
+        .iter()
+        .enumerate()
+        .map(|(i, &cpm)| [i as f64, cpm])
+        .collect();
+
+    draw_chart(&chart_points);
+    egui_macroquad::draw();
     
 }
 
@@ -115,4 +130,49 @@ pub fn write_err_rate(is_correct: &VecDeque<i8>, typed_chars: usize, font: Optio
             ..Default::default()
         },
     );
+}
+
+fn smooth(values: &[f64], window: usize, average_word_length: f64) -> Vec<f64> {
+    let len = values.len();
+    let mut smoothed = Vec::with_capacity(len);
+
+    for i in 0..len {
+        let start = i.saturating_sub(window);
+        let end = (i + window + 1).min(len);
+        let slice = &values[start..end];
+
+        let avg = slice.iter().sum::<f64>() / slice.len() as f64 / average_word_length;
+        smoothed.push(avg);
+    }
+
+    smoothed
+}
+
+fn draw_chart(points: &[[f64; 2]]) {
+    egui_macroquad::ui(|ctx| {
+        Area::new("chart_area".into())
+            .fixed_pos(pos2(30.0, 30.0))
+            .show(ctx, |ui| {
+                let size = egui::Vec2::new(1300.0, 500.0);
+                let (rect, _response) = ui.allocate_exact_size(size, egui::Sense::hover());
+                ui.painter().rect_filled(rect, 5.0, Color32::from_rgb(20, 17, 15));
+
+                let mut child_ui = ui.child_ui(rect, *ui.layout(), None);
+
+                Plot::new("performance_plot")
+                    .view_aspect(2.0)
+                    .include_y(0.0)
+                    .show_background(false)
+                    .show_axes([true, true])
+                    .show_grid(true)
+                    .view_aspect(3.0)
+                    .show(&mut child_ui, |plot_ui| {
+                        let line = Line::new("Performance", points.to_vec())
+                            .color(Color32::from_rgb(255, 155, 0))
+                            .highlight(true)
+                            .name("");
+                        plot_ui.line(line);
+                    });
+            });
+    });
 }

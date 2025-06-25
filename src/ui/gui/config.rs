@@ -87,6 +87,7 @@ pub fn reset_game_state(
     start_time: &mut Instant,
     game_started: &mut bool,
     game_over: &mut bool,
+    speed_per_second: &mut Vec<f64>
 ) {
     *is_correct = VecDeque::from(vec![0; is_correct.len()]);
     pressed_vec.clear();
@@ -95,6 +96,7 @@ pub fn reset_game_state(
     *start_time = Instant::now();
     *game_started = false;
     *game_over = false;
+    *speed_per_second = vec![];
 }
 
 pub fn handle_settings_buttons(
@@ -116,6 +118,7 @@ pub fn handle_settings_buttons(
     test_time: &mut f32,
     batch_size: &mut usize,
     start_x: f32,
+    speed_per_second: &mut Vec<f64>,
 ) -> bool {
     let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = 200.0;
@@ -219,7 +222,7 @@ pub fn handle_settings_buttons(
             } else {
                 *reference = utils::get_reference(*punctuation, *numbers, word_list, *batch_size);
             }
-            reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over);
+            reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second);
         }
     }
 
