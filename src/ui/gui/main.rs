@@ -5,12 +5,16 @@ use miniquad::window::set_mouse_cursor;
 use miniquad::CursorIcon;
 use std::time::Instant;
 
+use eframe::egui;
+use egui::{Color32,  Area, pos2};
+use egui_plot::{Line, Plot};
+
 use crate::utils;
 use crate::ui::gui::results;
 use crate::ui::gui::config;
 
 
-pub const MAIN_COLOR: Color = Color::from_rgba(255, 155, 0, 255);
+pub const MAIN_COLOR: macroquad::color::Color = macroquad::color::Color::from_rgba(255, 155, 0, 255);
 
 fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32) {
     let (type_text, man_text) = ("Type", "Man");
@@ -18,7 +22,7 @@ fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32) {
     
     for (text, color, dx) in [
         (type_text, MAIN_COLOR, 0.0),
-        (man_text, Color::from_rgba(255, 255, 255, 220), type_width),
+        (man_text, macroquad::color::Color::from_rgba(255, 255, 255, 220), type_width),
         ] {
             draw_text_ex(
                 text,    
@@ -113,7 +117,7 @@ fn draw_timer(font: Option<&Font>, font_size: f32, start_x: f32, start_y: f32, t
         TextParams {
             font,
             font_size: font_size as u16,
-            color: Color::from_rgba(255, 155, 0, 255),
+            color: macroquad::color::Color::from_rgba(255, 155, 0, 255),
             ..Default::default()
         },
     );
@@ -136,19 +140,19 @@ fn draw_reference_text(
         for char in line.chars() {
             let mut curr_char = char;
             let color = if pos + 1 > pressed_vec.len() || is_correct[pos] == 0 {
-                Color::from_rgba(255, 255, 255, 80)
+                macroquad::color::Color::from_rgba(255, 255, 255, 80)
             } else if is_correct.get(pos).is_some() && is_correct[pos] == 2 {
-                Color::from_rgba(255, 255, 255, 200)
+                macroquad::color::Color::from_rgba(255, 255, 255, 200)
             } else if is_correct.get(pos).is_some() && is_correct[pos] == 1 {
                 if char == ' ' {
                     curr_char = '_';
                 }
-                Color::from_rgba(255, 165, 0, 255)
+                macroquad::color::Color::from_rgba(255, 165, 0, 255)
             } else {
                 if char == ' ' {
                     curr_char = '_';
                 }
-                Color::from_rgba(255, 50, 50, 180)
+                macroquad::color::Color::from_rgba(255, 50, 50, 180)
             };
             draw_text_ex(
                 &curr_char.to_string(),
@@ -173,7 +177,7 @@ fn draw_reference_text(
 fn draw_cursor(cursor_x: usize, cursor_y: usize, start_x: f32, start_y: f32, line_h: f32, char_w: f32) {
     let cursor_x = start_x + cursor_x as f32 * char_w;
     let cursor_y = start_y + cursor_y as f32 * line_h;
-    draw_line(cursor_x, cursor_y - line_h * 0.9, cursor_x, cursor_y + line_h * 0.4, 2.0, Color::from_rgba(255, 155, 0, 255));
+    draw_line(cursor_x, cursor_y - line_h * 0.9, cursor_x, cursor_y + line_h * 0.4, 2.0, macroquad::color::Color::from_rgba(255, 155, 0, 255));
 }
 
 fn calc_pos(chars_in_line: &[i32], pos1: usize) -> (usize, usize) {
@@ -213,7 +217,7 @@ pub async fn gui_main_async() {
     let mut pos1: usize = 0;
     let mut timer = time::Duration::from_secs(0);
     let mut start_time: Instant = Instant::now();
-    let mut test_time = 15.0;
+    let mut test_time = 1.0;
     let mut game_started = false;
     let mut game_over = false;
     let mut whole_test_time: f32;
@@ -221,7 +225,7 @@ pub async fn gui_main_async() {
     let mut lines: Vec<String>;
     
     loop {
-        clear_background(Color::from_rgba(20, 17, 15, 255));
+        clear_background(macroquad::color::Color::from_rgba(20, 17, 15, 255));
         let max_width = f32::min(screen_width() * 0.9, 1700.0);
         let font_size = 40.0;
         let line_h = measure_text("Gy", font.as_ref(), font_size as u16, 1.0).height * 1.2;
@@ -347,7 +351,18 @@ pub async fn gui_main_async() {
             }
         }  
         else if game_over {
+            let show_chart: bool;
+            let chart_points: Vec<[f64; 2]>;
+
             whole_test_time = timer.as_secs_f32();
+            
+            chart_points = (-100..=100)
+                .map(|i| {
+                    let x = i as f64 * 0.1;
+                    [x, x * x]
+                })
+                .collect();
+            
             results::write_results(
                 &is_correct,
                 &pressed_vec,
@@ -358,7 +373,43 @@ pub async fn gui_main_async() {
                 whole_test_time,
                 40.0,
             );
-        }
+
+            
+            show_chart = true;
+            if show_chart {
+                draw_chart(&chart_points);
+                egui_macroquad::draw();
+            }
+    }
+
         next_frame().await;
     }
+}
+
+
+fn draw_chart(points: &[[f64; 2]]) {
+    egui_macroquad::ui(|ctx| {
+        Area::new("chart_area".into())
+            .fixed_pos(pos2(30.0, 30.0))
+            .show(ctx, |ui| {
+                let size = egui::Vec2::new(1000.0, 500.0);
+                let (rect, _response) = ui.allocate_exact_size(size, egui::Sense::hover());
+                ui.painter().rect_filled(rect, 5.0, Color32::from_rgb(20, 17, 15));
+
+                let mut child_ui = ui.child_ui(rect, *ui.layout(), None);
+
+                Plot::new("performance_plot")
+                    .view_aspect(2.0)
+                    .show_background(false)
+                    .show_axes([true, true])
+                    .show_grid(true)
+                    .show(&mut child_ui, |plot_ui| {
+                        let line = Line::new("Performance", points.to_vec())
+                            .color(Color32::from_rgb(255, 155, 0))
+                            .highlight(true)
+                            .name("");
+                        plot_ui.line(line);
+                    });
+            });
+    });
 }
