@@ -64,8 +64,9 @@ pub fn update_game_state(
     game_over: &mut bool,
     test_time: f32,
     time_mode: bool,
+    words_done: &mut usize,
 ) {
-    if !*game_started && main::handle_input(reference, pressed_vec, is_correct, pos1) {
+    if !*game_started && main::handle_input(reference, pressed_vec, is_correct, pos1, words_done) {
         *game_started = true;
         *start_time = Instant::now();
     }
@@ -87,7 +88,9 @@ pub fn reset_game_state(
     start_time: &mut Instant,
     game_started: &mut bool,
     game_over: &mut bool,
-    speed_per_second: &mut Vec<f64>
+    speed_per_second: &mut Vec<f64>,
+    last_recorded_time: &mut Instant,
+    words_done: &mut usize,
 ) {
     *is_correct = VecDeque::from(vec![0; is_correct.len()]);
     pressed_vec.clear();
@@ -97,6 +100,8 @@ pub fn reset_game_state(
     *game_started = false;
     *game_over = false;
     *speed_per_second = vec![];
+    *last_recorded_time = Instant::now();
+    *words_done = 0;
 }
 
 pub fn handle_settings_buttons(
@@ -119,6 +124,8 @@ pub fn handle_settings_buttons(
     batch_size: &mut usize,
     start_x: f32,
     speed_per_second: &mut Vec<f64>,
+    last_recorded_time: &mut Instant,
+    words_done: &mut usize,
 ) -> bool {
     let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = 200.0;
@@ -222,7 +229,7 @@ pub fn handle_settings_buttons(
             } else {
                 *reference = utils::get_reference(*punctuation, *numbers, word_list, *batch_size);
             }
-            reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second);
+            reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done);
         }
     }
 

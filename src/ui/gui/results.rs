@@ -52,7 +52,11 @@ pub fn write_results(
         screen_width / 2.0 - 100.0,
         screen_height / 2.0 + 200.0,
     );
-    let smoothed_speeds = smooth(&speed_per_second, 4, average_word_length);
+
+    let mut speed2: Vec<f64> = speed_per_second.clone();
+    speed2.push(speed_per_second.last().unwrap_or(&0.0) * 60.0 / average_word_length);
+    let smoothed_speeds = smooth(&speed2, 4, average_word_length);
+
 
     let chart_points: Vec<[f64; 2]> = smoothed_speeds
         .iter()
@@ -150,10 +154,16 @@ fn smooth(values: &[f64], window: usize, average_word_length: f64) -> Vec<f64> {
 
 fn draw_chart(points: &[[f64; 2]]) {
     egui_macroquad::ui(|ctx| {
+        let screen_width = macroquad::window::screen_width();
+        let chart_width = 1300.0;
+        let chart_height = 500.0;
+        let chart_x = (screen_width - chart_width) / 2.0;
+        let chart_y = 30.0;
+
         Area::new("chart_area".into())
-            .fixed_pos(pos2(30.0, 30.0))
+            .fixed_pos(pos2(chart_x, chart_y))
             .show(ctx, |ui| {
-                let size = egui::Vec2::new(1300.0, 500.0);
+                let size = egui::Vec2::new(chart_width, chart_height);
                 let (rect, _response) = ui.allocate_exact_size(size, egui::Sense::hover());
                 ui.painter().rect_filled(rect, 5.0, Color32::from_rgb(20, 17, 15));
 
@@ -166,12 +176,24 @@ fn draw_chart(points: &[[f64; 2]]) {
                     .show_axes([true, true])
                     .show_grid(true)
                     .view_aspect(3.0)
+                    .x_axis_label("Time (s)")
+                    .y_axis_label("Speed (WPM)")
                     .show(&mut child_ui, |plot_ui| {
                         let line = Line::new("Performance", points.to_vec())
                             .color(Color32::from_rgb(255, 155, 0))
                             .highlight(true)
-                            .name("");
+                            .name("Performance");
                         plot_ui.line(line);
+
+                        let offset_points: Vec<[f64; 2]> = points
+                            .iter()
+                            .map(|[x, y]| [*x, y + 1.0])
+                            .collect();
+                        let line2 = Line::new("Offset", offset_points)
+                            .color(Color32::from_rgb(0, 200, 255))
+                            .highlight(true)
+                            .name("Offset +10");
+                        plot_ui.line(line2);
                     });
             });
     });

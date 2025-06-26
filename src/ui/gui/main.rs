@@ -80,10 +80,14 @@ pub fn handle_input(
     pressed_vec: &mut Vec<char>,
     is_correct: &mut VecDeque<i8>,
     pos1: &mut usize,
+    words_done: &mut usize,
 ) -> bool {
     let pressed = get_char_pressed();
     if let Some(ch) = pressed {
         if ch == '\u{8}' {
+            if !pressed_vec.is_empty() && reference.chars().nth(*pos1) == Some(' ') {
+                *words_done -= 1;
+            }
             pressed_vec.pop();
             if *pos1 > 0 {
                 *pos1 -= 1;
@@ -99,6 +103,9 @@ pub fn handle_input(
             }
             *pos1 += 1;
             pressed_vec.push(ch);
+            if reference.chars().nth(*pos1) == Some(' ') {
+                *words_done += 1;
+            }
         }
         return true;
     }
@@ -107,6 +114,21 @@ pub fn handle_input(
     
 fn draw_timer(font: Option<&Font>, font_size: f32, start_x: f32, start_y: f32, timer: time::Duration, test_time: f32) {
     let timer_str = format!("{:.0}", test_time - timer.as_secs_f32());
+    draw_text_ex(
+        &timer_str,
+        start_x,
+        start_y - screen_height() / 20.0,
+        TextParams {
+            font,
+            font_size: font_size as u16,
+            color: macroquad::color::Color::from_rgba(255, 155, 0, 255),
+            ..Default::default()
+        },
+    );
+}
+
+fn draw_word_count(font: Option<&Font>, font_size: f32, start_x: f32, start_y: f32, words_done: &mut usize, total_words: usize) {
+    let timer_str = format!("{}/{}", words_done, total_words);
     draw_text_ex(
         &timer_str,
         start_x,
@@ -225,6 +247,8 @@ pub async fn gui_main_async() {
     let mut lines: Vec<String>;
     let mut last_recorded_time = Instant::now();
 
+    let mut words_done = 0;
+
     let words: Vec<&str> = reference.split_whitespace().collect();
     let average_word_length: f64 = if !words.is_empty() {
         words.iter().map(|w| w.len()).sum::<usize>() as f64 / words.len() as f64
@@ -243,6 +267,10 @@ pub async fn gui_main_async() {
         let mut chars_in_line: Vec<i32> = vec![];
         for line in &lines {
             chars_in_line.push(line.chars().count() as i32);
+        }
+
+        if !game_started {
+            last_recorded_time = Instant::now();
         }
         
         if !game_over {
@@ -266,6 +294,8 @@ pub async fn gui_main_async() {
                 &mut batch_size,
                 screen_width() / 2.0 - max_width / 2.0,
                 &mut speed_per_second,
+                &mut last_recorded_time,
+                &mut words_done,
             );
 
             
@@ -286,14 +316,16 @@ pub async fn gui_main_async() {
                 &mut game_over,
                 test_time,
                 time_mode,
+                &mut words_done,
             );
             
             if !game_started {
                 pos1 = 0;
             }
             
-            if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1) {
+            if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done) {
                 game_started = true;
+                timer = time::Duration::from_secs(0);
                 start_time = Instant::now();
             }
             
@@ -302,8 +334,7 @@ pub async fn gui_main_async() {
                 if (timer.as_secs_f32() >= test_time && time_mode) || pos1 >= reference.chars().count() {
                     game_over = true;
                 }
-            }
-            
+            }            
             
             let total_height = lines.len() as f32 * font_size * 1.2;
             let start_y = screen_height() / 2.0 - total_height / 2.0 + font_size;
@@ -316,10 +347,12 @@ pub async fn gui_main_async() {
                 screen_height() / 15.0,
             );
             
-            handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1);
+            handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done);
             
             if time_mode {
                 draw_timer(font.as_ref(), font_size, start_x, start_y, timer, test_time);
+            } else if word_mode {
+                draw_word_count(font.as_ref(), font_size, start_x, start_y, &mut words_done, batch_size);
             }
 
             
@@ -357,6 +390,8 @@ pub async fn gui_main_async() {
                     &mut game_started,
                     &mut game_over,
                     &mut speed_per_second,
+                    &mut last_recorded_time,
+                    &mut words_done,
                 );
                 reference = utils::get_reference(punctuation, false, &word_list, batch_size);
                 thread::sleep(time::Duration::from_millis(50));
@@ -365,6 +400,7 @@ pub async fn gui_main_async() {
             let now = Instant::now();
             let time_since_last = now.duration_since(last_recorded_time);
 
+            
             if time_since_last >= Duration::from_secs(1) {
                 let total_typed = pressed_vec.len();
                 let chars_in_this_second = total_typed.saturating_sub(char_number);
