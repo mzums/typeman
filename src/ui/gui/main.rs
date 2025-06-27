@@ -78,7 +78,7 @@ async fn load_font_async(path: &str) -> Option<Font> {
 pub fn handle_input(
     reference: &str,
     pressed_vec: &mut Vec<char>,
-    is_correct: &mut VecDeque<i8>,
+    is_correct: &mut VecDeque<i32>,
     pos1: &mut usize,
     words_done: &mut usize,
 ) -> bool {
@@ -96,6 +96,7 @@ pub fn handle_input(
             let ref_char = reference.chars().nth(*pos1);
             if is_correct.len() > *pos1 && ref_char == Some(ch) && is_correct[*pos1] != -1 && is_correct[*pos1] != 1 {
                 is_correct[*pos1] = 2; // Correct
+                println!("{} {}", is_correct.len(), *pos1);
             } else if ref_char == Some(ch) && is_correct[*pos1] == -1 {
                 is_correct[*pos1] = 1; // Corrected
             } else {
@@ -145,7 +146,7 @@ fn draw_word_count(font: Option<&Font>, font_size: f32, start_x: f32, start_y: f
 fn draw_reference_text(
     lines: &[String],
     pressed_vec: &[char],
-    is_correct: &VecDeque<i8>,
+    is_correct: &VecDeque<i32>,
     font: Option<&Font>,
     font_size: f32,
     start_x: f32,
@@ -232,7 +233,7 @@ pub async fn gui_main_async() {
     let mut reference = utils::get_reference(punctuation, false, &word_list, batch_size);
 
     let mut pressed_vec: Vec<char> = vec![];
-    let mut is_correct: VecDeque<i8> = VecDeque::from(vec![0; reference.len()]);
+    let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
     let mut pos1: usize = 0;
     let mut timer = time::Duration::from_secs(0);
     let mut start_time: Instant = Instant::now();

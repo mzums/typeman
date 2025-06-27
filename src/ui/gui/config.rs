@@ -56,7 +56,7 @@ fn draw_toggle_button(
 pub fn update_game_state(
     reference: &str,
     pressed_vec: &mut Vec<char>,
-    is_correct: &mut VecDeque<i8>,
+    is_correct: &mut VecDeque<i32>,
     pos1: &mut usize,
     timer: &mut Duration,
     start_time: &mut Instant,
@@ -82,7 +82,7 @@ pub fn update_game_state(
 
 pub fn reset_game_state(
     pressed_vec: &mut Vec<char>,
-    is_correct: &mut VecDeque<i8>,
+    is_correct: &mut VecDeque<i32>,
     pos1: &mut usize,
     timer: &mut Duration,
     start_time: &mut Instant,
@@ -113,7 +113,7 @@ pub fn handle_settings_buttons(
     time_mode: &mut bool,
     word_mode: &mut bool,
     pressed_vec: &mut Vec<char>,
-    is_correct: &mut VecDeque<i8>,
+    is_correct: &mut VecDeque<i32>,
     pos1: &mut usize,
     timer: &mut time::Duration,
     start_time: &mut Instant,
@@ -134,8 +134,8 @@ pub fn handle_settings_buttons(
     let mut total_width = 0.0;
 
     let mut button_states = vec![
-        ("! punctuation", *punctuation, true),
-        ("# numbers", *numbers, true),
+        ("! punctuation", *punctuation, !*quote),
+        ("# numbers", *numbers, !*quote),
         ("|", divider, true),
         ("time", *time_mode, true),
         ("words", *word_mode, true),
@@ -167,11 +167,11 @@ pub fn handle_settings_buttons(
         );
         total_width += btni_width;
         
-        if hovered {
+        if hovered && state_val != &divider {
             any_button_hovered = true;
         }
         
-        if clicked {
+        if clicked && state_val != &divider {
             match *label {
                 "! punctuation" => {
                     *punctuation = !*punctuation;

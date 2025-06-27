@@ -16,7 +16,7 @@ fn get_typed_words(reference: &str, typed_chars: usize) -> usize {
 }
 
 pub fn write_results(
-    is_correct: &VecDeque<i8>,
+    is_correct: &VecDeque<i32>,
     pressed_vec: &Vec<char>,
     screen_width: f32,
     screen_height: f32,
@@ -54,9 +54,8 @@ pub fn write_results(
     );
 
     let mut speed2: Vec<f64> = speed_per_second.clone();
-    speed2.push(speed_per_second.last().unwrap_or(&0.0) * 60.0 / average_word_length);
-    let smoothed_speeds = smooth(&speed2, 4, average_word_length);
-
+    speed2.push(*speed_per_second.last().unwrap_or(&0.0));
+    let smoothed_speeds = smooth(&speed2, 3, average_word_length);
 
     let chart_points: Vec<[f64; 2]> = smoothed_speeds
         .iter()
@@ -94,7 +93,7 @@ pub fn write_wpm(
     );
 }
 
-pub fn write_acc(is_correct: &VecDeque<i8>, typed_chars: usize, font: Option<&Font>, font_size: f32, x: f32, y: f32) {
+pub fn write_acc(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&Font>, font_size: f32, x: f32, y: f32) {
     let correct_count = is_correct.iter().filter(|&&x| x == 2 || x == 1).count();
     let accuracy = if typed_chars > 0 {
         (correct_count as f32 / typed_chars as f32 * 100.0).round()
@@ -115,7 +114,7 @@ pub fn write_acc(is_correct: &VecDeque<i8>, typed_chars: usize, font: Option<&Fo
     );
 }
 
-pub fn write_err_rate(is_correct: &VecDeque<i8>, typed_chars: usize, font: Option<&Font>, font_size: f32, x: f32, y: f32) {
+pub fn write_err_rate(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&Font>, font_size: f32, x: f32, y: f32) {
     let error_count = is_correct.iter().filter(|&&x| x == -1 || x == 1).count();
     let error_rate = if typed_chars > 0 {
         (error_count as f32 / typed_chars as f32 * 100.0).round()
