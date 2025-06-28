@@ -73,7 +73,7 @@ pub fn update_game_state(
     if *game_started && !*game_over {
         *timer = start_time.elapsed();
         if (timer.as_secs_f32() >= test_time && time_mode) || *pos1 >= reference.chars().count() {
-            *game_started = false;
+            //*game_started = false;
             *game_over = true;
         }
     }

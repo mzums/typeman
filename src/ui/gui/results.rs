@@ -19,10 +19,10 @@ pub fn write_results(
     screen_height: f32,
     font: Option<&Font>,
     test_time: f32,
-    font_size: f32,
     speed_per_second: &Vec<f64>,
     average_word_length: f64,
     words_done: usize,
+    mode: &str,
 ) {
     let correct_count = is_correct.iter().filter(|&&x| x == 2 || x == 1).count();
     let accuracy = if pressed_vec.len() > 0 {
@@ -50,25 +50,36 @@ pub fn write_results(
         pressed_vec.len(),
         font,
         (screen_width - chart_width - 2.0 * text_size.width) / 2.0,
-        (screen_height - chart_height) / 4.0 + 3.0 * text_size.height,
+        (screen_height - chart_height) / 4.0 + 3.5 * text_size.height,
     );
     write_err_rate(
         &is_correct,
         pressed_vec.len(),
         font,
-        font_size,
-        screen_width / 2.0 - 100.0,
-        screen_height / 2.0 + 200.0,
+        (screen_width - chart_width + 2.0 * text_size.width) / 2.0,
+        (screen_height - chart_height) / 2.0 - text_size.height * 3.0,
     );
     write_consistency(
         speed_per_second,
         average_word_length,
         font,
-        font_size,
-        screen_width / 2.0 - 100.0,
-        screen_height / 2.0 + 250.0,
+        (screen_width - chart_width + 7.0 * text_size.width) / 2.0,
+        (screen_height - chart_height) / 2.0 - text_size.height * 3.0,
         avg_wpm,
     );
+    write_time(
+        test_time,
+        font,
+        (screen_width - chart_width + 12.0 * text_size.width) / 2.0,
+        (screen_height - chart_height) / 2.0 - text_size.height * 3.0,
+    );
+    write_mode(
+        font,
+        (screen_width - chart_width + 17.0 * text_size.width) / 2.0,
+        (screen_height - chart_height) / 2.0 - text_size.height * 3.0,
+        mode,
+    );
+
     let mut speed2: Vec<f64> = speed_per_second.clone();
     speed2.push(*speed_per_second.last().unwrap_or(&0.0));
     let smoothed_speeds = smooth(&speed2, 2, average_word_length);
@@ -84,11 +95,72 @@ pub fn write_results(
     
 }
 
+fn write_mode(
+    font: Option<&Font>,
+    x: f32,
+    y: f32,
+    mode: &str,
+) {
+    let mode_text = format!("{mode}");
+    draw_text_ex(
+        "mode",
+        x,
+        y,
+        TextParams {
+            font,
+            font_size: 25.0 as u16,
+            color: Color::from_rgba(255, 255, 255, 80),
+            ..Default::default()
+        },
+    );
+    draw_text_ex(
+        &mode_text,
+        x,
+        y + 50.0,
+        TextParams {
+            font,
+            font_size: 50,
+            color: Color::from_rgba(255, 155, 0, 255),
+            ..Default::default()
+        },
+    );
+}
+
+fn write_time(
+    test_time: f32,
+    font: Option<&Font>,
+    x: f32,
+    y: f32,
+) {
+    let time_text = format!("{:.0}s", test_time);
+    draw_text_ex(
+        "time",
+        x,
+        y,
+        TextParams {
+            font,
+            font_size: 25.0 as u16,
+            color: Color::from_rgba(255, 255, 255, 80),
+            ..Default::default()
+        },
+    );
+    draw_text_ex(
+        &time_text,
+        x,
+        y + 60.0,
+        TextParams {
+            font,
+            font_size: 60,
+            color: Color::from_rgba(255, 155, 0, 255),
+            ..Default::default()
+        },
+    );
+}
+
 fn write_consistency(
     speed_per_second: &Vec<f64>,
     average_word_length: f64,
     font: Option<&Font>,
-    font_size: f32,
     x: f32,
     y: f32,
     avg_wpm: f32,
@@ -100,14 +172,25 @@ fn write_consistency(
         0.0
     };
 
-    let consistency_text = format!("Consistency: {consistency}%");
+    let consistency_text = format!("{consistency}%");
     draw_text_ex(
-        &consistency_text,
+        "consistency",
         x,
         y,
         TextParams {
             font,
-            font_size: font_size as u16,
+            font_size: 25.0 as u16,
+            color: Color::from_rgba(255, 255, 255, 80),
+            ..Default::default()
+        },
+    );
+    draw_text_ex(
+        &consistency_text,
+        x,
+        y + 60.0,
+        TextParams {
+            font,
+            font_size: 60,
             color: Color::from_rgba(255, 155, 0, 255),
             ..Default::default()
         },
@@ -129,7 +212,7 @@ fn write_wpm(
         y,
         TextParams {
             font,
-            font_size: 30.0 as u16,
+            font_size: 40.0 as u16,
             color: Color::from_rgba(255, 255, 255, 80),
             ..Default::default()
         },
@@ -137,10 +220,10 @@ fn write_wpm(
     draw_text_ex(
         &wpm_text,
         x,
-        y + 80.0,
+        y + 85.0,
         TextParams {
             font,
-            font_size: 75,
+            font_size: 90,
             color: Color::from_rgba(255, 155, 0, 255),
             ..Default::default()
         },
@@ -162,7 +245,7 @@ fn write_acc(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&Font>
         y,
         TextParams {
             font,
-            font_size: 30.0 as u16,
+            font_size: 40.0 as u16,
             color: Color::from_rgba(255, 255, 255, 80),
             ..Default::default()
         },
@@ -170,31 +253,42 @@ fn write_acc(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&Font>
     draw_text_ex(
         &acc_text,
         x,
-        y + 80.0,
+        y + 85.0,
         TextParams {
             font,
-            font_size: 75,
+            font_size: 90,
             color: Color::from_rgba(255, 155, 0, 255),
             ..Default::default()
         },
     );
 }
 
-fn write_err_rate(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&Font>, font_size: f32, x: f32, y: f32) {
+fn write_err_rate(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&Font>, x: f32, y: f32) {
     let error_count = is_correct.iter().filter(|&&x| x == -1 || x == 1).count();
     let error_rate = if typed_chars > 0 {
         (error_count as f32 / typed_chars as f32 * 100.0).round()
     } else {
         0.0
     };
-    let acc_text = format!("Error rate: {:.0}%", error_rate);
+    let err_text = format!("{:.0}%", error_rate);
     draw_text_ex(
-        &acc_text,
+        "err rate",
         x,
         y,
         TextParams {
             font,
-            font_size: font_size as u16,
+            font_size: 25.0 as u16,
+            color: Color::from_rgba(255, 255, 255, 80),
+            ..Default::default()
+        },
+    );
+    draw_text_ex(
+        &err_text,
+        x,
+        y + 60.0,
+        TextParams {
+            font,
+            font_size: 60,
             color: Color::from_rgba(255, 155, 0, 255),
             ..Default::default()
         },
@@ -246,7 +340,7 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                     marks
                 };
 
-                let max_x = points.len() as f64 - 1.0;
+                let max_x = f64::max(points.len() as f64 - 1.0, 5.0);
                 let mut max_y = 50.0;
                 for point in points {
                     if point[1] > max_y {

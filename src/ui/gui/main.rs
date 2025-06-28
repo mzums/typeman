@@ -408,17 +408,30 @@ pub async fn gui_main_async() {
             }
         }  
         else if game_over {
+            let mut mode = if time_mode {
+                "time".to_string()
+            } else if word_mode {
+                "word".to_string()
+            } else {
+                "quote".to_string()
+            };
+            if punctuation {
+                mode += "\n # ";
+            }
+            if numbers {
+                mode += "\n 123";
+            }
             results::write_results(
                 &is_correct,
                 &pressed_vec,
                 screen_width(),
                 screen_height(),
                 font.as_ref(),
-                test_time,
-                60.0,
+                timer.as_secs_f32(),
                 &speed_per_second,
                 average_word_length,
                 words_done,
+                &mode,
             );
         }
         next_frame().await;
