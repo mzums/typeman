@@ -94,7 +94,6 @@ pub fn handle_input(
             }
         } else {
             let ref_char: Option<char> = reference.chars().nth(*pos1);
-            println!("{} {}", is_correct.len(), *pos1);
             if is_correct.len() > *pos1 && ref_char == Some(ch) && is_correct[*pos1] != -1 && is_correct[*pos1] != 1 {
                 is_correct[*pos1] = 2; // Correct
             } else if ref_char == Some(ch) && is_correct[*pos1] == -1 {
@@ -237,10 +236,9 @@ pub async fn gui_main_async() {
     let mut pos1: usize = 0;
     let mut timer = time::Duration::from_secs(0);
     let mut start_time: Instant = Instant::now();
-    let mut test_time = 30.0;
+    let mut test_time = 1.0;
     let mut game_started = false;
     let mut game_over = false;
-    let mut whole_test_time: f32;
 
     let mut speed_per_second: Vec<f64> = vec![];
     let mut char_number = 0;
@@ -272,6 +270,9 @@ pub async fn gui_main_async() {
 
         if !game_started {
             last_recorded_time = Instant::now();
+            timer = time::Duration::from_secs(0);
+            start_time = Instant::now();
+            pos1 = 0;
         }
         
         if !game_over {
@@ -319,20 +320,16 @@ pub async fn gui_main_async() {
                 time_mode,
                 &mut words_done,
             );
-            
-            if !game_started {
-                pos1 = 0;
-            }
-            
+
             if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done) {
                 game_started = true;
-                timer = time::Duration::from_secs(0);
-                start_time = Instant::now();
+                //timer = time::Duration::from_secs(0);
+                //start_time = Instant::now();
             }
             
             if game_started && !game_over {
                 timer = start_time.elapsed();
-                if (timer.as_secs_f32() >= test_time && time_mode) || pos1 >= reference.chars().count() {
+                if (timer.as_secs_f32() >= test_time - 0.2 && time_mode) || pos1 >= reference.chars().count() {
                     game_over = true;
                 }
             }            
@@ -356,7 +353,6 @@ pub async fn gui_main_async() {
                 draw_word_count(font.as_ref(), font_size, start_x, start_y, &mut words_done, batch_size);
             }
 
-            
             draw_reference_text(
                 &lines,
                 &pressed_vec,
@@ -417,8 +413,6 @@ pub async fn gui_main_async() {
 
         }  
         else if game_over {
-            whole_test_time = timer.as_secs_f32();
-            
             results::write_results(
                 &is_correct,
                 &pressed_vec,
@@ -426,8 +420,8 @@ pub async fn gui_main_async() {
                 screen_height(),
                 &reference,
                 font.as_ref(),
-                whole_test_time,
-                40.0,
+                test_time,
+                60.0,
                 &speed_per_second,
                 average_word_length,
             );

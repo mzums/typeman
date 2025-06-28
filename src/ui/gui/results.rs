@@ -34,22 +34,35 @@ pub fn write_results(
     speed_per_second: &Vec<f64>,
     average_word_length: f64,
 ) {
+    let correct_count = is_correct.iter().filter(|&&x| x == 2 || x == 1).count();
+    let accuracy = if pressed_vec.len() > 0 {
+        (correct_count as f32 / pressed_vec.len() as f32 * 100.0).round()
+    } else {
+        0.0
+    };
+
+    let text_size = measure_text(&format!("{}%", accuracy), font, 60, 1.0);
+    let chart_width = f32::min(0.7 * screen_width, 1800.0);
+    let chart_height: f32 = f32::min(chart_width / 4.0, 300.0);
+
+    let chart_x = (screen_width - chart_width + 1.5 * text_size.width) / 2.0;
+    let chart_y = (screen_height - chart_height) / 4.0;
+
     let avg_wpm = write_wpm(
         &reference,
         pressed_vec.len(),
         font,
         test_time,
-        font_size,
-        screen_width / 2.0 - 100.0,
-        screen_height / 2.0 + 100.0,
+        (screen_width - chart_width - 2.0 * text_size.width) / 2.0,
+        (screen_height - chart_height) / 4.0,
     );
     write_acc(
         &is_correct,
         pressed_vec.len(),
         font,
         font_size,
-        screen_width / 2.0 - 100.0,
-        screen_height / 2.0 + 150.0,
+        (screen_width - chart_width - 2.0 * text_size.width) / 2.0,
+        (screen_height - chart_height) / 4.0 + 3.0 * text_size.height,
     );
     write_err_rate(
         &is_correct,
@@ -78,7 +91,7 @@ pub fn write_results(
         .map(|(i, &cpm)| [i as f64, cpm])
         .collect();
 
-    draw_chart(&chart_points);
+    draw_chart(&chart_points, chart_width, chart_height, chart_x, chart_y);
     egui_macroquad::draw();
     
 }
@@ -118,20 +131,30 @@ fn write_wpm(
     typed_chars: usize,
     font: Option<&Font>,
     test_time: f32,
-    font_size: f32,
     x: f32,
     y: f32,
 ) -> f32 {
     let typed_words = get_typed_words(reference, typed_chars);
     let wpm = typed_words as f32 * 60.0 / test_time;
-    let wpm_text = format!("WPM: {:.0}", wpm);
+    let wpm_text = format!("{:.0}", wpm);
     draw_text_ex(
-        &wpm_text,
+        "wpm",
         x,
         y,
         TextParams {
             font,
-            font_size: font_size as u16,
+            font_size: 30.0 as u16,
+            color: Color::from_rgba(255, 255, 255, 80),
+            ..Default::default()
+        },
+    );
+    draw_text_ex(
+        &wpm_text,
+        x,
+        y + 80.0,
+        TextParams {
+            font,
+            font_size: 75,
             color: Color::from_rgba(255, 155, 0, 255),
             ..Default::default()
         },
@@ -146,14 +169,25 @@ fn write_acc(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&Font>
     } else {
         0.0
     };
-    let acc_text = format!("Accuracy: {:.0}%", accuracy);
+    let acc_text = format!("{:.0}%", accuracy);
     draw_text_ex(
-        &acc_text,
+        "acc",
         x,
         y,
         TextParams {
             font,
-            font_size: font_size as u16,
+            font_size: 30.0 as u16,
+            color: Color::from_rgba(255, 255, 255, 80),
+            ..Default::default()
+        },
+    );
+    draw_text_ex(
+        &acc_text,
+        x,
+        y + 80.0,
+        TextParams {
+            font,
+            font_size: 75,
             color: Color::from_rgba(255, 155, 0, 255),
             ..Default::default()
         },
@@ -197,14 +231,8 @@ fn smooth(values: &[f64], window: usize, average_word_length: f64) -> Vec<f64> {
     smoothed
 }
 
-/*fn draw_chart(points: &[[f64; 2]]) {
+fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x: f32, chart_y: f32) {
     egui_macroquad::ui(|ctx| {
-        let screen_width = macroquad::window::screen_width();
-        let chart_width = 1300.0;
-        let chart_height = 300.0;
-        let chart_x = (screen_width - chart_width) / 2.0;
-        let chart_y = (screen_height() - chart_height) / 4.0;
-
         Area::new("chart_area".into())
             .fixed_pos(pos2(chart_x, chart_y))
             .show(ctx, |ui| {
@@ -214,52 +242,12 @@ fn smooth(values: &[f64], window: usize, average_word_length: f64) -> Vec<f64> {
 
                 let mut child_ui = ui.child_ui(rect, *ui.layout(), None);
 
-                Plot::new("performance_plot")
-                    .view_aspect(2.0)
-                    .include_y(0.0)
-                    .show_background(false)
-                    .show_axes([true, true])
-                    .show_grid(true)
-                    .view_aspect(5.0)
-                    .x_axis_label("Time (s)")
-                    .y_axis_label("Speed (WPM)")
-                    .show(&mut child_ui, |plot_ui| {
-                        let line = Line::new("Performance", points.to_vec())
-                            .color(Color32::from_rgb(255, 155, 0))
-                            .highlight(true)
-                            .name("Performance");
-                        plot_ui.line(line);
-                    });
-            });
-    });
-}*/
-
-
-fn draw_chart(points: &[[f64; 2]]) {
-    egui_macroquad::ui(|ctx| {
-        let screen_width = macroquad::window::screen_width();
-        let chart_width = 1300.0;
-        let chart_height = 500.0;
-        let chart_x = (screen_width - chart_width) / 2.0;
-        let chart_y = (screen_height() - chart_height) / 4.0;
-
-        Area::new("chart_area".into())
-            .fixed_pos(pos2(chart_x, chart_y))
-            .show(ctx, |ui| {
-                let size = egui::Vec2::new(chart_width, chart_height);
-                let (rect, _response) = ui.allocate_exact_size(size, egui::Sense::hover());
-                ui.painter().rect_filled(rect, 5.0, Color32::from_rgb(20, 17, 15));
-
-                let mut child_ui = ui.child_ui(rect, *ui.layout(), None);
-
-                // Custom grid spacer for x-axis (every 2 seconds)
                 let grid_spacer = |input: egui_plot::GridInput| -> Vec<egui_plot::GridMark> {
                     let min = input.bounds.0;
                     let max = input.bounds.1;
-                    let step = 20.0; // Grid every 2 seconds
+                    let step = 20.0;
                     let mut marks = Vec::new();
                     
-                    // Start from the first multiple of step >= min
                     let mut current = (min / step).ceil() * step;
                     while current <= max {
                         marks.push(egui_plot::GridMark {
@@ -271,6 +259,14 @@ fn draw_chart(points: &[[f64; 2]]) {
                     marks
                 };
 
+                let max_x = points.len() as f64;
+                let mut max_y = 60.0;
+                for point in points {
+                    if point[1] > max_y {
+                        max_y = point[1];
+                    }
+                }
+
                 Plot::new("performance_plot")
                     .include_y(0.0)
                     .show_background(false)
@@ -279,7 +275,9 @@ fn draw_chart(points: &[[f64; 2]]) {
                     .view_aspect(5.0)
                     .x_axis_label("Time (s)")
                     .y_axis_label("Speed (WPM)")
-                    .y_grid_spacer(grid_spacer) // Apply custom grid spacing
+                    .y_grid_spacer(grid_spacer)
+                    .default_x_bounds(0.0, max_x)
+                    .default_y_bounds(0.0, max_y)
                     .show(&mut child_ui, |plot_ui| {
                         let line = Line::new("Performance", points.to_vec())
                             .color(Color32::from_rgb(255, 155, 0))
