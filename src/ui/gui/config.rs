@@ -224,10 +224,12 @@ pub fn handle_settings_buttons(
 
             if *quote {
                 *reference = utils::get_random_quote();
+                *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
                 *punctuation = false;
                 *numbers = false;
             } else {
                 *reference = utils::get_reference(*punctuation, *numbers, word_list, *batch_size);
+                *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
             }
             reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done);
         }

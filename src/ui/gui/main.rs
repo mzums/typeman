@@ -93,10 +93,10 @@ pub fn handle_input(
                 *pos1 -= 1;
             }
         } else {
-            let ref_char = reference.chars().nth(*pos1);
+            let ref_char: Option<char> = reference.chars().nth(*pos1);
+            println!("{} {}", is_correct.len(), *pos1);
             if is_correct.len() > *pos1 && ref_char == Some(ch) && is_correct[*pos1] != -1 && is_correct[*pos1] != 1 {
                 is_correct[*pos1] = 2; // Correct
-                println!("{} {}", is_correct.len(), *pos1);
             } else if ref_char == Some(ch) && is_correct[*pos1] == -1 {
                 is_correct[*pos1] = 1; // Corrected
             } else {
@@ -395,6 +395,7 @@ pub async fn gui_main_async() {
                     &mut words_done,
                 );
                 reference = utils::get_reference(punctuation, false, &word_list, batch_size);
+                is_correct = VecDeque::from(vec![0; reference.len()]);
                 thread::sleep(time::Duration::from_millis(50));
             }
 

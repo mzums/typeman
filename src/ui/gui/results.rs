@@ -15,6 +15,13 @@ fn get_typed_words(reference: &str, typed_chars: usize) -> usize {
     res
 }
 
+fn calc_standard_deviation(values: &[f64], average_word_length: f64) -> f64 {
+    let wpm_values: Vec<f64> = values.iter().map(|&cpm| cpm / average_word_length).collect();
+    let mean = wpm_values.iter().sum::<f64>() / wpm_values.len() as f64;
+    let variance = wpm_values.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / wpm_values.len() as f64;
+    variance.sqrt()
+}
+
 pub fn write_results(
     is_correct: &VecDeque<i32>,
     pressed_vec: &Vec<char>,
@@ -27,7 +34,7 @@ pub fn write_results(
     speed_per_second: &Vec<f64>,
     average_word_length: f64,
 ) {
-    write_wpm(
+    let avg_wpm = write_wpm(
         &reference,
         pressed_vec.len(),
         font,
@@ -52,7 +59,15 @@ pub fn write_results(
         screen_width / 2.0 - 100.0,
         screen_height / 2.0 + 200.0,
     );
-
+    write_consistency(
+        speed_per_second,
+        average_word_length,
+        font,
+        font_size,
+        screen_width / 2.0 - 100.0,
+        screen_height / 2.0 + 250.0,
+        avg_wpm,
+    );
     let mut speed2: Vec<f64> = speed_per_second.clone();
     speed2.push(*speed_per_second.last().unwrap_or(&0.0));
     let smoothed_speeds = smooth(&speed2, 3, average_word_length);
@@ -68,7 +83,37 @@ pub fn write_results(
     
 }
 
-pub fn write_wpm(
+fn write_consistency(
+    speed_per_second: &Vec<f64>,
+    average_word_length: f64,
+    font: Option<&Font>,
+    font_size: f32,
+    x: f32,
+    y: f32,
+    avg_wpm: f32,
+) {
+    let standard_deviation = calc_standard_deviation(speed_per_second, average_word_length);
+    let consistency = if avg_wpm > 0.0 {
+        100.0 - (standard_deviation / avg_wpm as f64 * 100.0).round()
+    } else {
+        0.0
+    };
+
+    let consistency_text = format!("Consistency: {consistency}%");
+    draw_text_ex(
+        &consistency_text,
+        x,
+        y,
+        TextParams {
+            font,
+            font_size: font_size as u16,
+            color: Color::from_rgba(255, 155, 0, 255),
+            ..Default::default()
+        },
+    );
+}
+
+fn write_wpm(
     reference: &str,
     typed_chars: usize,
     font: Option<&Font>,
@@ -76,7 +121,7 @@ pub fn write_wpm(
     font_size: f32,
     x: f32,
     y: f32,
-) {
+) -> f32 {
     let typed_words = get_typed_words(reference, typed_chars);
     let wpm = typed_words as f32 * 60.0 / test_time;
     let wpm_text = format!("WPM: {:.0}", wpm);
@@ -91,9 +136,10 @@ pub fn write_wpm(
             ..Default::default()
         },
     );
+    return wpm;
 }
 
-pub fn write_acc(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&Font>, font_size: f32, x: f32, y: f32) {
+fn write_acc(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&Font>, font_size: f32, x: f32, y: f32) {
     let correct_count = is_correct.iter().filter(|&&x| x == 2 || x == 1).count();
     let accuracy = if typed_chars > 0 {
         (correct_count as f32 / typed_chars as f32 * 100.0).round()
@@ -114,7 +160,7 @@ pub fn write_acc(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&F
     );
 }
 
-pub fn write_err_rate(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&Font>, font_size: f32, x: f32, y: f32) {
+fn write_err_rate(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&Font>, font_size: f32, x: f32, y: f32) {
     let error_count = is_correct.iter().filter(|&&x| x == -1 || x == 1).count();
     let error_rate = if typed_chars > 0 {
         (error_count as f32 / typed_chars as f32 * 100.0).round()
@@ -151,13 +197,13 @@ fn smooth(values: &[f64], window: usize, average_word_length: f64) -> Vec<f64> {
     smoothed
 }
 
-fn draw_chart(points: &[[f64; 2]]) {
+/*fn draw_chart(points: &[[f64; 2]]) {
     egui_macroquad::ui(|ctx| {
         let screen_width = macroquad::window::screen_width();
         let chart_width = 1300.0;
-        let chart_height = 500.0;
+        let chart_height = 300.0;
         let chart_x = (screen_width - chart_width) / 2.0;
-        let chart_y = 30.0;
+        let chart_y = (screen_height() - chart_height) / 4.0;
 
         Area::new("chart_area".into())
             .fixed_pos(pos2(chart_x, chart_y))
@@ -174,7 +220,7 @@ fn draw_chart(points: &[[f64; 2]]) {
                     .show_background(false)
                     .show_axes([true, true])
                     .show_grid(true)
-                    .view_aspect(3.0)
+                    .view_aspect(5.0)
                     .x_axis_label("Time (s)")
                     .y_axis_label("Speed (WPM)")
                     .show(&mut child_ui, |plot_ui| {
@@ -183,17 +229,65 @@ fn draw_chart(points: &[[f64; 2]]) {
                             .highlight(true)
                             .name("Performance");
                         plot_ui.line(line);
+                    });
+            });
+    });
+}*/
 
-                        let offset_points: Vec<[f64; 2]> = points
-                            .iter()
-                            .map(|[x, y]| [*x, y + 1.0])
-                            .collect();
-                        let line2 = Line::new("Offset", offset_points)
-                            .color(Color32::from_rgb(0, 200, 255))
+
+fn draw_chart(points: &[[f64; 2]]) {
+    egui_macroquad::ui(|ctx| {
+        let screen_width = macroquad::window::screen_width();
+        let chart_width = 1300.0;
+        let chart_height = 500.0;
+        let chart_x = (screen_width - chart_width) / 2.0;
+        let chart_y = (screen_height() - chart_height) / 4.0;
+
+        Area::new("chart_area".into())
+            .fixed_pos(pos2(chart_x, chart_y))
+            .show(ctx, |ui| {
+                let size = egui::Vec2::new(chart_width, chart_height);
+                let (rect, _response) = ui.allocate_exact_size(size, egui::Sense::hover());
+                ui.painter().rect_filled(rect, 5.0, Color32::from_rgb(20, 17, 15));
+
+                let mut child_ui = ui.child_ui(rect, *ui.layout(), None);
+
+                // Custom grid spacer for x-axis (every 2 seconds)
+                let grid_spacer = |input: egui_plot::GridInput| -> Vec<egui_plot::GridMark> {
+                    let min = input.bounds.0;
+                    let max = input.bounds.1;
+                    let step = 20.0; // Grid every 2 seconds
+                    let mut marks = Vec::new();
+                    
+                    // Start from the first multiple of step >= min
+                    let mut current = (min / step).ceil() * step;
+                    while current <= max {
+                        marks.push(egui_plot::GridMark {
+                            value: current,
+                            step_size: step,
+                        });
+                        current += step;
+                    }
+                    marks
+                };
+
+                Plot::new("performance_plot")
+                    .include_y(0.0)
+                    .show_background(false)
+                    .show_axes([true, true])
+                    .show_grid(true)
+                    .view_aspect(5.0)
+                    .x_axis_label("Time (s)")
+                    .y_axis_label("Speed (WPM)")
+                    .y_grid_spacer(grid_spacer) // Apply custom grid spacing
+                    .show(&mut child_ui, |plot_ui| {
+                        let line = Line::new("Performance", points.to_vec())
+                            .color(Color32::from_rgb(255, 155, 0))
                             .highlight(true)
-                            .name("Offset +10");
-                        plot_ui.line(line2);
+                            .name("Performance");
+                        plot_ui.line(line);
                     });
             });
     });
 }
+     
