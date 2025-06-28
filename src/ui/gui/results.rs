@@ -5,16 +5,6 @@ use egui::{Color32,  Area, pos2};
 use egui_plot::{Line, Plot};
 
 
-fn get_typed_words(reference: &str, typed_chars: usize) -> usize {
-    let mut res = 0;
-    for c in reference[..typed_chars].chars() {
-        if c.is_whitespace() {
-            res += 1;
-        }
-    }
-    res
-}
-
 fn calc_standard_deviation(values: &[f64], average_word_length: f64) -> f64 {
     let wpm_values: Vec<f64> = values.iter().map(|&cpm| cpm / average_word_length).collect();
     let mean = wpm_values.iter().sum::<f64>() / wpm_values.len() as f64;
@@ -27,12 +17,12 @@ pub fn write_results(
     pressed_vec: &Vec<char>,
     screen_width: f32,
     screen_height: f32,
-    reference: &str,
     font: Option<&Font>,
     test_time: f32,
     font_size: f32,
     speed_per_second: &Vec<f64>,
     average_word_length: f64,
+    words_done: usize,
 ) {
     let correct_count = is_correct.iter().filter(|&&x| x == 2 || x == 1).count();
     let accuracy = if pressed_vec.len() > 0 {
@@ -49,18 +39,16 @@ pub fn write_results(
     let chart_y = (screen_height - chart_height) / 4.0;
 
     let avg_wpm = write_wpm(
-        &reference,
-        pressed_vec.len(),
         font,
         test_time,
         (screen_width - chart_width - 2.0 * text_size.width) / 2.0,
         (screen_height - chart_height) / 4.0,
+        words_done,
     );
     write_acc(
         &is_correct,
         pressed_vec.len(),
         font,
-        font_size,
         (screen_width - chart_width - 2.0 * text_size.width) / 2.0,
         (screen_height - chart_height) / 4.0 + 3.0 * text_size.height,
     );
@@ -83,7 +71,7 @@ pub fn write_results(
     );
     let mut speed2: Vec<f64> = speed_per_second.clone();
     speed2.push(*speed_per_second.last().unwrap_or(&0.0));
-    let smoothed_speeds = smooth(&speed2, 3, average_word_length);
+    let smoothed_speeds = smooth(&speed2, 2, average_word_length);
 
     let chart_points: Vec<[f64; 2]> = smoothed_speeds
         .iter()
@@ -107,7 +95,7 @@ fn write_consistency(
 ) {
     let standard_deviation = calc_standard_deviation(speed_per_second, average_word_length);
     let consistency = if avg_wpm > 0.0 {
-        100.0 - (standard_deviation / avg_wpm as f64 * 100.0).round()
+        (100.0 - (standard_deviation / avg_wpm as f64 * 100.0).round()).max(0.0)
     } else {
         0.0
     };
@@ -127,15 +115,13 @@ fn write_consistency(
 }
 
 fn write_wpm(
-    reference: &str,
-    typed_chars: usize,
     font: Option<&Font>,
     test_time: f32,
     x: f32,
     y: f32,
+    words_done: usize,
 ) -> f32 {
-    let typed_words = get_typed_words(reference, typed_chars);
-    let wpm = typed_words as f32 * 60.0 / test_time;
+    let wpm = words_done as f32 * 60.0 / test_time;
     let wpm_text = format!("{:.0}", wpm);
     draw_text_ex(
         "wpm",
@@ -162,7 +148,7 @@ fn write_wpm(
     return wpm;
 }
 
-fn write_acc(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&Font>, font_size: f32, x: f32, y: f32) {
+fn write_acc(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&Font>, x: f32, y: f32) {
     let correct_count = is_correct.iter().filter(|&&x| x == 2 || x == 1).count();
     let accuracy = if typed_chars > 0 {
         (correct_count as f32 / typed_chars as f32 * 100.0).round()
@@ -217,7 +203,8 @@ fn write_err_rate(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&
 
 fn smooth(values: &[f64], window: usize, average_word_length: f64) -> Vec<f64> {
     let len = values.len();
-    let mut smoothed = Vec::with_capacity(len);
+    let mut smoothed = Vec::with_capacity(len+1);
+    smoothed.push(0.0);
 
     for i in 0..len {
         let start = i.saturating_sub(window);
@@ -259,13 +246,14 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                     marks
                 };
 
-                let max_x = points.len() as f64;
-                let mut max_y = 60.0;
+                let max_x = points.len() as f64 - 1.0;
+                let mut max_y = 50.0;
                 for point in points {
                     if point[1] > max_y {
                         max_y = point[1];
                     }
                 }
+                max_y += 10.0;
 
                 Plot::new("performance_plot")
                     .include_y(0.0)
@@ -276,7 +264,7 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                     .x_axis_label("Time (s)")
                     .y_axis_label("Speed (WPM)")
                     .y_grid_spacer(grid_spacer)
-                    .default_x_bounds(0.0, max_x)
+                    .default_x_bounds(1.0, max_x)
                     .default_y_bounds(0.0, max_y)
                     .show(&mut child_ui, |plot_ui| {
                         let line = Line::new("Performance", points.to_vec())

@@ -3,7 +3,6 @@ use std::collections::VecDeque;
 use macroquad::prelude::*;
 use std::time::{Instant, Duration};
 
-
 use crate::ui::gui::main;
 use crate::utils;
 

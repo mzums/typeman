@@ -16,13 +16,13 @@ pub const MAIN_COLOR: macroquad::color::Color = macroquad::color::Color::from_rg
 fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32) {
     let (type_text, man_text) = ("Type", "Man");
     let type_width = measure_text(type_text, font.as_ref(), font_size as u16, 1.0).width;
-    
+
     for (text, color, dx) in [
         (type_text, MAIN_COLOR, 0.0),
         (man_text, macroquad::color::Color::from_rgba(255, 255, 255, 220), type_width),
         ] {
             draw_text_ex(
-                text,    
+                text,
                 x + dx,
                 y,
                 TextParams {
@@ -30,9 +30,9 @@ fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32) {
                     font_size: font_size as u16,
                     color,
                     ..Default::default()
-            },    
+            },
         );
-    }    
+    }
 }
     
 pub fn create_lines(reference: &str, font: Option<Font>, font_size: f32, max_width: f32, quote: bool, word_mode: bool) -> Vec<String> {
@@ -250,7 +250,7 @@ pub async fn gui_main_async() {
 
     let words: Vec<&str> = reference.split_whitespace().collect();
     let average_word_length: f64 = if !words.is_empty() {
-        words.iter().map(|w| w.len()).sum::<usize>() as f64 / words.len() as f64
+        words.iter().map(|w| w.len()).sum::<usize>() as f64 / words.len() as f64 + 1.0
     } else {
         5.0
     };
@@ -323,8 +323,6 @@ pub async fn gui_main_async() {
 
             if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done) {
                 game_started = true;
-                //timer = time::Duration::from_secs(0);
-                //start_time = Instant::now();
             }
             
             if game_started && !game_over {
@@ -370,7 +368,6 @@ pub async fn gui_main_async() {
                     draw_cursor(calc_pos_x, calc_pos_y, start_x, start_y, line_h, char_w);
                 }
             } else {
-                
                 draw_cursor(calc_pos_x, calc_pos_y, start_x, start_y, line_h, char_w);
             }
             
@@ -409,8 +406,6 @@ pub async fn gui_main_async() {
                 char_number = total_typed;
                 last_recorded_time += Duration::from_secs(1);
             }
-
-
         }  
         else if game_over {
             results::write_results(
@@ -418,15 +413,14 @@ pub async fn gui_main_async() {
                 &pressed_vec,
                 screen_width(),
                 screen_height(),
-                &reference,
                 font.as_ref(),
                 test_time,
                 60.0,
                 &speed_per_second,
                 average_word_length,
+                words_done,
             );
         }
-
         next_frame().await;
     }
 }
