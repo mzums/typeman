@@ -16,11 +16,11 @@ fn draw_toggle_button(
     is_active: bool,
     inactive_color: Color,
     visible: bool,
+    font_size: u16,
 ) -> (bool, bool, f32) {
     if !visible {
         return (false, false, 0.0);
     }
-    let font_size = 22;
     let padding = 10.0;
         
     let text_dims = measure_text(&label, Some(font.as_ref().unwrap()), font_size, 1.0);
@@ -129,6 +129,7 @@ pub fn handle_settings_buttons(
     last_recorded_time: &mut Instant,
     words_done: &mut usize,
     errors_per_second: &mut Vec<f64>,
+    font_size: u16,
 ) -> bool {
     let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = 200.0;
@@ -158,23 +159,30 @@ pub fn handle_settings_buttons(
     for (label, state_val, visible) in button_states.iter_mut() {
         let x = start_x + total_width;
         let is_active = *state_val;
+        let mut y = btn_y;
+        if *label == "! punctuation" || *label == "quote" {
+            y -= (measure_text("p", font.as_ref(), font_size, 1.0).height - 
+                   measure_text("n", font.as_ref(), font_size, 1.0).height) / 2.0;
+        }
+
         let (clicked, hovered, btni_width) = draw_toggle_button(
             x, 
-            btn_y,
+            y,
             btn_padding,
             label,
             font, 
             is_active, 
             inactive_color,
             *visible,
+            font_size,
         );
         total_width += btni_width;
         
-        if hovered && state_val != &divider {
+        if hovered && *label != "|" {
             any_button_hovered = true;
         }
         
-        if clicked && state_val != &divider {
+        if clicked && *label != "|"  && (!is_active || (*label == "! punctuation" || *label == "# numbers")) {
             match *label {
                 "! punctuation" => {
                     *punctuation = !*punctuation;

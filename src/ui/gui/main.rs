@@ -331,6 +331,7 @@ pub async fn gui_main_async() {
                 &mut last_recorded_time,
                 &mut words_done,
                 &mut errors_per_second,
+                22,
             );
 
             
@@ -422,6 +423,25 @@ pub async fn gui_main_async() {
                 errors_this_second = 0.0;
                 last_recorded_time += Duration::from_secs(1);
             }
+
+            if is_key_down(KeyCode::Tab) && is_key_down(KeyCode::Enter) {
+                config::reset_game_state(
+                    &mut pressed_vec,
+                    &mut is_correct,
+                    &mut pos1,
+                    &mut timer,
+                    &mut start_time,
+                    &mut game_started,
+                    &mut game_over,
+                    &mut speed_per_second,
+                    &mut last_recorded_time,
+                    &mut words_done,
+                    &mut errors_per_second,
+                );
+                reference = utils::get_reference(punctuation, false, &word_list, batch_size);
+                is_correct = VecDeque::from(vec![0; reference.len()]);
+                thread::sleep(time::Duration::from_millis(80));
+            }
         }  
         else if game_over {
             let mode = if time_mode {
@@ -446,28 +466,33 @@ pub async fn gui_main_async() {
                 numbers,
                 &errors_per_second,
             );
+
+            if is_key_down(KeyCode::Tab) && is_key_down(KeyCode::Enter) {
+                config::reset_game_state(
+                    &mut pressed_vec,
+                    &mut is_correct,
+                    &mut pos1,
+                    &mut timer,
+                    &mut start_time,
+                    &mut game_started,
+                    &mut game_over,
+                    &mut speed_per_second,
+                    &mut last_recorded_time,
+                    &mut words_done,
+                    &mut errors_per_second,
+                );
+                reference = utils::get_reference(punctuation, false, &word_list, batch_size);
+                is_correct = VecDeque::from(vec![0; reference.len()]);
+                thread::sleep(time::Duration::from_millis(80));
+            }
+            else {
+                let _pressed = get_char_pressed();
+            }
         }
         if is_key_down(KeyCode::Escape) {
             break;
         }
-        if is_key_down(KeyCode::Tab) && is_key_down(KeyCode::Enter) {
-            config::reset_game_state(
-                &mut pressed_vec,
-                &mut is_correct,
-                &mut pos1,
-                &mut timer,
-                &mut start_time,
-                &mut game_started,
-                &mut game_over,
-                &mut speed_per_second,
-                &mut last_recorded_time,
-                &mut words_done,
-                &mut errors_per_second,
-            );
-            reference = utils::get_reference(punctuation, false, &word_list, batch_size);
-            is_correct = VecDeque::from(vec![0; reference.len()]);
-            thread::sleep(time::Duration::from_millis(80));
-        }
+
 
         draw_shortcut_info(font.as_ref(), 20.0, screen_width() / 2.0 - max_width / 2.0, screen_height() - 100.0);
 

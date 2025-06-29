@@ -9,12 +9,11 @@ mod ui {
         pub mod results;
         pub mod config;
     }
-    // DODAJ TUI MODULE
     pub mod tui {
         pub mod app;
         pub mod event;
         pub mod ui;
-        pub mod r#mod; // to będzie src/ui/tui/mod.rs
+        pub mod r#mod;
     }
 }
 mod modes;
