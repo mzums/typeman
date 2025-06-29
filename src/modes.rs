@@ -10,10 +10,18 @@ use crate::ui::gui::main as gui;
 use crate::Cli;
 use crate::Quote;
 use crate::utils;
+use crate::ui::tui::r#mod as tui_mod;
 
 
 pub fn gui_main() {
     macroquad::Window::new("Hello World", async { gui::gui_main_async().await });
+}
+
+pub fn tui_main() {
+    if let Err(e) = tui_mod::run() {
+        eprintln!("Błąd TUI: {}", e);
+        std::process::exit(1);
+    }
 }
 
 pub fn word_mode(args: &Cli) {

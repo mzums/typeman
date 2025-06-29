@@ -9,6 +9,13 @@ mod ui {
         pub mod results;
         pub mod config;
     }
+    // DODAJ TUI MODULE
+    pub mod tui {
+        pub mod app;
+        pub mod event;
+        pub mod ui;
+        pub mod r#mod; // to będzie src/ui/tui/mod.rs
+    }
 }
 mod modes;
 mod practice;
@@ -25,18 +32,20 @@ type-test -q
 type-test -t=30 -n=500
 type-test -w=50 -n=500
 type-test -w=50 -n=500 -p -d
-type_test",
+type_test --tui",
     long_about = "\n
 Run 'type-test -c <path/to/your/file>' to test your typing on a specified text
 Run 'type-test -q' to test your typing on a random quote
 Run 'type-test -w=50 (-n=500 -p -d)' to test your typing on n most common English words, specify the -w for number of words (default is 50)
 Run 'type-test (-t=30 -n=500 -p -d)' to test your typing on random words for t seconds; -t sets the time limit (default is 30 seconds)
+Run 'type-test --tui' to start the terminal-based interface
 
 Optional:
   - Use -p to include punctuation, -d to include digits
   - Use -n to specify the number of words to type (default is 50, max is 500)
   - Use -t to set a time limit for the test (default is 30 seconds, use 0 for no limit)
   - Use -n to specify the number of top words to use (default is 500, max is 1000)
+  - Use --tui for terminal-based interface
 
 Default behavior is to test typing on random words for 30 seconds with 500 most common English words.
     "
@@ -69,6 +78,9 @@ struct Cli {
 
     #[arg(long = "gui", conflicts_with_all = &["custom_file", "random_quote", "time_limit", "top_words", "word_number", "level"])]
     gui: bool,
+
+    #[arg(long = "tui", conflicts_with_all = &["custom_file", "random_quote", "time_limit", "top_words", "word_number", "level", "gui"])]
+    tui: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -82,6 +94,10 @@ fn main() {
 
     if args.gui {
         modes::gui_main();
+        return;
+    }
+    if args.tui {
+        modes::tui_main();
         return;
     }
 
