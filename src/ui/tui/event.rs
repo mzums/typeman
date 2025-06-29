@@ -1,42 +1,81 @@
-use crossterm::event::{self, Event as CEvent, KeyEvent};
-use std::time::Duration;
-use std::{sync::mpsc, thread};
+use crate::ui::tui::app::{App, CurrentScreen, CurrentlyEditing};
+use crossterm::event::KeyEvent;
+use crossterm::event::KeyCode;
 
 pub enum Event {
     Key(KeyEvent),
-    Tick,
 }
 
-pub struct EventHandler {
-    rx: mpsc::Receiver<Event>,
-}
-
-impl EventHandler {
-    pub fn new(tick_rate: u64) -> Self {
-        let (tx, rx) = mpsc::channel();
-        let tx_clone = tx.clone();
-        
-        thread::spawn(move || {
-            loop {
-                if event::poll(Duration::from_millis(tick_rate)).unwrap() {
-                    if let Ok(CEvent::Key(key)) = event::read() {
-                        tx.send(Event::Key(key)).unwrap();
+pub fn handle_key_event(key: KeyEvent, app: &mut App) -> Option<bool> {
+    match app.current_screen {
+        CurrentScreen::Main => match key.code {
+            KeyCode::Char('e') => {
+                app.current_screen = CurrentScreen::Editing;
+                app.currently_editing = Some(CurrentlyEditing::Key);
+                None
+            }
+            KeyCode::Char('q') => {
+                app.current_screen = CurrentScreen::Exiting;
+                None
+            }
+            _ => None,
+        },
+        CurrentScreen::Exiting => match key.code {
+            KeyCode::Char('y') => Some(true),
+            KeyCode::Char('n') | KeyCode::Char('q') => Some(false),
+            _ => None,
+        },
+        CurrentScreen::Editing => match key.code {
+            KeyCode::Enter => {
+                if let Some(editing) = &app.currently_editing {
+                    match editing {
+                        CurrentlyEditing::Key => {
+                            app.currently_editing = Some(CurrentlyEditing::Value);
+                        }
+                        CurrentlyEditing::Value => {
+                            app.save_key_value();
+                            app.current_screen = CurrentScreen::Main;
+                        }
                     }
                 }
-                tx_clone.send(Event::Tick).unwrap();
+                None
             }
-        });
-        
-        EventHandler { rx }
-    }
-
-    pub fn next(&self) -> Result<Option<Event>, mpsc::RecvError> {
-        match self.rx.recv_timeout(Duration::from_millis(100)) {
-            Ok(event) => Ok(Some(event)),
-            Err(mpsc::RecvTimeoutError::Timeout) => Ok(None),
-            Err(mpsc::RecvTimeoutError::Disconnected) => {
-                Err(mpsc::RecvError)
+            KeyCode::Backspace => {
+                if let Some(editing) = &app.currently_editing {
+                    match editing {
+                        CurrentlyEditing::Key => {
+                            app.key_input.pop();
+                        }
+                        CurrentlyEditing::Value => {
+                            app.value_input.pop();
+                        }
+                    }
+                }
+                None
             }
-        }
+            KeyCode::Esc => {
+                app.current_screen = CurrentScreen::Main;
+                app.currently_editing = None;
+                None
+            }
+            KeyCode::Tab => {
+                app.toggle_editing();
+                None
+            }
+            KeyCode::Char(value) => {
+                if let Some(editing) = &app.currently_editing {
+                    match editing {
+                        CurrentlyEditing::Key => {
+                            app.key_input.push(value);
+                        }
+                        CurrentlyEditing::Value => {
+                            app.value_input.push(value);
+                        }
+                    }
+                }
+                None
+            }
+            _ => None,
+        },
     }
 }
