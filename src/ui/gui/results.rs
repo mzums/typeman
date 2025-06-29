@@ -23,6 +23,8 @@ pub fn write_results(
     average_word_length: f64,
     words_done: usize,
     mode: &str,
+    punctuation: bool,
+    numbers: bool,
 ) {
     let correct_count = is_correct.iter().filter(|&&x| x == 2 || x == 1).count();
     let accuracy = if pressed_vec.len() > 0 {
@@ -33,16 +35,19 @@ pub fn write_results(
 
     let text_size = measure_text(&format!("{}%", accuracy), font, 60, 1.0);
     let chart_width = f32::min(0.7 * screen_width, 1800.0);
-    let chart_height: f32 = f32::min(chart_width / 4.0, 300.0);
+    let chart_height: f32 = f32::min(chart_width / 5.0, 360.0);
 
     let chart_x = (screen_width - chart_width + 1.5 * text_size.width) / 2.0;
     let chart_y = (screen_height - chart_height) / 4.0;
+
+    let text2_width = measure_text("consistency", font, 25, 1.0).width;
+    let padding = (chart_width - 4.0 * text2_width) / 3.0;
 
     let avg_wpm = write_wpm(
         font,
         test_time,
         (screen_width - chart_width - 2.0 * text_size.width) / 2.0,
-        (screen_height - chart_height) / 4.0,
+        (screen_height - chart_height) / 3.8,
         words_done,
     );
     write_acc(
@@ -50,34 +55,36 @@ pub fn write_results(
         pressed_vec.len(),
         font,
         (screen_width - chart_width - 2.0 * text_size.width) / 2.0,
-        (screen_height - chart_height) / 4.0 + 3.5 * text_size.height,
+        (screen_height - chart_height) / 3.8 + text_size.height * 3.0,
     );
     write_err_rate(
         &is_correct,
         pressed_vec.len(),
         font,
         (screen_width - chart_width + 2.0 * text_size.width) / 2.0,
-        (screen_height - chart_height) / 2.0 - text_size.height * 3.0,
+        chart_y + chart_height + 20.0,
     );
     write_consistency(
         speed_per_second,
         average_word_length,
         font,
-        (screen_width - chart_width + 7.0 * text_size.width) / 2.0,
-        (screen_height - chart_height) / 2.0 - text_size.height * 3.0,
+        (screen_width - chart_width + 2.0 * text_size.width) / 2.0 + text2_width + padding,
+        chart_y + chart_height + 20.0,
         avg_wpm,
     );
     write_time(
         test_time,
         font,
-        (screen_width - chart_width + 12.0 * text_size.width) / 2.0,
-        (screen_height - chart_height) / 2.0 - text_size.height * 3.0,
+        (screen_width - chart_width + 2.0 * text_size.width) / 2.0 + (text2_width + padding) * 2.0,
+        chart_y + chart_height + 20.0,
     );
     write_mode(
         font,
-        (screen_width - chart_width + 17.0 * text_size.width) / 2.0,
-        (screen_height - chart_height) / 2.0 - text_size.height * 3.0,
+        (screen_width - chart_width + 2.0 * text_size.width) / 2.0 + (text2_width + padding) * 3.0,
+        chart_y + chart_height + 20.0,
         mode,
+        punctuation,
+        numbers,
     );
 
     let mut speed2: Vec<f64> = speed_per_second.clone();
@@ -100,8 +107,14 @@ fn write_mode(
     x: f32,
     y: f32,
     mode: &str,
+    punctuation: bool,
+    numbers: bool,
 ) {
     let mode_text = format!("{mode}");
+    let mut font_size = 50;
+    let mut punct_pos: f32 = y;
+    let mut number_pos: f32 = y;
+    let mut mode_pos: f32 = y + 50.0;
     draw_text_ex(
         "mode",
         x,
@@ -113,17 +126,59 @@ fn write_mode(
             ..Default::default()
         },
     );
+    if punctuation && numbers{
+        punct_pos = y + 70.0;
+        number_pos = y + 90.0;
+        font_size = 20;
+        mode_pos = y + 40.0;
+    }
+    else if punctuation || numbers {
+        font_size = 20;
+        mode_pos = y + 40.0;
+        if punctuation {
+            punct_pos = y + 70.0;
+        } else {
+            number_pos = y + 70.0;
+        }
+    }
+
     draw_text_ex(
         &mode_text,
         x,
-        y + 50.0,
+        mode_pos,
         TextParams {
             font,
-            font_size: 50,
+            font_size: font_size + 10,
             color: Color::from_rgba(255, 155, 0, 255),
             ..Default::default()
         },
     );
+    if punctuation {
+        draw_text_ex(
+            "punctuation",
+            x,
+            punct_pos,
+            TextParams {
+                font,
+                font_size: font_size,
+                color: Color::from_rgba(255, 155, 0, 255),
+                ..Default::default()
+            },
+        );
+    }
+    if numbers {
+        draw_text_ex(
+            "numbers",
+            x,
+            number_pos,
+            TextParams {
+                font,
+                font_size: font_size,
+                color: Color::from_rgba(255, 155, 0, 255),
+                ..Default::default()
+            },
+        );
+    }
 }
 
 fn write_time(
@@ -366,8 +421,14 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                             .highlight(true)
                             .name("Performance");
                         plot_ui.line(line);
+                        
+                        let dots = egui_plot::Points::new("Errors", points.to_vec())
+                            .color(Color32::RED)
+                            .radius(3.0)
+                            .shape(egui_plot::MarkerShape::Circle)
+                            .name("Errors");
+                        plot_ui.points(dots);
                     });
             });
     });
 }
-     
