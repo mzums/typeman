@@ -34,6 +34,31 @@ fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32) {
         );
     }
 }
+
+fn draw_shortcut_info(font: Option<&Font>, font_size: f32, x: f32, y: f32) {
+    draw_text_ex(
+        "Tab + Enter - reset",
+        x,
+        y,
+        TextParams {
+            font,
+            font_size: font_size as u16,
+            color: macroquad::color::Color::from_rgba(255, 255, 255, 80),
+            ..Default::default()
+        },
+    );
+    draw_text_ex(
+        "Esc - quit",
+        x,
+        y + font_size * 1.2,
+        TextParams {
+            font,
+            font_size: font_size as u16,
+            color: macroquad::color::Color::from_rgba(255, 255, 255, 80),
+            ..Default::default()
+        },
+    );
+}
     
 pub fn create_lines(reference: &str, font: Option<Font>, font_size: f32, max_width: f32, quote: bool, word_mode: bool) -> Vec<String> {
     let mut lines = Vec::new();
@@ -81,9 +106,13 @@ pub fn handle_input(
     is_correct: &mut VecDeque<i32>,
     pos1: &mut usize,
     words_done: &mut usize,
+    errors_this_second: &mut f64,
 ) -> bool {
     let pressed = get_char_pressed();
     if let Some(ch) = pressed {
+        if ch == '\t' || ch == '\n' || ch == '\r' {
+            return false;
+        }
         if ch == '\u{8}' {
             if !pressed_vec.is_empty() && reference.chars().nth(*pos1) == Some(' ') {
                 *words_done -= 1;
@@ -100,6 +129,7 @@ pub fn handle_input(
                 is_correct[*pos1] = 1; // Corrected
             } else {
                 is_correct[*pos1] = -1; // Incorrect
+                *errors_this_second += 1.0;
             }
             *pos1 += 1;
             pressed_vec.push(ch);
@@ -236,11 +266,13 @@ pub async fn gui_main_async() {
     let mut pos1: usize = 0;
     let mut timer = time::Duration::from_secs(0);
     let mut start_time: Instant = Instant::now();
-    let mut test_time = 1.0;
+    let mut test_time = 10.0;
     let mut game_started = false;
     let mut game_over = false;
 
     let mut speed_per_second: Vec<f64> = vec![];
+    let mut errors_per_second: Vec<f64> = vec![];
+    let mut errors_this_second: f64 = 0.0;
     let mut char_number = 0;
 
     let mut lines: Vec<String>;
@@ -298,6 +330,7 @@ pub async fn gui_main_async() {
                 &mut speed_per_second,
                 &mut last_recorded_time,
                 &mut words_done,
+                &mut errors_per_second,
             );
 
             
@@ -319,9 +352,10 @@ pub async fn gui_main_async() {
                 test_time,
                 time_mode,
                 &mut words_done,
+                &mut errors_this_second,
             );
 
-            if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done) {
+            if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second) {
                 game_started = true;
             }
             
@@ -343,7 +377,7 @@ pub async fn gui_main_async() {
                 screen_height() / 15.0,
             );
             
-            handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done);
+            handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second);
             
             if time_mode {
                 draw_timer(font.as_ref(), font_size, start_x, start_y, timer, test_time);
@@ -383,6 +417,9 @@ pub async fn gui_main_async() {
                 speed_per_second.push(cpm);
 
                 char_number = total_typed;
+
+                errors_per_second.push(errors_this_second);
+                errors_this_second = 0.0;
                 last_recorded_time += Duration::from_secs(1);
             }
         }  
@@ -407,6 +444,7 @@ pub async fn gui_main_async() {
                 &mode,
                 punctuation,
                 numbers,
+                &errors_per_second,
             );
         }
         if is_key_down(KeyCode::Escape) {
@@ -424,11 +462,14 @@ pub async fn gui_main_async() {
                 &mut speed_per_second,
                 &mut last_recorded_time,
                 &mut words_done,
+                &mut errors_per_second,
             );
             reference = utils::get_reference(punctuation, false, &word_list, batch_size);
             is_correct = VecDeque::from(vec![0; reference.len()]);
-            thread::sleep(time::Duration::from_millis(50));
+            thread::sleep(time::Duration::from_millis(80));
         }
+
+        draw_shortcut_info(font.as_ref(), 20.0, screen_width() / 2.0 - max_width / 2.0, screen_height() - 100.0);
 
         next_frame().await;
     }

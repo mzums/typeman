@@ -25,6 +25,7 @@ pub fn write_results(
     mode: &str,
     punctuation: bool,
     numbers: bool,
+    errors_per_second: &Vec<f64>,
 ) {
     let correct_count = is_correct.iter().filter(|&&x| x == 2 || x == 1).count();
     let accuracy = if pressed_vec.len() > 0 {
@@ -33,7 +34,14 @@ pub fn write_results(
         0.0
     };
 
-    let text_size = measure_text(&format!("{}%", accuracy), font, 60, 1.0);
+    let wpm = (words_done as f32 * 60.0 / test_time) as i32;
+
+    let text_size = {
+        let a = measure_text(&format!("{}%", accuracy), font, 60, 1.0);
+        let b = measure_text(&format!("{wpm}"), font, 60, 1.0);
+        if a.width > b.width { a } else { b }
+    };
+
     let chart_width = f32::min(0.7 * screen_width, 1800.0);
     let chart_height: f32 = f32::min(chart_width / 5.0, 360.0);
 
@@ -97,7 +105,7 @@ pub fn write_results(
         .map(|(i, &cpm)| [i as f64, cpm])
         .collect();
 
-    draw_chart(&chart_points, chart_width, chart_height, chart_x, chart_y);
+    draw_chart(&chart_points, chart_width, chart_height, chart_x, chart_y, errors_per_second);
     egui_macroquad::draw();
     
 }
@@ -367,7 +375,10 @@ fn smooth(values: &[f64], window: usize, average_word_length: f64) -> Vec<f64> {
     smoothed
 }
 
-fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x: f32, chart_y: f32) {
+fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x: f32, chart_y: f32, errors_per_second: &Vec<f64>) {
+    let mut errors: Vec<f64> = Vec::new();
+    errors.push(0.0);
+    errors.extend(errors_per_second.iter().cloned());
     egui_macroquad::ui(|ctx| {
         Area::new("chart_area".into())
             .fixed_pos(pos2(chart_x, chart_y))
@@ -413,7 +424,7 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                     .x_axis_label("Time (s)")
                     .y_axis_label("Speed (WPM)")
                     .y_grid_spacer(grid_spacer)
-                    .default_x_bounds(1.0, max_x)
+                    .default_x_bounds(0.8, max_x)
                     .default_y_bounds(0.0, max_y)
                     .show(&mut child_ui, |plot_ui| {
                         let line = Line::new("Performance", points.to_vec())
@@ -421,13 +432,27 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                             .highlight(true)
                             .name("Performance");
                         plot_ui.line(line);
-                        
-                        let dots = egui_plot::Points::new("Errors", points.to_vec())
-                            .color(Color32::RED)
-                            .radius(3.0)
-                            .shape(egui_plot::MarkerShape::Circle)
-                            .name("Errors");
-                        plot_ui.points(dots);
+
+                        let error_points: Vec<([f64; 2], f32)> = errors
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(i, &val)| {
+                                if val > 0.0 {
+                                    Some(([i as f64, val + 5.0], 2.0 + (val as f32 * 1.5)))
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+                        for (point, radius) in error_points.iter() {
+                            let num_errors = errors[point[0] as usize];
+                            let dots = egui_plot::Points::new(format!("Errors at t={}", point[0]), vec![*point])
+                                .color(Color32::RED)
+                                .radius(*radius)
+                                .shape(egui_plot::MarkerShape::Circle)
+                                .name(format!("Errors: {}", num_errors as u32));
+                            plot_ui.points(dots);
+                        }
                     });
             });
     });
