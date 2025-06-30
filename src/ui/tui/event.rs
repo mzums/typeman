@@ -11,7 +11,7 @@ pub enum Event {
 
 pub fn handle_input_events(tx: mpsc::Sender<Event>) {
     loop {
-        if event::poll(Duration::from_millis(100)).unwrap() {
+        if event::poll(Duration::from_millis(0)).unwrap() {
             if let CEvent::Key(key) = event::read().unwrap() {
                 tx.send(Event::Input(key)).unwrap();
             }
@@ -25,7 +25,12 @@ pub fn run_background_thread(tx: mpsc::Sender<Event>) {
     
     loop {
         thread::sleep(Duration::from_millis(100));
-        progress = (progress + increment).min(1.0);
+        progress += increment;
+        if progress > 1.0 {
+            progress = 1.0;
+            tx.send(Event::Progress(progress)).unwrap();
+            progress = 0.0;
+        }
         tx.send(Event::Progress(progress)).unwrap();
     }
 }

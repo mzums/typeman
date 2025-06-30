@@ -13,6 +13,7 @@ pub struct ProgressBar {
 pub struct App {
     pub exit: bool,
     pub progress_bars: Vec<ProgressBar>,
+    pub selected: usize,
 }
 
 impl App {
@@ -20,6 +21,7 @@ impl App {
         Self {
             exit: false,
             progress_bars: vec![ProgressBar { progress: 0.0, color: Color::Green }],
+            selected: 0,
         }
     }
 
@@ -38,20 +40,34 @@ impl App {
         if key_event.kind == crossterm::event::KeyEventKind::Press {
             match key_event.code {
                 crossterm::event::KeyCode::Char('q') => self.exit = true,
-                crossterm::event::KeyCode::Char('c') => self.toggle_last_progress_color(),
+                crossterm::event::KeyCode::Char('c') => self.toggle_selected_progress_color(),
+                crossterm::event::KeyCode::Up => self.select_prev(),
+                crossterm::event::KeyCode::Down => self.select_next(),
                 _ => {}
             }
         }
         Ok(())
     }
 
-    fn toggle_last_progress_color(&mut self) {
-        if let Some(last) = self.progress_bars.last_mut() {
-            last.color = if last.color == Color::Green {
+    fn toggle_selected_progress_color(&mut self) {
+        if let Some(selected) = self.progress_bars.get_mut(self.selected) {
+            selected.color = if selected.color == Color::Green {
                 Color::Red
             } else {
                 Color::Green
             };
+        }
+    }
+
+    fn select_prev(&mut self) {
+        if self.selected > 0 {
+            self.selected -= 1;
+        }
+    }
+
+    fn select_next(&mut self) {
+        if self.selected + 1 < self.progress_bars.len() {
+            self.selected += 1;
         }
     }
 
@@ -60,6 +76,7 @@ impl App {
             last.progress = new_progress;
             if new_progress >= 1.0 {
                 self.progress_bars.push(ProgressBar { progress: 0.0, color: Color::Green });
+                self.selected = self.progress_bars.len() - 1;
             }
         }
     }

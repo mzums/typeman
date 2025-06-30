@@ -39,9 +39,15 @@ fn render_progress_bar(frame: &mut Frame, area: Rect, app: &App, index: usize) {
         "<q>".blue().bold(),
     ]);
 
+    let mut border_color = Color::White;
+    if index == app.selected {
+        border_color = Color::Yellow;
+    }
+
     let block = Block::bordered()
         .title("Background processes")
         .title_bottom(instructions)
+        .style(Style::default().fg(border_color))
         .border_set(border::THICK);
 
     let progress_bar = Gauge::default()
