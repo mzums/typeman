@@ -19,7 +19,7 @@ pub fn gui_main() {
 
 pub fn tui_main() {
     if let Err(e) = tui_mod::main() {
-        eprintln!("Błąd TUI: {}", e);
+        eprintln!("TUI error: {}", e);
         std::process::exit(1);
     }
 }
