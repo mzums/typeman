@@ -14,7 +14,7 @@ impl App {
         Self { exit: false }
     }
 
-    pub fn run(&mut self, terminal: &mut DefaultTerminal, _reference: String) -> io::Result<()> {
+    pub fn run(&mut self, terminal: &mut DefaultTerminal, reference: String) -> io::Result<()> {
         while !self.exit {
             if event::poll(Duration::from_millis(16))? {
                 if let CEvent::Key(key) = event::read()? {
@@ -22,7 +22,7 @@ impl App {
                 }
             }
             
-            terminal.draw(|frame| render_app(frame, self))?;
+            terminal.draw(|frame| render_app(frame, self, &reference))?;
         }
         Ok(())
     }
