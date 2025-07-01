@@ -1,68 +1,56 @@
 use ratatui::{
     prelude::*,
     widgets::*,
-    symbols::border,
     Frame,
 };
-use crate ::ui::tui::app::App;
+use crate::ui::tui::app::App;
 
-pub fn render_app(frame: &mut Frame, app: &App) {
-    let vertical_layout = Layout::vertical([
-        Constraint::Percentage(20),
-        Constraint::Percentage(80),
-    ]);
-    let [title_area, gauge_area] = vertical_layout.areas(frame.area());
+const BORDER_COLOR: Color = Color::Rgb(140, 80, 0);
+const REF_COLOR: Color = Color::Rgb(100, 100, 100);
 
-    let gauge_areas: Vec<Rect> = Layout::vertical(
-        vec![Constraint::Length(3); app.progress_bars.len()]
-    ).split(gauge_area).to_vec();
-    
-    render_title(frame, title_area);
-    for i in 0..app.progress_bars.len() {
-        render_progress_bar(frame, gauge_areas[i], app, i);
-    }
-        
+fn render_instructions(frame: &mut Frame, area: Rect) {
+    let text = Paragraph::new("\nPress 'q' to exit.").style(Style::default().fg(BORDER_COLOR));
+    frame.render_widget(text, area);
 }
 
-fn render_title(frame: &mut Frame, area: Rect) {
-    frame.render_widget(
-        Line::from("Process overview").bold(),
-        area,
-    );
+pub fn render_app(frame: &mut Frame, _app: &App) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(0),
+            Constraint::Length(3),
+            Constraint::Length(1),
+        ])
+        .split(frame.area());
+
+    render_content(frame, chunks[0]);
+    render_instructions(frame, chunks[1]);
 }
 
-fn render_progress_bar(frame: &mut Frame, area: Rect, app: &App, index: usize) {
-    let instructions = Line::from(vec![
-        "Change color".into(),
-        "<c>".blue().bold(),
-        "Exit".into(),
-        "<q>".blue().bold(),
-    ]);
+fn render_content(frame: &mut Frame, area: Rect) {
+    let empty_line = Line::from("");
+    let instructions = Line::from("! punctuation  # numbers | time  words  quote | 15 30 60 120").style(style::Style::default().fg(REF_COLOR));
 
-    let mut border_color = Color::White;
-    if index == app.selected {
-        border_color = Color::Yellow;
-    }
+    let horizontal_line = Line::from("─".repeat(area.width.saturating_sub(15) as usize).fg(BORDER_COLOR));
 
-    let block = Block::bordered()
-        .title("Background processes")
-        .title_bottom(instructions)
-        .style(Style::default().fg(border_color))
-        .border_set(border::THICK);
+    let content = vec![
+        empty_line,
+        instructions,
+        horizontal_line,
+    ];
 
-    let progress_bar = Gauge::default()
-        .gauge_style(Style::default().fg(app.progress_bars[index].color))
-        .label(format!("Progress: {:.2}%", app.progress_bars[index].progress * 100.0))
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(BORDER_COLOR))
+        .title(Line::from(vec![
+            " Type".fg(Color::Rgb(255, 155, 0)),
+            "Man ".fg(Color::White),
+        ]))
+        .title_alignment(Alignment::Center);
+
+    let paragraph = Paragraph::new(content)
         .block(block)
-        .ratio(app.progress_bars[index].progress);
+        .alignment(Alignment::Center);
 
-    frame.render_widget(
-        progress_bar,
-        Rect::new(
-            area.x,
-            area.y,
-            area.width,
-            3,
-        ),
-    );
+    frame.render_widget(paragraph, area);
 }
