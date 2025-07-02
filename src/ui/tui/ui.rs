@@ -29,7 +29,7 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Min(0),
-            Constraint::Length(3),
+            Constraint::Length(2),
         ])
         .split(frame.area());
 
@@ -41,7 +41,7 @@ fn render_reference_frame(frame: &mut Frame, area: Rect, app: &App, timer: Durat
     let max_ref_width = calculate_max_ref_width(area);
     let ref_padding = calculate_ref_padding(area, max_ref_width);
     
-    let instruction_line = create_instruction_line(area, ref_padding);
+    let instruction_line = create_instruction_line(area, ref_padding, app);
     let horizontal_line = create_horizontal_line(area);
     let timer_line = create_timer(timer, app.test_time);
     let colored_lines = create_colored_lines(app, max_ref_width);
@@ -75,8 +75,8 @@ fn calculate_ref_padding(area: Rect, max_ref_width: usize) -> u16 {
     }
 }
 
-fn create_timer(timer: Duration, test_time: Duration) -> Line<'static> {
-    let seconds = test_time.as_secs().saturating_sub(timer.as_secs());
+fn create_timer(timer: Duration, test_time: f32) -> Line<'static> {
+    let seconds = test_time - timer.as_secs() as f32;
     let formatted_time = format!("{:?}", seconds);
     
     Line::from(formatted_time)
@@ -84,14 +84,48 @@ fn create_timer(timer: Duration, test_time: Duration) -> Line<'static> {
         .alignment(Alignment::Left)
 }
 
-fn create_instruction_line(area: Rect, ref_padding: u16) -> Line<'static> {
-    let instruction_text = "! punctuation  # numbers | time  words  quote | 15 30 60 120";
-    let available_width = area.width.saturating_sub(ref_padding * 2) as usize;
-    let padding = (available_width.saturating_sub(instruction_text.len())) / 2;
-    let padded_instruction = format!("{:width$}{}", "", instruction_text, width = padding);
-    
-    Line::from(padded_instruction)
-        .style(style::Style::default().fg(REF_COLOR).bg(BG_COLOR))
+fn create_instruction_line(area: Rect, ref_padding: u16, app: &App) -> Line<'static> {
+    let divider = true;
+    let mut button_states = vec![
+        ("! punctuation", app.punctuation, !app.quote),
+        ("# numbers", app.numbers, !app.quote),
+        ("|", divider, true),
+        ("time", app.time_mode, true),
+        ("words", app.word_mode, true),
+        ("quote", app.quote, true),
+        ("|", divider, true),
+        ("15", app.test_time == 15.0, app.time_mode),
+        ("30", app.test_time == 30.0, app.time_mode),
+        ("60", app.test_time == 60.0, app.time_mode),
+        ("120", app.test_time == 120.0, app.time_mode),
+        ("25", app.batch_size == 25, app.word_mode),
+        ("50", app.batch_size == 50, app.word_mode),
+        ("100", app.batch_size == 100, app.word_mode),
+    ];
+
+    let mut spans: Vec<Span<'static>> = vec![];
+
+    let mut fg_colors = vec![REF_COLOR; button_states.len()];
+    let mut bg_colors = vec![BG_COLOR; button_states.len()];
+    for (i, (label, state_val, visible)) in button_states.iter_mut().enumerate() {
+        if !*visible {
+            continue;
+        }
+        if *state_val && app.selected_config == *label && app.config {
+            bg_colors[i] = MAIN_COLOR;
+            fg_colors[i] = BG_COLOR;
+        } else if *state_val {
+            fg_colors[i] = MAIN_COLOR;
+        } else {
+            fg_colors[i] = REF_COLOR;
+        }
+        spans.push(Span::styled(
+            format!(" {} ", label),
+            Style::default().fg(fg_colors[i]).bg(bg_colors[i]),
+        ));
+    }
+
+    Line::from(spans).alignment(Alignment::Center)
 }
 
 fn create_horizontal_line(area: Rect) -> Line<'static> {
@@ -101,19 +135,23 @@ fn create_horizontal_line(area: Rect) -> Line<'static> {
 }
 
 fn create_colored_lines<'a>(app: &App, max_ref_width: usize) -> Vec<Line<'a>> {
-    let mut colors: Vec<Color> = vec![REF_COLOR; app.reference.chars().count()];
+    let mut fg_colors: Vec<Color> = vec![REF_COLOR; app.reference.chars().count()];
+    let mut bg_colors: Vec<Color> = vec![BG_COLOR; app.reference.chars().count()];
     
     for i in 0..app.is_correct.len()-1 {
-        if app.is_correct[i] == 0 || i >= app.pos1{
-            colors[i] = REF_COLOR;
+        if app.pos1 == i {
+            fg_colors[i] = BG_COLOR;
+            bg_colors[i] = MAIN_COLOR
+        } else if app.is_correct[i] == 0 || i >= app.pos1{
+            fg_colors[i] = REF_COLOR;
         } else if app.is_correct[i] == 2 {
-            colors[i] = Color::White;
+            fg_colors[i] = Color::White;
         } else if app.is_correct[i] == 1 {
-            colors[i] = MAIN_COLOR;
+            fg_colors[i] = MAIN_COLOR;
         } else if app.is_correct[i] == -1 {
-            colors[i] = Color::Rgb(255, 0, 0);
+            fg_colors[i] = Color::Rgb(255, 0, 0);
         } else {
-            colors[i] = REF_COLOR;
+            fg_colors[i] = REF_COLOR;
         }
     }
 
@@ -125,9 +163,10 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize) -> Vec<Line<'a>> {
             let spans: Vec<Span<'a>> = line
                 .chars()
                 .map(|c| {
-                    let color = colors.get(char_index).cloned().unwrap_or(REF_COLOR);
+                    let fg_color = fg_colors.get(char_index).cloned().unwrap_or(REF_COLOR);
+                    let bg_color = bg_colors.get(char_index).cloned().unwrap_or(BG_COLOR);
                     char_index += 1;
-                    Span::styled(c.to_string(), Style::default().fg(color).bg(BG_COLOR))
+                    Span::styled(c.to_string(), Style::default().fg(fg_color).bg(bg_color))
                 })
                 .collect();
             Line::from(spans)

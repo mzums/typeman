@@ -1,5 +1,6 @@
 use std::io;
 use crossterm::event::{self, Event as CEvent, KeyEvent};
+use eframe::egui::Key;
 use ratatui::DefaultTerminal;
 use std::time::{Duration, Instant};
 
@@ -22,9 +23,17 @@ pub struct App {
     pub words_done: usize,
     pub is_correct: Vec<i32>,
     pub errors_this_second: f32,
-    pub test_time: Duration,
+    pub test_time: f32,
     pub start_time: Option<Instant>,
     pub game_state: GameState,
+    pub config: bool,
+    pub punctuation: bool,
+    pub numbers: bool,
+    pub time_mode: bool,
+    pub word_mode: bool,
+    pub quote: bool,
+    pub batch_size: usize,
+    pub selected_config: &'static str,
 }
 
 impl App {
@@ -37,15 +46,23 @@ impl App {
             words_done: 0,
             is_correct: Vec::new(),
             errors_this_second: 0.0,
-            test_time: Duration::from_secs(10),
+            test_time: 10.0,
             start_time: None,
             game_state: GameState::NotStarted,
+            config: false,
+            punctuation: false,
+            numbers: false,
+            time_mode: true,
+            word_mode: false,
+            quote: false,
+            batch_size: 50,
+            selected_config: "time"
         }
     }
 
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         let word_list = utils::read_first_n_words(500);
-        self.reference = utils::get_reference(false, false, &word_list, 50);
+        self.reference = utils::get_reference(false, false, &word_list, self.batch_size);
         self.is_correct = vec![0; self.reference.chars().count()];
         let reference_chars: Vec<char> = self.reference.chars().collect();
         
@@ -89,6 +106,12 @@ impl App {
                     if self.pos1 > 0 {
                         self.pos1 -= 1;
                     }
+                }
+                KeyCode::Up => {
+                    self.config = true;
+                }
+                KeyCode::Down => {
+                    self.config = false;
                 }
                 KeyCode::Char(ch) => {
                     if let Some(&ref_char) = reference_chars.get(self.pos1) {
