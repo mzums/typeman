@@ -10,12 +10,13 @@ const REF_COLOR: Color = Color::Rgb(80, 80, 80);
 const BG_COLOR: Color = Color::Black;
 
 fn render_instructions(frame: &mut Frame, area: Rect) {
-    let text = Paragraph::new("\nPress 'q' to exit.")
-        .style(Style::default().fg(BORDER_COLOR).bg(BG_COLOR));
+    let text = Paragraph::new("  Press 'Esc' to exit.")
+        .style(Style::default().fg(BORDER_COLOR).bg(BG_COLOR))
+        .alignment(Alignment::Left);
     frame.render_widget(text, area);
 }
 
-pub fn render_app(frame: &mut Frame, _app: &App, reference: &String) {
+pub fn render_app(frame: &mut Frame, app: &App, reference: &String) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -24,47 +25,120 @@ pub fn render_app(frame: &mut Frame, _app: &App, reference: &String) {
         ])
         .split(frame.area());
 
-    render_content(frame, chunks[0], reference);
+    render_reference_frame(frame, chunks[0], reference, &app.is_correct);
     render_instructions(frame, chunks[1]);
 }
 
-fn render_content(frame: &mut Frame, area: Rect, reference: &String) {
-    let empty_line = Line::from("");
-    let instructions = Line::from("! punctuation  # numbers | time  words  quote | 15 30 60 120")
-        .style(style::Style::default().fg(REF_COLOR).bg(BG_COLOR));
+fn render_reference_frame(frame: &mut Frame, area: Rect, reference: &String, is_correct: &[i32]) {
+    let max_ref_width = calculate_max_ref_width(area);
+    let ref_padding = calculate_ref_padding(area, max_ref_width);
+    
+    let instruction_line = create_instruction_line(area, ref_padding);
+    let horizontal_line = create_horizontal_line(area);
+    let colored_lines = create_colored_lines(reference, max_ref_width, is_correct);
+    let empty_space = calculate_vertical_padding(area, colored_lines.len());
 
-    let horizontal_line = Line::from("─".repeat(area.width.saturating_sub(15) as usize).fg(BORDER_COLOR).bg(BG_COLOR));
+    let content = assemble_content(
+        instruction_line, 
+        horizontal_line, 
+        colored_lines, 
+        empty_space
+    );
 
+    let block = create_reference_block(ref_padding);
+    let paragraph = Paragraph::new(content)
+        .block(block)
+        .style(Style::default().bg(BG_COLOR));
+
+    frame.render_widget(paragraph, area);
+}
+
+fn calculate_max_ref_width(area: Rect) -> usize {
+    usize::min(area.width as usize - 15, 150)
+}
+
+fn calculate_ref_padding(area: Rect, max_ref_width: usize) -> u16 {
+    if area.width > max_ref_width as u16 {
+        (area.width - max_ref_width as u16) / 2
+    } else {
+        7
+    }
+}
+
+fn create_instruction_line(area: Rect, ref_padding: u16) -> Line<'static> {
+    let instruction_text = "! punctuation  # numbers | time  words  quote | 15 30 60 120";
+    let available_width = area.width.saturating_sub(ref_padding * 2) as usize;
+    let padding = (available_width.saturating_sub(instruction_text.len())) / 2;
+    let padded_instruction = format!("{:width$}{}", "", instruction_text, width = padding);
+    
+    Line::from(padded_instruction)
+        .style(style::Style::default().fg(REF_COLOR).bg(BG_COLOR))
+}
+
+fn create_horizontal_line(area: Rect) -> Line<'static> {
+    Line::from("─".repeat(area.width.saturating_sub(15) as usize)
+        .fg(BORDER_COLOR)
+        .bg(BG_COLOR))
+}
+
+fn create_colored_lines<'a>(reference: &'a str, max_ref_width: usize, is_correct: &'a [i32]) -> Vec<Line<'a>> {
+    
     let colors: Vec<Color> = reference
         .chars()
         .enumerate()
-        .map(|(i, _)| if i % 2 == 0 { Color::Yellow } else { Color::Green })
+        .map(|(i, _)| match is_correct.get(i) {
+            Some(0) => Color::Gray,
+            Some(1) => Color::White,
+            Some(2) => Color::Yellow,
+            Some(-1) => Color::Red,
+            _ => REF_COLOR,
+        })
         .collect();
 
-    let colored_spans: Vec<Span> = reference
-        .chars()
-        .zip(colors.iter().cloned().chain(std::iter::repeat(REF_COLOR)))
-        .map(|(c, color)| Span::styled(c.to_string(), Style::default().fg(color).bg(BG_COLOR)))
-        .collect();
+    let split = split_lines(reference, max_ref_width);
 
-    let colored_reference: Vec<Line> = colored_spans
-        .chunks(area.width as usize)
-        .map(|chunk| Line::from(chunk.to_vec()))
-        .collect();
+    let mut char_index = 0;
+    split.into_iter()
+        .map(|line| {
+            let spans: Vec<Span<'a>> = line
+                .chars()
+                .map(|c| {
+                    let color = colors.get(char_index).cloned().unwrap_or(REF_COLOR);
+                    char_index += 1;
+                    Span::styled(c.to_string(), Style::default().fg(color).bg(BG_COLOR))
+                })
+                .collect();
+            Line::from(spans)
+        })
+        .collect()
+}
 
-    let content = {
-        let mut content = vec![
-            empty_line.clone(),
-            instructions,
-            horizontal_line,
-        ];
-        content.push(empty_line.clone());
-        content.extend(colored_reference);
-        content
-    };
+fn calculate_vertical_padding(area: Rect, content_lines: usize) -> usize {
+    let empty_space = (area.height as u16).saturating_sub(3) as usize / 2;
+    empty_space.saturating_sub(content_lines)
+}
 
+fn assemble_content<'a>(
+    instruction_line: Line<'a>,
+    horizontal_line: Line<'a>,
+    colored_lines: Vec<Line<'a>>,
+    empty_space: usize
+) -> Vec<Line<'a>> {
+    let empty_line = Line::from("");
+    let mut content = vec![
+        empty_line.clone(),
+        instruction_line,
+        horizontal_line,
+        empty_line.clone(),
+    ];
+    
+    content.extend(vec![empty_line.clone(); empty_space]);
+    content.extend(colored_lines);
+    content
+}
 
-    let block = Block::default()
+fn create_reference_block(ref_padding: u16) -> Block<'static> {
+    Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(BORDER_COLOR).bg(BG_COLOR))
         .style(Style::default().bg(BG_COLOR))
@@ -73,17 +147,35 @@ fn render_content(frame: &mut Frame, area: Rect, reference: &String) {
             "Man ".fg(Color::White).bg(BG_COLOR),
         ]))
         .padding(Padding {
-            left: 5,
-            right: 0,
+            left: ref_padding,
+            right: ref_padding.saturating_sub(2),
             top: 0,
             bottom: 0,
         })
-        .title_alignment(Alignment::Left);
+        .title_alignment(Alignment::Left)
+}
 
-    let paragraph = Paragraph::new(content)
-        .block(block)
-        .alignment(Alignment::Left)
-        .style(Style::default().bg(BG_COLOR));
+fn split_lines(text: &str, width: usize) -> Vec<String> {
+    text.lines()
+        .flat_map(|line| {
+            let mut words = line.split_whitespace();
+            let mut current_line = String::new();
+            let mut lines = Vec::new();
 
-    frame.render_widget(paragraph, area);
+            while let Some(word) = words.next() {
+                if current_line.len() + word.len() + 1 > width {
+                    lines.push(current_line.trim().to_string());
+                    current_line.clear();
+                }
+                if !current_line.is_empty() {
+                    current_line.push(' ');
+                }
+                current_line.push_str(word);
+            }
+            if !current_line.is_empty() {
+                lines.push(current_line.trim().to_string());
+            }
+            lines
+        })
+        .collect()
 }
