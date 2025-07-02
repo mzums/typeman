@@ -2,6 +2,8 @@ use std::io;
 use crossterm::event::{self, Event as CEvent, KeyEvent};
 use std::time::Duration;
 use ratatui::DefaultTerminal;
+use std::fs::OpenOptions;
+use std::io::Write;
 
 use crate::ui::tui::ui::render_app;
 
@@ -27,15 +29,22 @@ impl App {
     }
 
     pub fn run(&mut self, terminal: &mut DefaultTerminal, reference: String) -> io::Result<()> {
+        /*if let Ok(mut file) = OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open("key_events.log")
+                    {
+                        let _ = writeln!(file, "ref: {}", reference);
+                    }*/
         self.is_correct = vec![0; reference.chars().count()];
         while !self.exit {
             if event::poll(Duration::from_millis(16))? {
                 if let CEvent::Key(key) = event::read()? {
-                    self.handle_key_event(key)?;
+                    self.handle_key_event(key, &reference)?;
                 }
             }
             
-            terminal.draw(|frame| render_app(frame, self, &reference))?;
+            terminal.draw(|frame| render_app(frame, self, &reference, &self.is_correct, &self.pos1))?;
         }
         Ok(())
     }
@@ -44,8 +53,10 @@ impl App {
     pub fn handle_key_event(
         &mut self,
         key_event: KeyEvent,
+        reference: &String,
     ) -> io::Result<()> {
         use crossterm::event::KeyCode;
+
         if key_event.kind == crossterm::event::KeyEventKind::Press {
             match key_event.code {
                 KeyCode::Esc => self.exit = true,
@@ -60,9 +71,17 @@ impl App {
                     if self.pos1 > 0 {
                         self.pos1 -= 1;
                     }
+                    /*if let Ok(mut file) = OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open("key_events.log")
+                    {
+                        let _ = writeln!(file, "pos1: {:?}", self.pos1);
+                    }*/
                 }
                 KeyCode::Char(ch) => {
-                    let ref_char: Option<char> = self.reference.chars().nth(self.pos1);
+                    let ref_char: Option<char> = reference.chars().nth(self.pos1);
+                    //println!("{}", self.reference);
                     if self.is_correct.len() > self.pos1 && ref_char == Some(ch) && self.is_correct[self.pos1] != -1 && self.is_correct[self.pos1] != 1 {
                         self.is_correct[self.pos1] = 2; // Correct
                     } else if ref_char == Some(ch) && self.is_correct[self.pos1] == -1 {

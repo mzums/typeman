@@ -5,8 +5,12 @@ use ratatui::{
 };
 use crate::ui::tui::app::App;
 
+use std::fs::OpenOptions;
+use std::io::Write;
+
+
 const BORDER_COLOR: Color = Color::Rgb(100, 60, 0);
-const REF_COLOR: Color = Color::Rgb(80, 80, 80);
+const REF_COLOR: Color = Color::Rgb(100, 100, 100);
 const BG_COLOR: Color = Color::Black;
 
 fn render_instructions(frame: &mut Frame, area: Rect) {
@@ -16,7 +20,8 @@ fn render_instructions(frame: &mut Frame, area: Rect) {
     frame.render_widget(text, area);
 }
 
-pub fn render_app(frame: &mut Frame, app: &App, reference: &String) {
+pub fn render_app(frame: &mut Frame, app: &App, reference: &String, is_correct: &[i32], pos1: &usize) {
+    
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -25,17 +30,17 @@ pub fn render_app(frame: &mut Frame, app: &App, reference: &String) {
         ])
         .split(frame.area());
 
-    render_reference_frame(frame, chunks[0], reference, &app.is_correct);
+    render_reference_frame(frame, chunks[0], reference, is_correct, pos1);
     render_instructions(frame, chunks[1]);
 }
 
-fn render_reference_frame(frame: &mut Frame, area: Rect, reference: &String, is_correct: &[i32]) {
+fn render_reference_frame(frame: &mut Frame, area: Rect, reference: &String, is_correct: &[i32], pos1: &usize) {
     let max_ref_width = calculate_max_ref_width(area);
     let ref_padding = calculate_ref_padding(area, max_ref_width);
     
     let instruction_line = create_instruction_line(area, ref_padding);
     let horizontal_line = create_horizontal_line(area);
-    let colored_lines = create_colored_lines(reference, max_ref_width, is_correct);
+    let colored_lines = create_colored_lines(reference, max_ref_width, is_correct, pos1);
     let empty_space = calculate_vertical_padding(area, colored_lines.len());
 
     let content = assemble_content(
@@ -81,19 +86,22 @@ fn create_horizontal_line(area: Rect) -> Line<'static> {
         .bg(BG_COLOR))
 }
 
-fn create_colored_lines<'a>(reference: &'a str, max_ref_width: usize, is_correct: &'a [i32]) -> Vec<Line<'a>> {
+fn create_colored_lines<'a>(reference: &'a str, max_ref_width: usize, is_correct: &'a [i32], pos1: &usize) -> Vec<Line<'a>> {
+    let mut colors: Vec<Color> = vec![REF_COLOR; reference.chars().count()];
     
-    let colors: Vec<Color> = reference
-        .chars()
-        .enumerate()
-        .map(|(i, _)| match is_correct.get(i) {
-            Some(0) => Color::Gray,
-            Some(1) => Color::White,
-            Some(2) => Color::Yellow,
-            Some(-1) => Color::Red,
-            _ => REF_COLOR,
-        })
-        .collect();
+    for i in 0..is_correct.len()-1 {
+        if is_correct[i] == 0 || i >= *pos1{
+            colors[i] = REF_COLOR;
+        } else if is_correct[i] == 2 {
+            colors[i] = Color::White;
+        } else if is_correct[i] == 1 {
+            colors[i] = Color::Rgb(255, 155, 0);
+        } else if is_correct[i] == -1 {
+            colors[i] = Color::Rgb(255, 0, 0);
+        } else {
+            colors[i] = REF_COLOR;
+        }
+    }
 
     let split = split_lines(reference, max_ref_width);
 
