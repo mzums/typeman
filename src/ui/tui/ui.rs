@@ -3,6 +3,8 @@ use ratatui::{
     widgets::*,
     Frame,
 };
+use std::time::Duration;
+
 use crate::ui::tui::app::App;
 
 use std::fs::OpenOptions;
@@ -12,6 +14,7 @@ use std::io::Write;
 const BORDER_COLOR: Color = Color::Rgb(100, 60, 0);
 const REF_COLOR: Color = Color::Rgb(100, 100, 100);
 const BG_COLOR: Color = Color::Black;
+const MAIN_COLOR: Color = Color::Rgb(255, 155, 0);
 
 fn render_instructions(frame: &mut Frame, area: Rect) {
     let text = Paragraph::new("  Press 'Esc' to exit.")
@@ -20,7 +23,7 @@ fn render_instructions(frame: &mut Frame, area: Rect) {
     frame.render_widget(text, area);
 }
 
-pub fn render_app(frame: &mut Frame, app: &App, reference: &String, is_correct: &[i32], pos1: &usize) {
+pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
     
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -30,22 +33,24 @@ pub fn render_app(frame: &mut Frame, app: &App, reference: &String, is_correct: 
         ])
         .split(frame.area());
 
-    render_reference_frame(frame, chunks[0], reference, is_correct, pos1);
+    render_reference_frame(frame, chunks[0], &app, timer);
     render_instructions(frame, chunks[1]);
 }
 
-fn render_reference_frame(frame: &mut Frame, area: Rect, reference: &String, is_correct: &[i32], pos1: &usize) {
+fn render_reference_frame(frame: &mut Frame, area: Rect, app: &App, timer: Duration) {
     let max_ref_width = calculate_max_ref_width(area);
     let ref_padding = calculate_ref_padding(area, max_ref_width);
     
     let instruction_line = create_instruction_line(area, ref_padding);
     let horizontal_line = create_horizontal_line(area);
-    let colored_lines = create_colored_lines(reference, max_ref_width, is_correct, pos1);
+    let timer_line = create_timer(timer, app.test_time);
+    let colored_lines = create_colored_lines(app, max_ref_width);
     let empty_space = calculate_vertical_padding(area, colored_lines.len());
 
     let content = assemble_content(
         instruction_line, 
-        horizontal_line, 
+        horizontal_line,
+        timer_line,
         colored_lines, 
         empty_space
     );
@@ -70,6 +75,15 @@ fn calculate_ref_padding(area: Rect, max_ref_width: usize) -> u16 {
     }
 }
 
+fn create_timer(timer: Duration, test_time: Duration) -> Line<'static> {
+    let seconds = test_time.as_secs().saturating_sub(timer.as_secs());
+    let formatted_time = format!("{:?}", seconds);
+    
+    Line::from(formatted_time)
+        .style(Style::default().fg(MAIN_COLOR).bg(BG_COLOR))
+        .alignment(Alignment::Left)
+}
+
 fn create_instruction_line(area: Rect, ref_padding: u16) -> Line<'static> {
     let instruction_text = "! punctuation  # numbers | time  words  quote | 15 30 60 120";
     let available_width = area.width.saturating_sub(ref_padding * 2) as usize;
@@ -86,24 +100,24 @@ fn create_horizontal_line(area: Rect) -> Line<'static> {
         .bg(BG_COLOR))
 }
 
-fn create_colored_lines<'a>(reference: &'a str, max_ref_width: usize, is_correct: &'a [i32], pos1: &usize) -> Vec<Line<'a>> {
-    let mut colors: Vec<Color> = vec![REF_COLOR; reference.chars().count()];
+fn create_colored_lines<'a>(app: &App, max_ref_width: usize) -> Vec<Line<'a>> {
+    let mut colors: Vec<Color> = vec![REF_COLOR; app.reference.chars().count()];
     
-    for i in 0..is_correct.len()-1 {
-        if is_correct[i] == 0 || i >= *pos1{
+    for i in 0..app.is_correct.len()-1 {
+        if app.is_correct[i] == 0 || i >= app.pos1{
             colors[i] = REF_COLOR;
-        } else if is_correct[i] == 2 {
+        } else if app.is_correct[i] == 2 {
             colors[i] = Color::White;
-        } else if is_correct[i] == 1 {
-            colors[i] = Color::Rgb(255, 155, 0);
-        } else if is_correct[i] == -1 {
+        } else if app.is_correct[i] == 1 {
+            colors[i] = MAIN_COLOR;
+        } else if app.is_correct[i] == -1 {
             colors[i] = Color::Rgb(255, 0, 0);
         } else {
             colors[i] = REF_COLOR;
         }
     }
 
-    let split = split_lines(reference, max_ref_width);
+    let split = split_lines(&app.reference, max_ref_width);
 
     let mut char_index = 0;
     split.into_iter()
@@ -129,6 +143,7 @@ fn calculate_vertical_padding(area: Rect, content_lines: usize) -> usize {
 fn assemble_content<'a>(
     instruction_line: Line<'a>,
     horizontal_line: Line<'a>,
+    timer: Line<'a>,
     colored_lines: Vec<Line<'a>>,
     empty_space: usize
 ) -> Vec<Line<'a>> {
@@ -141,6 +156,8 @@ fn assemble_content<'a>(
     ];
     
     content.extend(vec![empty_line.clone(); empty_space]);
+    content.push(timer);
+    content.push(empty_line.clone());
     content.extend(colored_lines);
     content
 }
@@ -151,7 +168,7 @@ fn create_reference_block(ref_padding: u16) -> Block<'static> {
         .border_style(Style::default().fg(BORDER_COLOR).bg(BG_COLOR))
         .style(Style::default().bg(BG_COLOR))
         .title(Line::from(vec![
-            " Type".fg(Color::Rgb(255, 155, 0)).bg(BG_COLOR),
+            " Type".fg(MAIN_COLOR).bg(BG_COLOR),
             "Man ".fg(Color::White).bg(BG_COLOR),
         ]))
         .padding(Padding {
