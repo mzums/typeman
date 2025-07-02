@@ -111,8 +111,11 @@ fn create_instruction_line(area: Rect, ref_padding: u16, app: &App) -> Line<'sta
         if !*visible {
             continue;
         }
-        if *state_val && app.selected_config == *label && app.config {
+        if *state_val && app.selected_config == *label && app.config && *label != "|" {
             bg_colors[i] = MAIN_COLOR;
+            fg_colors[i] = BG_COLOR;
+        } else if app.selected_config == *label && app.config && *label != "|" {
+            bg_colors[i] = BORDER_COLOR;
             fg_colors[i] = BG_COLOR;
         } else if *state_val {
             fg_colors[i] = MAIN_COLOR;

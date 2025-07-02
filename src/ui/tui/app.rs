@@ -7,6 +7,9 @@ use std::time::{Duration, Instant};
 use crate::ui::tui::ui::render_app;
 use crate::utils;
 
+use std::fs::OpenOptions;
+use std::io::Write;
+
 
 #[derive(PartialEq, Eq)]
 pub enum GameState {
@@ -46,7 +49,7 @@ impl App {
             words_done: 0,
             is_correct: Vec::new(),
             errors_this_second: 0.0,
-            test_time: 10.0,
+            test_time: 15.0,
             start_time: None,
             game_state: GameState::NotStarted,
             config: false,
@@ -56,7 +59,7 @@ impl App {
             word_mode: false,
             quote: false,
             batch_size: 50,
-            selected_config: "time"
+            selected_config: "time",
         }
     }
 
@@ -94,6 +97,23 @@ impl App {
     ) -> io::Result<()> {
         use crossterm::event::KeyCode;
 
+        let button_states = vec![
+            ("! punctuation", self.punctuation, !self.quote),
+            ("# numbers", self.numbers, !self.quote),
+            ("|", true, true),
+            ("time", self.time_mode, true),
+            ("words", self.word_mode, true),
+            ("quote", self.quote, true),
+            ("|", true, true),
+            ("15", self.test_time == 15.0, self.time_mode),
+            ("30", self.test_time == 30.0, self.time_mode),
+            ("60", self.test_time == 60.0, self.time_mode),
+            ("120", self.test_time == 120.0, self.time_mode),
+            ("25", self.batch_size == 25, self.word_mode),
+            ("50", self.batch_size == 50, self.word_mode),
+            ("100", self.batch_size == 100, self.word_mode),
+        ];
+
         if key_event.kind == crossterm::event::KeyEventKind::Press {
             match key_event.code {
                 KeyCode::Esc => self.exit = true,
@@ -112,6 +132,71 @@ impl App {
                 }
                 KeyCode::Down => {
                     self.config = false;
+                }
+                KeyCode::Left => {
+                    if ! self.config {
+                        return Ok(());
+                    }
+                    for (i, (label, state_val, visible)) in button_states.iter().enumerate() {
+                        if *visible && self.selected_config == *label {
+                            /*let mut file = OpenOptions::new()
+                                .create(true)
+                                .append(true)
+                                .open("lposition.log")
+                                .unwrap();
+                            writeln!(file, "pos1: {}", i).unwrap();*/
+                            if i == 0 {
+                                self.selected_config = button_states.last().unwrap().0;
+                            } else {
+                                let mut prev = i - 1;
+
+                                if button_states[prev].0 == "|" {
+                                    prev -= 1;
+                                }
+                                if !button_states[prev].2 {
+                                    prev -= 1;
+                                }
+                                self.selected_config = button_states[prev].0;
+                            }
+                            break;
+                        }
+                    }
+                }
+                KeyCode::Right => {
+                    if ! self.config {
+                        return Ok(());
+                    }
+                    for (i, (label, state_val, visible)) in button_states.iter().enumerate() {
+                        if *visible && self.selected_config == *label {
+                            
+                            let mut file = OpenOptions::new()
+                                .create(true)
+                                .append(true)
+                                .open("lposition.log")
+                                .unwrap();
+                            writeln!(file, "pos1: {}", i).unwrap();
+
+                            if i == button_states.len() - 1 {
+                                self.selected_config = button_states[0].0;
+                            } else {
+                                let mut next = i + 1;
+                                if button_states[next].0 == "|" {
+                                    next += 1;
+                                }
+                                while next != i {
+                                    if next >= button_states.len() {
+                                        next = 0;
+                                    }
+                                    if button_states[next].2 {
+                                        self.selected_config = button_states[next].0;
+                                        break;
+                                    }
+                                    next += 1;
+                                }
+                            }
+                            break;
+                        }
+                    }
                 }
                 KeyCode::Char(ch) => {
                     if let Some(&ref_char) = reference_chars.get(self.pos1) {
