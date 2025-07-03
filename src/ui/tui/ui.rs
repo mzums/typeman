@@ -16,6 +16,7 @@ const BORDER_COLOR: Color = Color::Rgb(100, 60, 0);
 const REF_COLOR: Color = Color::Rgb(100, 100, 100);
 const BG_COLOR: Color = Color::Black;
 const MAIN_COLOR: Color = Color::Rgb(255, 155, 0);
+const DIMMER_MAIN: Color = Color::Rgb(180, 100, 0);
 
 fn render_instructions(frame: &mut Frame, area: Rect) {
     let text = Paragraph::new("  Press 'Esc' to exit.")
@@ -75,16 +76,12 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
 
     let bar_dataset = Dataset::default()
         .graph_type(GraphType::Bar)
-        .style(Style::default().fg(MAIN_COLOR))
+        .style(Style::default().fg(DIMMER_MAIN))
+        .marker(symbols::Marker::Block)
         .data(&data);
 
     let chart = Chart::new(vec![bar_dataset])
         .bg(BG_COLOR)
-        .block(
-            Block::default()
-                .borders(Borders::NONE)
-                .style(Style::default().bg(BG_COLOR)),
-        )
         .x_axis(
             Axis::default()
                 .title("Time (s)")
@@ -109,20 +106,22 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
                 ]),
         );
 
+    let block = create_reference_block(5);
+
+    let inner_area = block.inner(area);
     let chunks = Layout::vertical([
         Constraint::Length(2),
         Constraint::Length(12),
-        Constraint::Min(1),
-    ]).split(area);
+    ]).split(inner_area);
 
-    let content = vec![wpm_line, acc_line];
-    let paragraph = Paragraph::new(content)
-        .block(Block::default().borders(Borders::NONE).style(Style::default().bg(BG_COLOR)))
+    let stats = Paragraph::new(vec![wpm_line, acc_line])
         .style(Style::default().bg(BG_COLOR))
         .alignment(Alignment::Center);
 
-    frame.render_widget(paragraph, chunks[0]);
+    frame.render_widget(block, area);
+    frame.render_widget(stats, chunks[0]);
     frame.render_widget(chart, chunks[1]);
+
 }
 
 fn render_reference_frame(frame: &mut Frame, area: Rect, app: &App, timer: Duration) {
@@ -211,7 +210,7 @@ fn create_instruction_line(area: Rect, ref_padding: u16, app: &App) -> Line<'sta
             continue;
         }
         if *state_val && app.selected_config == *label && app.config && *label != "|" {
-            bg_colors[i] = Color::Rgb(180, 100, 0);
+            bg_colors[i] = DIMMER_MAIN;
             fg_colors[i] = BG_COLOR;
         } else if app.selected_config == *label && app.config && *label != "|" {
             bg_colors[i] = BORDER_COLOR;

@@ -52,7 +52,7 @@ impl App {
             words_done: 0,
             is_correct: Vec::new(),
             errors_this_second: 0.0,
-            test_time: 1.0,
+            test_time: 5.0,
             start_time: None,
             game_state: GameState::NotStarted,
             config: false,
@@ -77,6 +77,9 @@ impl App {
         let mut last_recorded_time = Instant::now();
         
         while !self.exit {
+            if self.game_state != GameState::Started {
+                last_recorded_time = Instant::now();
+            }
             if event::poll(Duration::from_millis(16))? {
                 if let CEvent::Key(key) = event::read()? {
                     self.handle_key_event(key, &reference_chars)?;
