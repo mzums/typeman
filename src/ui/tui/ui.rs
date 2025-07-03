@@ -5,7 +5,8 @@ use ratatui::{
 };
 use std::time::Duration;
 
-use crate::ui::tui::app::App;
+use crate::ui::tui::app::{App, GameState};
+use crate::ui::gui::results::smooth;
 
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -32,9 +33,96 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
             Constraint::Length(2),
         ])
         .split(frame.area());
-
-    render_reference_frame(frame, chunks[0], &app, timer);
+    
+    if app.game_state == GameState::Results {
+        render_results(frame, chunks[0], app);
+    }
+    else {
+        render_reference_frame(frame, chunks[0], &app, timer);
+    }
     render_instructions(frame, chunks[1]);
+}
+
+fn render_results(frame: &mut Frame, area: Rect, app: &App) {
+    frame.render_widget(
+        Block::default().style(Style::default().bg(BG_COLOR)),
+        area,
+    );
+
+    let wpm = (app.words_done as f32 / app.test_time) * 60.0;
+    let wpm_line = Line::from(format!("WPM: {:.2}", wpm))
+        .style(Style::default().fg(MAIN_COLOR).bg(BG_COLOR))
+        .alignment(Alignment::Center);
+
+    let correct_count = app.is_correct.iter().filter(|&&x| x == 2 || x == 1).count();
+    let accuracy = if app.words_done > 0 {
+        (correct_count as f32 / app.pressed_vec.len() as f32) * 100.0
+    } else {
+        0.0
+    };
+    let acc_line = Line::from(format!("Accuracy: {:.2}%", accuracy))
+        .style(Style::default().fg(MAIN_COLOR).bg(BG_COLOR))
+        .alignment(Alignment::Center);
+
+    let data: Vec<(f64, f64)> = app.speed_per_second
+        .iter()
+        .enumerate()
+        .map(|(i, &speed)| (i as f64 + 1.0, speed))
+        .collect();
+
+    let max_speed: f64 = app.speed_per_second.iter().fold(0.0_f64, |a, &b| a.max(b)).max(1.0);
+    let max_time = data.len() as f64;
+
+    let bar_dataset = Dataset::default()
+        .graph_type(GraphType::Bar)
+        .style(Style::default().fg(MAIN_COLOR))
+        .data(&data);
+
+    let chart = Chart::new(vec![bar_dataset])
+        .bg(BG_COLOR)
+        .block(
+            Block::default()
+                .borders(Borders::NONE)
+                .style(Style::default().bg(BG_COLOR)),
+        )
+        .x_axis(
+            Axis::default()
+                .title("Time (s)")
+                .style(Style::default().fg(Color::White))
+                .bounds([0.0, max_time])
+                .labels(
+                    (0..=max_time as usize)
+                        .step_by(std::cmp::max(1, max_time as usize / 5))
+                        .map(|i| Span::from(i.to_string()))
+                        .collect::<Vec<Span>>(),
+                ),
+        )
+        .y_axis(
+            Axis::default()
+                .title("CPM").labels_alignment(Alignment::Left)
+                .style(Style::default().fg(Color::White))
+                .bounds([0.0, max_speed * 1.1])
+                .labels(vec![
+                    Span::from("0"),
+                    Span::from(format!("{:.0}", max_speed / 2.0)),
+                    Span::from(format!("{:.0}", max_speed)),
+                ]),
+        );
+
+    let chunks = Layout::vertical([
+        Constraint::Length(2),
+        Constraint::Length(12),
+        Constraint::Min(1),
+    ]).split(area);
+
+    let content = vec![wpm_line, acc_line];
+    let paragraph = Paragraph::new(content)
+        .block(Block::default().borders(Borders::NONE).style(Style::default().bg(BG_COLOR)))
+        .style(Style::default().bg(BG_COLOR))
+        .alignment(Alignment::Center);
+
+    frame.render_widget(paragraph, chunks[0]);
+    frame.render_widget(chart, chunks[1]);
 }
 
 fn render_reference_frame(frame: &mut Frame, area: Rect, app: &App, timer: Duration) {
@@ -123,7 +211,7 @@ fn create_instruction_line(area: Rect, ref_padding: u16, app: &App) -> Line<'sta
             continue;
         }
         if *state_val && app.selected_config == *label && app.config && *label != "|" {
-            bg_colors[i] = MAIN_COLOR;
+            bg_colors[i] = Color::Rgb(180, 100, 0);
             fg_colors[i] = BG_COLOR;
         } else if app.selected_config == *label && app.config && *label != "|" {
             bg_colors[i] = BORDER_COLOR;

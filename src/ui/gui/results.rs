@@ -358,7 +358,7 @@ fn write_err_rate(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&
     );
 }
 
-fn smooth(values: &[f64], window: usize, average_word_length: f64) -> Vec<f64> {
+pub fn smooth(values: &[f64], window: usize, average_word_length: f64) -> Vec<f64> {
     let len = values.len();
     let mut smoothed = Vec::with_capacity(len+1);
     smoothed.push(0.0);

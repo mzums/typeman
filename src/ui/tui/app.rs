@@ -15,7 +15,7 @@ use std::io::Write;
 pub enum GameState {
     NotStarted,
     Started,
-    _Results,
+    Results,
 }
 
 pub struct App {
@@ -37,6 +37,9 @@ pub struct App {
     pub quote: bool,
     pub batch_size: usize,
     pub selected_config: &'static str,
+    pub speed_per_second: Vec<f64>,
+    pub char_number: usize,
+    pub errors_per_second: Vec<f32>,
 }
 
 impl App {
@@ -49,7 +52,7 @@ impl App {
             words_done: 0,
             is_correct: Vec::new(),
             errors_this_second: 0.0,
-            test_time: 15.0,
+            test_time: 1.0,
             start_time: None,
             game_state: GameState::NotStarted,
             config: false,
@@ -60,6 +63,9 @@ impl App {
             quote: false,
             batch_size: 50,
             selected_config: "time",
+            speed_per_second: Vec::new(),
+            char_number: 0,
+            errors_per_second: Vec::new(),
         }
     }
 
@@ -68,6 +74,7 @@ impl App {
         self.reference = utils::get_reference(false, false, &word_list, self.batch_size);
         self.is_correct = vec![0; self.reference.chars().count()];
         let reference_chars: Vec<char> = self.reference.chars().collect();
+        let mut last_recorded_time = Instant::now();
         
         while !self.exit {
             if event::poll(Duration::from_millis(16))? {
@@ -77,6 +84,7 @@ impl App {
             }
             let timer = if let Some(start_time) = self.start_time {
                 if self.game_state == GameState::Started {
+                    //println!("Y");
                     Instant::now().duration_since(start_time)
                 } else {
                     Duration::from_secs(0)
@@ -84,6 +92,28 @@ impl App {
             } else {
                 Duration::from_secs(0)
             };
+            if self.test_time - (timer.as_secs_f32()) < 0.0 {
+                if self.game_state == GameState::Started {
+                    self.game_state = GameState::Results;
+                }
+            }
+            let now = Instant::now();
+            let time_since_last = now.duration_since(last_recorded_time);
+
+            if time_since_last >= Duration::from_secs(1) && self.game_state == GameState::Started && self.game_state != GameState::Results {
+                let total_typed = self.pressed_vec.len();
+                let chars_in_this_second = total_typed.saturating_sub(self.char_number);
+                let cpm = chars_in_this_second as f64 * 60.0;
+
+                self.speed_per_second.push(cpm);
+                //println!("Y");
+
+                self.char_number = total_typed;
+
+                self.errors_per_second.push(self.errors_this_second);
+                self.errors_this_second = 0.0;
+                last_recorded_time += Duration::from_secs(1);
+            }
             //println!("Timer: {:?}", timer);
             terminal.draw(|frame| render_app(frame, self, timer))?;
         }
@@ -195,9 +225,9 @@ impl App {
                         self.errors_this_second = 0.0;
                         self.start_time = None;
                         self.game_state = GameState::NotStarted;
-                    } else if self.game_state == GameState::NotStarted {
-                        self.game_state = GameState::Started;
-                        self.start_time = Some(Instant::now());
+                        self.speed_per_second.clear();
+                        self.char_number = 0;
+                        self.errors_per_second.clear();
                     }
                 }
                 KeyCode::Left => {
@@ -268,6 +298,7 @@ impl App {
                     let reference_chars: Vec<char> = self.reference.chars().collect();
                     if let Some(&ref_char) = reference_chars.get(self.pos1) {
                         if self.game_state == GameState::NotStarted {
+                            //println!("X");
                             self.game_state = GameState::Started;
                             self.start_time = Some(Instant::now());
                         }
