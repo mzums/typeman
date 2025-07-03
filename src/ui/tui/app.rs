@@ -117,7 +117,6 @@ impl App {
         if key_event.kind == crossterm::event::KeyEventKind::Press {
             match key_event.code {
                 KeyCode::Esc => self.exit = true,
-                KeyCode::Tab | KeyCode::Enter => {}
                 KeyCode::Backspace => {
                     if !self.pressed_vec.is_empty() && reference_chars.get(self.pos1) == Some(&' ') {
                         self.words_done = self.words_done.saturating_sub(1);
@@ -126,6 +125,7 @@ impl App {
                     if self.pos1 > 0 {
                         self.pos1 -= 1;
                     }
+                    self.config = false;
                 }
                 KeyCode::Up => {
                     self.config = true;
@@ -133,30 +133,96 @@ impl App {
                 KeyCode::Down => {
                     self.config = false;
                 }
+                KeyCode::Enter => {
+                    if self.config {
+                        match self.selected_config {
+                            "time" => {
+                                self.time_mode = true;
+                                self.word_mode = false;
+                                self.quote = false;
+                                self.batch_size = 50;
+                            }
+                            "words" => {
+                                self.time_mode = false;
+                                self.word_mode = true;
+                                self.quote = false;
+                            }
+                            "quote" => {
+                                self.quote = true;
+                                self.time_mode = false;
+                                self.word_mode = false;
+                            }
+                            "! punctuation" => {
+                                self.punctuation = !self.punctuation;
+                            }
+                            "# numbers" => {
+                                self.numbers = !self.numbers;
+                            }
+                            "15" => {
+                                self.test_time = 15.0;
+                            }
+                            "30" => {
+                                self.test_time = 30.0;
+                            }
+                            "60" => {
+                                self.test_time = 60.0;
+                            }
+                            "120" => {
+                                self.test_time = 120.0;
+                            }
+                            "25" => {
+                                self.batch_size = 25;
+                            }
+                            "50" => {
+                                self.batch_size = 50;
+                            }
+                            "100" => {
+                                self.batch_size = 100;
+                            }
+                            _ => {}
+                        }
+                        if self.selected_config == "quote" {
+                            self.reference = utils::get_random_quote();
+                        }
+                        else {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500), self.batch_size);
+
+                        }
+                        self.is_correct = vec![0; self.reference.chars().count()];
+                        self.pressed_vec.clear();
+                        self.pos1 = 0;
+                        self.words_done = 0;
+                        self.errors_this_second = 0.0;
+                        self.start_time = None;
+                        self.game_state = GameState::NotStarted;
+                    } else if self.game_state == GameState::NotStarted {
+                        self.game_state = GameState::Started;
+                        self.start_time = Some(Instant::now());
+                    }
+                }
                 KeyCode::Left => {
                     if ! self.config {
                         return Ok(());
                     }
-                    for (i, (label, state_val, visible)) in button_states.iter().enumerate() {
+                    for (i, (label, _state_val, visible)) in button_states.iter().enumerate() {
                         if *visible && self.selected_config == *label {
-                            /*let mut file = OpenOptions::new()
-                                .create(true)
-                                .append(true)
-                                .open("lposition.log")
-                                .unwrap();
-                            writeln!(file, "pos1: {}", i).unwrap();*/
-                            if i == 0 {
-                                self.selected_config = button_states.last().unwrap().0;
+                            let start_index = i;
+                            let mut j = if i == 0 {
+                                button_states.len() - 1
                             } else {
-                                let mut prev = i - 1;
+                                i - 1
+                            };
 
-                                if button_states[prev].0 == "|" {
-                                    prev -= 1;
+                            while j != start_index {
+                                if button_states[j].2 && button_states[j].0 != "|" {
+                                    self.selected_config = button_states[j].0;
+                                    break;
                                 }
-                                if !button_states[prev].2 {
-                                    prev -= 1;
-                                }
-                                self.selected_config = button_states[prev].0;
+                                j = if j == 0 {
+                                    button_states.len() - 1
+                                } else {
+                                    j - 1
+                                };
                             }
                             break;
                         }
@@ -166,7 +232,7 @@ impl App {
                     if ! self.config {
                         return Ok(());
                     }
-                    for (i, (label, state_val, visible)) in button_states.iter().enumerate() {
+                    for (i, (label, _state_val, visible)) in button_states.iter().enumerate() {
                         if *visible && self.selected_config == *label {
                             
                             let mut file = OpenOptions::new()
@@ -199,12 +265,19 @@ impl App {
                     }
                 }
                 KeyCode::Char(ch) => {
+                    let reference_chars: Vec<char> = self.reference.chars().collect();
                     if let Some(&ref_char) = reference_chars.get(self.pos1) {
                         if self.game_state == GameState::NotStarted {
                             self.game_state = GameState::Started;
                             self.start_time = Some(Instant::now());
                         }
                         if self.is_correct.len() > self.pos1 {
+                            let mut file = OpenOptions::new()
+                                .create(true)
+                                .append(true)
+                                .open("lposition.log")
+                                .unwrap();
+                            writeln!(file, "ref_char: {ref_char}  my {ch}").unwrap();
                             if ref_char == ch && self.is_correct[self.pos1] != -1 && self.is_correct[self.pos1] != 1 {
                                 self.is_correct[self.pos1] = 2; // Correct
                             } else if ref_char == ch && self.is_correct[self.pos1] == -1 {
@@ -220,6 +293,7 @@ impl App {
                             self.words_done += 1;
                         }
                     }
+                    self.config = false;
                 }
                 _ => {}
             }

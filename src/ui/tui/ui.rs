@@ -43,14 +43,18 @@ fn render_reference_frame(frame: &mut Frame, area: Rect, app: &App, timer: Durat
     
     let instruction_line = create_instruction_line(area, ref_padding, app);
     let horizontal_line = create_horizontal_line(area);
-    let timer_line = create_timer(timer, app.test_time);
+    let time_words = if app.time_mode {
+        create_timer(timer, app.test_time)
+    } else {
+        create_words_count(app.batch_size, app.words_done)
+    };
     let colored_lines = create_colored_lines(app, max_ref_width);
     let empty_space = calculate_vertical_padding(area, colored_lines.len());
 
     let content = assemble_content(
         instruction_line, 
         horizontal_line,
-        timer_line,
+        time_words,
         colored_lines, 
         empty_space
     );
@@ -77,9 +81,16 @@ fn calculate_ref_padding(area: Rect, max_ref_width: usize) -> u16 {
 
 fn create_timer(timer: Duration, test_time: f32) -> Line<'static> {
     let seconds = test_time - timer.as_secs() as f32;
-    let formatted_time = format!("{:?}", seconds);
+    let formatted_time = format!("{:?}", seconds as i32);
     
     Line::from(formatted_time)
+        .style(Style::default().fg(MAIN_COLOR).bg(BG_COLOR))
+        .alignment(Alignment::Left)
+}
+
+fn create_words_count(all_words: usize, typed_words: usize) -> Line<'static> {
+    let words_text = format!("{}/{}", typed_words, all_words);
+    Line::from(words_text)
         .style(Style::default().fg(MAIN_COLOR).bg(BG_COLOR))
         .alignment(Alignment::Left)
 }
@@ -179,7 +190,7 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize) -> Vec<Line<'a>> {
 
 fn calculate_vertical_padding(area: Rect, content_lines: usize) -> usize {
     let empty_space = (area.height as u16).saturating_sub(3) as usize / 2;
-    empty_space.saturating_sub(content_lines)
+    empty_space.saturating_sub(content_lines / 2) - 3
 }
 
 fn assemble_content<'a>(
@@ -226,9 +237,10 @@ fn split_lines(text: &str, width: usize) -> Vec<String> {
     text.lines()
         .flat_map(|line| {
             let mut words = line.split_whitespace();
+            
             let mut current_line = String::new();
             let mut lines = Vec::new();
-
+            
             while let Some(word) = words.next() {
                 if current_line.len() + word.len() + 1 > width {
                     lines.push(current_line.trim().to_string());
@@ -242,6 +254,11 @@ fn split_lines(text: &str, width: usize) -> Vec<String> {
             if !current_line.is_empty() {
                 lines.push(current_line.trim().to_string());
             }
+            /*for _ in 0..len {
+                lines.push(String::new()); // One empty line
+                lines.push(String::new()); // Another empty line
+
+            }*/
             lines
         })
         .collect()
