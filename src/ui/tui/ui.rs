@@ -5,6 +5,7 @@ use ratatui::{
     Frame,
 };
 use std::time::Duration;
+use std::collections::HashMap;
 
 use crate::ui::tui::app::{App, GameState};
 
@@ -44,21 +45,50 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
     render_instructions(frame, chunks[1]);
 }
 
-fn smooth(values: &[f64], window: usize, average_word_length: f64) -> Vec<f64> {
+fn smooth(
+    values: &[f64],
+    window: usize,
+    average_word_length: f64,
+    extra_columns: usize,
+) -> Vec<f64> {
     let len = values.len();
-    let mut smoothed = Vec::with_capacity(2*len);
+    let mut smoothed = Vec::with_capacity((extra_columns + 1) * len);
 
-    for i in 0..len {
-        let start = i.saturating_sub(window);
-        let end = (i + window + 1).min(len);
-        let slice = &values[start..end];
-
-        let avg = slice.iter().sum::<f64>() / slice.len() as f64 / average_word_length;
-        let avg2 = (smoothed.last().cloned().unwrap_or(0.0) + avg) / 2.0;
-        smoothed.push(avg2);
-        smoothed.push(avg);
+    if len < 2 {
+        for _ in 0..(len * extra_columns) {
+            smoothed.push(values.get(0).copied().unwrap_or(0.0) / average_word_length);
+        }
+        return smoothed;
     }
-    smoothed.push(smoothed.last().cloned().unwrap_or(0.0));
+
+    let get = |idx: isize| -> f64 {
+        let i = idx.clamp(0, (len - 1) as isize) as usize;
+        values[i] / average_word_length
+    };
+
+    for i in 0..len - 1 {
+        let p0 = get(i as isize - 1);
+        let p1 = get(i as isize);
+        let p2 = get(i as isize + 1);
+        let p3 = get(i as isize + 2);
+
+        for j in 0..extra_columns {
+            let t = j as f64 / extra_columns as f64;
+            let t2 = t * t;
+            let t3 = t2 * t;
+            let interp = 0.5 * (
+                2.0 * p1 +
+                (p2 - p0) * t +
+                (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2 +
+                (3.0 * p1 - p0 - 3.0 * p2 + p3) * t3
+            );
+            smoothed.push(interp);
+        }
+    }
+    let last = get((len - 1) as isize);
+    for _ in 0..extra_columns {
+        smoothed.push(last);
+    }
     smoothed
 }
 
@@ -83,7 +113,29 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
         .style(Style::default().fg(MAIN_COLOR).bg(BG_COLOR))
         .alignment(Alignment::Center);
 
-    let smoothed_speeds = smooth(&app.speed_per_second, 2, 6.0);
+    let columns_for_sec: HashMap<u32, usize> = [(5, 4), (15, 3), (30, 2), (60, 1)]
+        .iter()
+        .cloned()
+        .collect();
+
+    let test_time = app.test_time.round() as u32;
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("lposition.log")
+        .unwrap();
+    writeln!(file, "test_time: {}", test_time).unwrap();
+
+    let extra_columns = *columns_for_sec.get(&test_time).unwrap_or(&1);
+    writeln!(file, "extra_columns: {}", extra_columns).unwrap();
+
+    let smoothed_speeds = smooth(
+        &app.speed_per_second,
+        0,
+        6.0,
+        extra_columns,
+    );
+
 
     let data: Vec<(f64, f64)> = smoothed_speeds
         .iter()
@@ -106,13 +158,13 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
             Axis::default()
             .title("time (s)").style(style::Style::default().fg(REF_COLOR))
             .style(Style::default().fg(REF_COLOR))
-            .bounds([0.0, 2.0*max_time])
+            .bounds([0.0, smoothed_speeds.len() as f64])
             .labels(
                 (0..=max_time as usize)
                 .step_by(5)
                 .map(|i| Span::styled(i.to_string(), Style::default().fg(REF_COLOR)))
                 .collect::<Vec<Span>>(),
-            ),
+                ),
         )
         .y_axis(
             Axis::default()
@@ -135,7 +187,7 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
     ]).split(inner_area);
 
 
-    let max_chart_width = u16::min(u16::min(12 * app.test_time as u16, 180), (0.8 * area.width as f32) as u16);
+    let max_chart_width: u16 = 2*smoothed_speeds.len() as u16 + 4;
     let chart_area = {
         let mut area = chunks[1];
         if area.width > max_chart_width {
