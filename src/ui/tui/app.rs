@@ -160,7 +160,9 @@ impl App {
                     self.config = false;
                 }
                 KeyCode::Up => {
-                    self.config = true;
+                    if self.game_state != GameState::Results {
+                        self.config = true;
+                    }
                 }
                 KeyCode::Down => {
                     self.config = false;
@@ -299,6 +301,9 @@ impl App {
                 KeyCode::Char(ch) => {
                     let reference_chars: Vec<char> = self.reference.chars().collect();
                     if let Some(&ref_char) = reference_chars.get(self.pos1) {
+                        if self.game_state == GameState::Results {
+                            return Ok(());
+                        }
                         if self.game_state == GameState::NotStarted {
                             //println!("X");
                             self.game_state = GameState::Started;

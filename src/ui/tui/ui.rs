@@ -1,4 +1,3 @@
-use eframe::glow::COLOR;
 use ratatui::{
     prelude::*,
     widgets::*,
@@ -8,10 +7,6 @@ use std::time::Duration;
 use std::collections::HashMap;
 
 use crate::ui::tui::app::{App, GameState};
-
-use std::fs::OpenOptions;
-use std::io::Write;
-
 
 const BORDER_COLOR: Color = Color::Rgb(100, 60, 0);
 const REF_COLOR: Color = Color::Rgb(100, 100, 100);
@@ -47,7 +42,6 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
 
 fn smooth(
     values: &[f64],
-    window: usize,
     average_word_length: f64,
     extra_columns: usize,
 ) -> Vec<f64> {
@@ -92,16 +86,16 @@ fn smooth(
     smoothed
 }
 
-fn render_results(frame: &mut Frame, area: Rect, app: &App) {
-    frame.render_widget(
-        Block::default().style(Style::default().bg(BG_COLOR)),
-        area,
-    );
+fn calc_standard_deviation(values: &[f64], average_word_length: f64) -> f64 {
+    let wpm_values: Vec<f64> = values.iter().map(|&cpm| cpm / average_word_length).collect();
+    let mean = wpm_values.iter().sum::<f64>() / wpm_values.len() as f64;
+    let variance = wpm_values.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / wpm_values.len() as f64;
+    variance.sqrt()
+}
 
+fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
     let wpm = (app.words_done as f32 / app.test_time) * 60.0;
-    let wpm_line = Line::from(format!("wpm: {}", wpm as i32))
-        .style(Style::default().fg(MAIN_COLOR).bg(BG_COLOR))
-        .alignment(Alignment::Center);
+    let wpm_str = format!("{}", wpm as i32);
 
     let correct_count = app.is_correct.iter().filter(|&&x| x == 2 || x == 1).count();
     let accuracy = if app.words_done > 0 {
@@ -109,39 +103,67 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
     } else {
         0.0
     };
-    let acc_line = Line::from(format!("acc: {}%", accuracy as i32))
-        .style(Style::default().fg(MAIN_COLOR).bg(BG_COLOR))
-        .alignment(Alignment::Center);
+    let acc_str = format!("{}%", accuracy as i32);
 
-    let columns_for_sec: HashMap<u32, usize> = [(5, 4), (15, 3), (30, 2), (60, 1)]
-        .iter()
-        .cloned()
-        .collect();
+    let error_count = app.is_correct.iter().filter(|&&x| x == -1 || x == 1).count();
+    let error_rate = if app.pressed_vec.len() > 0 {
+        (error_count as f32 / app.pressed_vec.len() as f32) * 100.0
+    } else {
+        0.0
+    };
+    let error_str = format!("{}%", error_rate as i32);
 
-    let test_time = app.test_time.round() as u32;
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("lposition.log")
-        .unwrap();
-    writeln!(file, "test_time: {}", test_time).unwrap();
+    let standard_deviation = calc_standard_deviation(&app.speed_per_second, 6.0);
+    let consistency = if wpm > 0.0 {
+        (100.0 - (standard_deviation / wpm as f64 * 100.0).round()).max(0.0)
+    } else {
+        0.0
+    };
+    let consistency_str = format!("{consistency}%");
 
-    let extra_columns = *columns_for_sec.get(&test_time).unwrap_or(&1);
-    writeln!(file, "extra_columns: {}", extra_columns).unwrap();
+    let label_style = Style::default().fg(REF_COLOR).bg(BG_COLOR);
+    let value_style = Style::default().fg(MAIN_COLOR).bg(BG_COLOR);
+    let space_style = Style::default().bg(BG_COLOR);
 
-    let smoothed_speeds = smooth(
-        &app.speed_per_second,
-        0,
-        6.0,
-        extra_columns,
-    );
+    let col_widths = [(4, "wpm"), (4, "acc"), (5, "err"), (5, "cons")];
 
+    let label_spans = col_widths.iter().enumerate().flat_map(|(i, (width, label))| {
+        let mut spans = Vec::new();
+        if i > 0 {
+            spans.push(Span::styled("   ", space_style));
+        }
+        spans.push(Span::styled(format!("{:<width$}", label, width = width), label_style));
+        spans
+    }).collect::<Vec<_>>();
 
+    let value_spans = [
+        format!("{:<4}", wpm_str),
+        format!("{:<4}", acc_str),
+        format!("{:<5}", error_str),
+        format!("{:<5}", consistency_str)
+    ].iter().enumerate().flat_map(|(i, val)| {
+        let mut spans = Vec::new();
+        if i > 0 {
+            spans.push(Span::styled("   ", space_style));
+        }
+        spans.push(Span::styled(val.clone(), value_style));
+        spans
+    }).collect::<Vec<_>>();
+
+    (
+        Line::from(label_spans).alignment(Alignment::Center),
+        Line::from(value_spans).alignment(Alignment::Center),
+    )
+}
+
+fn get_chart(smoothed_speeds: &[f64], app: &App) -> Chart<'static> {
     let data: Vec<(f64, f64)> = smoothed_speeds
         .iter()
         .enumerate()
         .map(|(i, &speed)| (i as f64 + 1.0, speed))
         .collect();
+
+    let data: &'static [(f64, f64)] = Box::leak(data.into_boxed_slice());
 
     let max_speed: f64 = f64::max(70.0, app.speed_per_second.iter().fold(0.0_f64, |a, &b| a.max(b)).max(1.0) / 6.0);
     let max_time = app.test_time as f64;
@@ -150,7 +172,7 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
         .graph_type(GraphType::Bar)
         .style(Style::default().fg(Color::Rgb(150, 80, 0)).bg(BG_COLOR))
         .marker(symbols::Marker::HalfBlock)
-        .data(&data);
+        .data(data);
 
     let chart = Chart::new(vec![bar_dataset])
         .bg(BG_COLOR)
@@ -177,19 +199,58 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
                     Span::from(format!("{:.0}", max_speed)).style(Style::default().fg(REF_COLOR)),
                 ]).style(Style::default().fg(REF_COLOR)),
         );
+    return chart;
+}
+
+fn render_results(frame: &mut Frame, area: Rect, app: &App) {
+    frame.render_widget(
+        Block::default().style(Style::default().bg(BG_COLOR)),
+        area,
+    );
+
+    let (wpm_line, acc_line) = get_stats(app);
+
+    let columns_for_sec: HashMap<u32, usize> = [(5, 4), (15, 3), (30, 2), (60, 1)]
+        .iter()
+        .cloned()
+        .collect();
+
+    let test_time = app.test_time.round() as u32;
+    let extra_columns = *columns_for_sec.get(&test_time).unwrap_or(&1);
+    let smoothed_speeds = smooth(
+        &app.speed_per_second,
+        6.0,
+        extra_columns,
+    );
+
+    let chart = get_chart(&smoothed_speeds, app);
 
     let block = create_reference_block(5);
 
     let inner_area = block.inner(area);
+
+    let chart_height = 12u16;
+    let y_offset = if inner_area.height > chart_height {
+        (inner_area.height - chart_height) / 2
+    } else {
+        0
+    };
+    let centered_area = Rect {
+        x: inner_area.x,
+        y: inner_area.y + y_offset,
+        width: inner_area.width,
+        height: chart_height.min(inner_area.height),
+    };
+
     let chunks = Layout::vertical([
-        Constraint::Length(2),
-        Constraint::Length(12),
-    ]).split(inner_area);
+        Constraint::Length(9),
+        Constraint::Length(1),
+        Constraint::Length(3),
+    ]).split(centered_area);
 
-
-    let max_chart_width: u16 = 2*smoothed_speeds.len() as u16 + 4;
+    let max_chart_width: u16 = 2 * smoothed_speeds.len() as u16 + 4;
     let chart_area = {
-        let mut area = chunks[1];
+        let mut area = chunks[0];
         if area.width > max_chart_width {
             let padding = (area.width - max_chart_width) / 2;
             area.x += padding;
@@ -202,19 +263,20 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
         .style(Style::default().bg(BG_COLOR))
         .alignment(Alignment::Center);
 
-    frame.render_widget(block, area);
-    frame.render_widget(stats, chunks[0]);
-    frame.render_widget(chart, chart_area);
+    let empty_line = Line::from("");
 
+    frame.render_widget(block, area);
+    frame.render_widget(chart, chart_area);
+    frame.render_widget(empty_line, chunks[1]);
+    frame.render_widget(stats, chunks[2]);
 }
 
 fn render_reference_frame(frame: &mut Frame, area: Rect, app: &App, timer: Duration) {
     let max_ref_width = calculate_max_ref_width(area);
     let ref_padding = calculate_ref_padding(area, max_ref_width);
 
-    let instruction_line = create_instruction_line(area, ref_padding, app);
+    let instruction_line = create_instruction_line(app);
     let horizontal_line = create_horizontal_line(area);
-    let empty_line = Line::from("");
     let time_words = if app.time_mode {
         create_timer(timer, app.test_time)
     } else {
@@ -268,7 +330,7 @@ fn create_words_count(all_words: usize, typed_words: usize) -> Line<'static> {
         .alignment(Alignment::Left)
 }
 
-fn create_instruction_line(area: Rect, ref_padding: u16, app: &App) -> Line<'static> {
+fn create_instruction_line( app: &App) -> Line<'static> {
     let divider = true;
     let mut button_states = vec![
         ("! punctuation", app.punctuation, !app.quote),
