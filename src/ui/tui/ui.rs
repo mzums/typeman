@@ -15,7 +15,11 @@ const MAIN_COLOR: Color = Color::Rgb(255, 155, 0);
 const DIMMER_MAIN: Color = Color::Rgb(180, 100, 0);
 
 fn render_instructions(frame: &mut Frame, area: Rect) {
-    let text = Paragraph::new("  Press 'Esc' to exit.")
+    let text = Paragraph::new(vec![
+            Line::from("  \u{2191} - enter config, \u{2190}/\u{2192} - toggle config, Enter - apply config"),
+            Line::from("  Tab + Enter - restart"),
+            Line::from("  Esc - exit"),
+        ])
         .style(Style::default().fg(BORDER_COLOR).bg(BG_COLOR))
         .alignment(Alignment::Left);
     frame.render_widget(text, area);
@@ -27,7 +31,7 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Min(0),
-            Constraint::Length(2),
+            Constraint::Length(3),
         ])
         .split(frame.area());
     
@@ -121,34 +125,68 @@ fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
     };
     let consistency_str = format!("{consistency}%");
 
+    let time_str = format!("{:.0}s", app.test_time);
+
+    let mut mode_str = if app.time_mode {
+        "time".to_string()
+    } else if app.word_mode {
+        "words".to_string()
+    } else {
+        "quote".to_string()
+    };
+    if app.punctuation {
+        mode_str += " !";
+    }
+    if app.numbers {
+        mode_str += " #";
+    }
+
     let label_style = Style::default().fg(REF_COLOR).bg(BG_COLOR);
     let value_style = Style::default().fg(MAIN_COLOR).bg(BG_COLOR);
     let space_style = Style::default().bg(BG_COLOR);
 
-    let col_widths = [(4, "wpm"), (4, "acc"), (5, "err"), (5, "cons")];
+    let col_widths = [3, 4, 4, 4, 4, 8];
 
-    let label_spans = col_widths.iter().enumerate().flat_map(|(i, (width, label))| {
-        let mut spans = Vec::new();
-        if i > 0 {
-            spans.push(Span::styled("   ", space_style));
-        }
-        spans.push(Span::styled(format!("{:<width$}", label, width = width), label_style));
-        spans
-    }).collect::<Vec<_>>();
-
-    let value_spans = [
-        format!("{:<4}", wpm_str),
+    let labels = ["wpm", "acc", "err", "cons", "time", "mode"];
+    let values = [
+        format!("{:<3}", wpm_str),
         format!("{:<4}", acc_str),
-        format!("{:<5}", error_str),
-        format!("{:<5}", consistency_str)
-    ].iter().enumerate().flat_map(|(i, val)| {
-        let mut spans = Vec::new();
-        if i > 0 {
-            spans.push(Span::styled("   ", space_style));
-        }
-        spans.push(Span::styled(val.clone(), value_style));
-        spans
-    }).collect::<Vec<_>>();
+        format!("{:<4}", error_str),
+        format!("{:<4}", consistency_str),
+        format!("{:<4}", time_str),
+        format!("{:<8}", mode_str),
+    ];
+
+    let mut label_spans = vec![Span::styled("    ", space_style)];
+    let mut value_spans = vec![Span::styled("    ", space_style)];
+    if app.punctuation && app.numbers {
+        label_spans = vec![Span::styled("  ", space_style)];
+        value_spans = vec![Span::styled("  ", space_style)];
+    } else if app.punctuation || app.numbers {
+        label_spans = vec![Span::styled("    ", space_style)];
+        value_spans = vec![Span::styled("    ", space_style)];
+    }
+    label_spans.extend(
+        labels.iter().zip(col_widths.iter()).enumerate().flat_map(|(i, (label, width))| {
+            let mut spans = Vec::new();
+            if i > 0 {
+                spans.push(Span::styled("  ", space_style));
+            }
+            spans.push(Span::styled(format!("{:<width$}", label, width = *width), label_style));
+            spans
+        })
+    );
+
+    value_spans.extend(
+        values.iter().zip(col_widths.iter()).enumerate().flat_map(|(i, (val, width))| {
+            let mut spans = Vec::new();
+            if i > 0 {
+                spans.push(Span::styled("  ", space_style));
+            }
+            spans.push(Span::styled(format!("{:<width$}", val, width = *width), value_style));
+            spans
+        })
+    );
 
     (
         Line::from(label_spans).alignment(Alignment::Center),
@@ -165,7 +203,7 @@ fn get_chart(smoothed_speeds: &[f64], app: &App) -> Chart<'static> {
 
     let data: &'static [(f64, f64)] = Box::leak(data.into_boxed_slice());
 
-    let max_speed: f64 = f64::max(70.0, app.speed_per_second.iter().fold(0.0_f64, |a, &b| a.max(b)).max(1.0) / 6.0);
+    let max_speed: f64 = f64::max(70.0, app.speed_per_second.iter().fold(0.0_f64, |a, &b| a.max(b)).max(1.0) / 6.0 + 30.0);
     let max_time = app.test_time as f64;
 
     let bar_dataset = Dataset::default()
@@ -178,13 +216,12 @@ fn get_chart(smoothed_speeds: &[f64], app: &App) -> Chart<'static> {
         .bg(BG_COLOR)
         .x_axis(
             Axis::default()
-            .title("time (s)").style(style::Style::default().fg(REF_COLOR))
             .style(Style::default().fg(REF_COLOR))
             .bounds([0.0, smoothed_speeds.len() as f64])
             .labels(
                 (0..=max_time as usize)
                 .step_by(5)
-                .map(|i| Span::styled(i.to_string(), Style::default().fg(REF_COLOR)))
+                .map(|i| Span::styled(format!("{i}s"), Style::default().fg(REF_COLOR)))
                 .collect::<Vec<Span>>(),
                 ),
         )
@@ -275,7 +312,7 @@ fn render_reference_frame(frame: &mut Frame, area: Rect, app: &App, timer: Durat
     let max_ref_width = calculate_max_ref_width(area);
     let ref_padding = calculate_ref_padding(area, max_ref_width);
 
-    let instruction_line = create_instruction_line(app);
+    let instruction_line = create_config_line(app);
     let horizontal_line = create_horizontal_line(area);
     let time_words = if app.time_mode {
         create_timer(timer, app.test_time)
@@ -330,7 +367,7 @@ fn create_words_count(all_words: usize, typed_words: usize) -> Line<'static> {
         .alignment(Alignment::Left)
 }
 
-fn create_instruction_line( app: &App) -> Line<'static> {
+fn create_config_line( app: &App) -> Line<'static> {
     let divider = true;
     let mut button_states = vec![
         ("! punctuation", app.punctuation, !app.quote),

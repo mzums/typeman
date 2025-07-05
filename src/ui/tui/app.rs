@@ -39,6 +39,7 @@ pub struct App {
     pub speed_per_second: Vec<f64>,
     pub char_number: usize,
     pub errors_per_second: Vec<f32>,
+    pub tab_pressed: bool,
 }
 
 impl App {
@@ -65,6 +66,7 @@ impl App {
             speed_per_second: Vec::new(),
             char_number: 0,
             errors_per_second: Vec::new(),
+            tab_pressed: false,
         }
     }
 
@@ -116,7 +118,6 @@ impl App {
                 self.errors_this_second = 0.0;
                 last_recorded_time += Duration::from_secs(1);
             }
-            //println!("Timer: {:?}", timer);
             terminal.draw(|frame| render_app(frame, self, timer))?;
         }
         Ok(())
@@ -167,7 +168,24 @@ impl App {
                 KeyCode::Down => {
                     self.config = false;
                 }
+                KeyCode::Tab => {
+                    self.tab_pressed = true;
+                },
                 KeyCode::Enter => {
+                    if self.tab_pressed {
+                        self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500), self.batch_size);
+                        self.is_correct = vec![0; self.reference.chars().count()];
+                        self.pressed_vec.clear();
+                        self.pos1 = 0;
+                        self.words_done = 0;
+                        self.errors_this_second = 0.0;
+                        self.start_time = None;
+                        self.game_state = GameState::NotStarted;
+                        self.speed_per_second.clear();
+                        self.char_number = 0;
+                        self.errors_per_second.clear();
+                        self.tab_pressed = false;
+                    }
                     if self.config {
                         match self.selected_config {
                             "time" => {
@@ -232,6 +250,7 @@ impl App {
                         self.speed_per_second.clear();
                         self.char_number = 0;
                         self.errors_per_second.clear();
+                        self.tab_pressed = false;
                     }
                 }
                 KeyCode::Left => {
@@ -268,14 +287,6 @@ impl App {
                     }
                     for (i, (label, _state_val, visible)) in button_states.iter().enumerate() {
                         if *visible && self.selected_config == *label {
-                            
-                            let mut file = OpenOptions::new()
-                                .create(true)
-                                .append(true)
-                                .open("lposition.log")
-                                .unwrap();
-                            writeln!(file, "pos1: {}", i).unwrap();
-
                             if i == button_states.len() - 1 {
                                 self.selected_config = button_states[0].0;
                             } else {
@@ -305,7 +316,6 @@ impl App {
                             return Ok(());
                         }
                         if self.game_state == GameState::NotStarted {
-                            //println!("X");
                             self.game_state = GameState::Started;
                             self.start_time = Some(Instant::now());
                         }
