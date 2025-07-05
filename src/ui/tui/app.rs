@@ -40,6 +40,8 @@ pub struct App {
     pub char_number: usize,
     pub errors_per_second: Vec<f32>,
     pub tab_pressed: bool,
+    pub correct_count: usize,
+    pub error_count: usize,
 }
 
 impl App {
@@ -61,12 +63,14 @@ impl App {
             time_mode: true,
             word_mode: false,
             quote: false,
-            batch_size: 50,
+            batch_size: 1,
             selected_config: "time",
             speed_per_second: Vec::new(),
             char_number: 0,
             errors_per_second: Vec::new(),
             tab_pressed: false,
+            correct_count: 0,
+            error_count: 0,
         }
     }
 
@@ -98,6 +102,7 @@ impl App {
             };
             if self.test_time - (timer.as_secs_f32()) < 0.0 {
                 if self.game_state == GameState::Started {
+                    self.errors_per_second.push(self.errors_this_second);
                     self.game_state = GameState::Results;
                 }
             }
@@ -154,6 +159,11 @@ impl App {
                     if !self.pressed_vec.is_empty() && reference_chars.get(self.pos1) == Some(&' ') {
                         self.words_done = self.words_done.saturating_sub(1);
                     }
+                    if self.is_correct[self.pos1] == 2 || self.is_correct[self.pos1] == 1 {
+                        self.correct_count -= 1;
+                    } else if self.is_correct[self.pos1] == -1 {
+                        self.error_count -= 1;
+                    }
                     self.pressed_vec.pop();
                     if self.pos1 > 0 {
                         self.pos1 -= 1;
@@ -185,6 +195,8 @@ impl App {
                         self.char_number = 0;
                         self.errors_per_second.clear();
                         self.tab_pressed = false;
+                        self.correct_count = 0;
+                        self.error_count = 0;
                     }
                     if self.config {
                         match self.selected_config {
@@ -251,6 +263,8 @@ impl App {
                         self.char_number = 0;
                         self.errors_per_second.clear();
                         self.tab_pressed = false;
+                        self.correct_count = 0;
+                        self.error_count = 0;
                     }
                 }
                 KeyCode::Left => {
@@ -310,6 +324,9 @@ impl App {
                     }
                 }
                 KeyCode::Char(ch) => {
+                    if self.is_correct[0] == 0 && ch == ' ' {
+                        return Ok(());
+                    }
                     let reference_chars: Vec<char> = self.reference.chars().collect();
                     if let Some(&ref_char) = reference_chars.get(self.pos1) {
                         if self.game_state == GameState::Results {
@@ -320,19 +337,16 @@ impl App {
                             self.start_time = Some(Instant::now());
                         }
                         if self.is_correct.len() > self.pos1 {
-                            let mut file = OpenOptions::new()
-                                .create(true)
-                                .append(true)
-                                .open("lposition.log")
-                                .unwrap();
-                            writeln!(file, "ref_char: {ref_char}  my {ch}").unwrap();
+                            
                             if ref_char == ch && self.is_correct[self.pos1] != -1 && self.is_correct[self.pos1] != 1 {
                                 self.is_correct[self.pos1] = 2; // Correct
+                                self.correct_count += 1;
                             } else if ref_char == ch && self.is_correct[self.pos1] == -1 {
                                 self.is_correct[self.pos1] = 1; // Corrected
                             } else {
                                 self.is_correct[self.pos1] = -1; // Incorrect
                                 self.errors_this_second += 1.0;
+                                self.error_count += 1;
                             }
                         }
                         self.pos1 += 1;
@@ -342,6 +356,27 @@ impl App {
                         }
                     }
                     self.config = false;
+
+                    if self.pos1 >= self.reference.chars().count() {
+                        let mut file = OpenOptions::new()
+                            .create(true)
+                            .append(true)
+                            .open("lposition.log")
+                            .unwrap();
+                        writeln!(file, "words_done: {}", self.words_done).unwrap();
+
+                        self.words_done += 1;
+                        self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500), self.batch_size);
+                        self.is_correct = vec![0; self.reference.chars().count()];
+                        self.pos1 = 0;
+
+                        let mut file = OpenOptions::new()
+                            .create(true)
+                            .append(true)
+                            .open("lposition.log")
+                            .unwrap();
+                        writeln!(file, "words_done: {}", self.words_done).unwrap();
+                    }
                 }
                 _ => {}
             }

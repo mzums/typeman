@@ -109,21 +109,19 @@ fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
     let wpm = (app.words_done as f32 / app.test_time) * 60.0;
     let wpm_str = format!("{}", wpm as i32);
 
-    let correct_count = app.is_correct.iter().filter(|&&x| x == 2 || x == 1).count();
     let accuracy = if app.words_done > 0 {
-        (correct_count as f32 / app.pressed_vec.len() as f32) * 100.0
+        (app.correct_count as f32 / app.pressed_vec.len() as f32) * 100.0
     } else {
         0.0
     };
-    let acc_str = format!("{}%", accuracy as i32);
+    let acc_str = format!("{}%", accuracy.round());
 
-    let error_count = app.is_correct.iter().filter(|&&x| x == -1 || x == 1).count();
     let error_rate = if app.pressed_vec.len() > 0 {
-        (error_count as f32 / app.pressed_vec.len() as f32) * 100.0
+        (app.error_count as f32 / app.pressed_vec.len() as f32) * 100.0
     } else {
         0.0
     };
-    let error_str = format!("{}%", error_rate as i32);
+    let error_str = format!("{}%", error_rate.round());
 
     let standard_deviation = calc_standard_deviation(&app.speed_per_second, 6.0);
     let consistency = if wpm > 0.0 {
@@ -348,7 +346,7 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
                 }
                 if *err > 0.0 {
                     ctx.print(
-                        (i as f64 + 1.0) * extra_columns as f64,
+                        (i as f64 + 0.8) * (smoothed_speeds.len() as f64 / test_time as f64),
                         1.0,
                         Span::styled(cross, Style::default().fg(Color::Red).bg(BG_COLOR)),
                     );
@@ -478,7 +476,7 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize) -> Vec<Line<'a>> {
     let mut fg_colors: Vec<Color> = vec![REF_COLOR; app.reference.chars().count()];
     let mut bg_colors: Vec<Color> = vec![BG_COLOR; app.reference.chars().count()];
     
-    for i in 0..app.is_correct.len()-1 {
+    for i in 0..app.is_correct.len() {
         if app.pos1 == i {
             fg_colors[i] = BG_COLOR;
             bg_colors[i] = MAIN_COLOR
