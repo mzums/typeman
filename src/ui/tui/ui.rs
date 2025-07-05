@@ -6,6 +6,7 @@ use ratatui::{
 use std::time::Duration;
 use std::collections::HashMap;
 
+use ratatui::widgets::canvas::Canvas;
 use crate::ui::tui::app::{App, GameState};
 
 const BORDER_COLOR: Color = Color::Rgb(100, 60, 0);
@@ -14,12 +15,15 @@ const BG_COLOR: Color = Color::Rgb(10, 10, 10);
 const MAIN_COLOR: Color = Color::Rgb(255, 155, 0);
 const DIMMER_MAIN: Color = Color::Rgb(180, 100, 0);
 
-fn render_instructions(frame: &mut Frame, area: Rect) {
-    let text = Paragraph::new(vec![
-            Line::from("  \u{2191} - enter config, \u{2190}/\u{2192} - toggle config, Enter - apply config"),
-            Line::from("  Tab + Enter - restart"),
-            Line::from("  Esc - exit"),
-        ])
+fn render_instructions(frame: &mut Frame, area: Rect, show: bool) {
+    let mut lines = Vec::new();
+    if show {
+        lines.push(Line::from("  \u{2191} - enter config, \u{2190}/\u{2192} - toggle config, Enter - apply config"));
+    }
+    lines.push(Line::from("  Tab + Enter - restart"));
+    lines.push(Line::from("  Esc - exit"));
+
+    let text = Paragraph::new(lines)
         .style(Style::default().fg(BORDER_COLOR).bg(BG_COLOR))
         .alignment(Alignment::Left);
     frame.render_widget(text, area);
@@ -31,7 +35,11 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Min(0),
-            Constraint::Length(3),
+            if app.game_state == GameState::Results {
+                Constraint::Length(2)
+            } else {
+                Constraint::Length(3)
+            },
         ])
         .split(frame.area());
     
@@ -41,7 +49,7 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
     else {
         render_reference_frame(frame, chunks[0], &app, timer);
     }
-    render_instructions(frame, chunks[1]);
+    render_instructions(frame, chunks[1], app.game_state != GameState::Results);
 }
 
 fn smooth(
@@ -211,30 +219,33 @@ fn get_chart(smoothed_speeds: &[f64], app: &App) -> Chart<'static> {
         .style(Style::default().fg(Color::Rgb(150, 80, 0)).bg(BG_COLOR))
         .marker(symbols::Marker::HalfBlock)
         .data(data);
-
+    
     let chart = Chart::new(vec![bar_dataset])
+    .block(Block::default().style(Style::default().bg(BG_COLOR)))
         .bg(BG_COLOR)
+        .style(Style::default().bg(BG_COLOR))
         .x_axis(
             Axis::default()
-            .style(Style::default().fg(REF_COLOR))
-            .bounds([0.0, smoothed_speeds.len() as f64])
-            .labels(
-                (0..=max_time as usize)
-                .step_by(5)
-                .map(|i| Span::styled(format!("{i}s"), Style::default().fg(REF_COLOR)))
-                .collect::<Vec<Span>>(),
+                .style(Style::default().fg(REF_COLOR))
+                .bounds([0.0, smoothed_speeds.len() as f64])
+                .labels(
+                    (0..=max_time as usize)
+                        .step_by(5)
+                        .map(|i| Span::styled(format!("{i}s"), Style::default().fg(REF_COLOR)))
+                        .collect::<Vec<Span>>(),
                 ),
         )
         .y_axis(
             Axis::default()
-                .title("wpm").labels_alignment(Alignment::Left).style(Style::default().fg(REF_COLOR))
+                .title("wpm")
+                .labels_alignment(ratatui::layout::Alignment::Left)
                 .style(Style::default().fg(REF_COLOR))
                 .bounds([0.0, max_speed * 1.1])
                 .labels(vec![
                     Span::from("0").style(Style::default().fg(REF_COLOR)),
                     Span::from(format!("{:.0}", max_speed / 2.0)).style(Style::default().fg(REF_COLOR)),
                     Span::from(format!("{:.0}", max_speed)).style(Style::default().fg(REF_COLOR)),
-                ]).style(Style::default().fg(REF_COLOR)),
+                ]),
         );
     return chart;
 }
@@ -303,7 +314,50 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
     let empty_line = Line::from("");
 
     frame.render_widget(block, area);
+    frame.render_widget(
+        Block::default().style(Style::default().bg(BG_COLOR)),
+        chart_area,
+    );
     frame.render_widget(chart, chart_area);
+
+    let max_speed = f64::max(
+        70.0,
+        app.speed_per_second
+            .iter()
+            .fold(0.0_f64, |a, &b| a.max(b))
+            .max(1.0) / 6.0
+            + 30.0,
+    );
+
+    let canvas = Canvas::default()
+        .block(Block::default().style(Style::default().bg(BG_COLOR)))
+        .x_bounds([0.0, smoothed_speeds.len() as f64])
+        .y_bounds([0.0, max_speed * 1.1])
+        .background_color(BG_COLOR)
+        .paint(|ctx| {
+            for (i, err) in app.errors_per_second.iter().enumerate() {
+                let cross: &str;
+                if *err <= 1.0 {
+                    cross = "\u{00D7}";
+                } else if *err <= 2.0 {
+                    cross = "\u{2715}";
+                } else if *err <= 3.0 {
+                    cross = "\u{2716}";
+                } else {
+                    cross = "\u{274C}";
+                }
+                if *err > 0.0 {
+                    ctx.print(
+                        (i as f64 + 1.0) * extra_columns as f64,
+                        1.0,
+                        Span::styled(cross, Style::default().fg(Color::Red).bg(BG_COLOR)),
+                    );
+                }
+            }
+        });
+
+    frame.render_widget(canvas, chart_area);
+
     frame.render_widget(empty_line, chunks[1]);
     frame.render_widget(stats, chunks[2]);
 }
