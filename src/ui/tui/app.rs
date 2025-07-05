@@ -268,7 +268,7 @@ impl App {
                     }
                 }
                 KeyCode::Left => {
-                    if ! self.config {
+                    if !self.config {
                         return Ok(());
                     }
                     for (i, (label, _state_val, visible)) in button_states.iter().enumerate() {
@@ -296,7 +296,7 @@ impl App {
                     }
                 }
                 KeyCode::Right => {
-                    if ! self.config {
+                    if !self.config {
                         return Ok(());
                     }
                     for (i, (label, _state_val, visible)) in button_states.iter().enumerate() {

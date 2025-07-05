@@ -107,9 +107,11 @@ pub fn handle_input(
     pos1: &mut usize,
     words_done: &mut usize,
     errors_this_second: &mut f64,
+    config_opened: &mut bool,
 ) -> bool {
     let pressed = get_char_pressed();
     if let Some(ch) = pressed {
+        *config_opened = false;
         if ch == '\t' || ch == '\n' || ch == '\r' {
             return false;
         }
@@ -266,7 +268,7 @@ pub async fn gui_main_async() {
     let mut pos1: usize = 0;
     let mut timer = time::Duration::from_secs(0);
     let mut start_time: Instant = Instant::now();
-    let mut test_time = 10.0;
+    let mut test_time = 5.0;
     let mut game_started = false;
     let mut game_over = false;
 
@@ -279,6 +281,9 @@ pub async fn gui_main_async() {
     let mut last_recorded_time = Instant::now();
 
     let mut words_done = 0;
+
+    let mut config_opened = false;
+    let mut selected_config: String = "time".to_string();
 
     let words: Vec<&str> = reference.split_whitespace().collect();
     let average_word_length: f64 = if !words.is_empty() {
@@ -332,6 +337,8 @@ pub async fn gui_main_async() {
                 &mut words_done,
                 &mut errors_per_second,
                 22,
+                &mut config_opened,
+                &mut selected_config,
             );
 
             
@@ -356,7 +363,7 @@ pub async fn gui_main_async() {
                 &mut errors_this_second,
             );
 
-            if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second) {
+            if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened) {
                 game_started = true;
             }
             
@@ -378,7 +385,7 @@ pub async fn gui_main_async() {
                 screen_height() / 15.0,
             );
             
-            handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second);
+            handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened);
             
             if time_mode {
                 draw_timer(font.as_ref(), font_size, start_x, start_y, timer, test_time);

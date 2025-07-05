@@ -17,6 +17,7 @@ fn draw_toggle_button(
     inactive_color: Color,
     visible: bool,
     font_size: u16,
+    selected: bool,
 ) -> (bool, bool, f32) {
     if !visible {
         return (false, false, 0.0);
@@ -32,8 +33,15 @@ fn draw_toggle_button(
     let hovered = rect.contains(vec2(mx, my));
     let clicked = hovered && is_mouse_button_pressed(MouseButton::Left);
 
-    let text_color = if is_active { main::MAIN_COLOR } else { inactive_color };
-    let bg_color = Color::from_rgba(0, 0, 0, 0);
+    let mut text_color = if is_active { main::MAIN_COLOR } else { inactive_color };
+    let mut bg_color = Color::from_rgba(255, 0, 0, 0);
+    if selected && is_active {
+        text_color = macroquad::color::BLACK;
+        bg_color = Color::from_rgba(255, 155, 0, 200);
+    } else if selected {
+        text_color = macroquad::color::BLACK;
+        bg_color = Color::from_rgba(255, 155, 0, 80);
+    }
     
     draw_rectangle(x, y, btn_width, btn_height, bg_color);
     draw_text_ex(
@@ -66,7 +74,7 @@ pub fn update_game_state(
     words_done: &mut usize,
     errors_this_second: &mut f64,
 ) {
-    if !*game_started && main::handle_input(reference, pressed_vec, is_correct, pos1, words_done, errors_this_second) {
+    if !*game_started && main::handle_input(reference, pressed_vec, is_correct, pos1, words_done, errors_this_second, &mut false) {
         *game_started = true;
         *start_time = Instant::now();
     }
@@ -130,6 +138,8 @@ pub fn handle_settings_buttons(
     words_done: &mut usize,
     errors_per_second: &mut Vec<f64>,
     font_size: u16,
+    config_opened: &mut bool,
+    selected_config: &mut String,
 ) -> bool {
     let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = 200.0;
@@ -154,6 +164,68 @@ pub fn handle_settings_buttons(
         ("100", *batch_size == 100, *word_mode),
     ];
 
+    if is_key_down(KeyCode::Up) {
+        *config_opened = true;
+    } else if is_key_down(KeyCode::Down) {
+        *config_opened = false;
+    } else if is_key_pressed(KeyCode::Left) {
+        if !*config_opened {
+            return false;
+        }
+        for (i, (label, _state_val, visible)) in button_states.iter().enumerate() {
+            if *visible && *selected_config == *label {
+                let start_index = i;
+                let mut j = if i == 0 {
+                    button_states.len() - 1
+                } else {
+                    i - 1
+                };
+
+                while j != start_index {
+                    if button_states[j].2 && button_states[j].0 != "|" {
+                        *selected_config = button_states[j].0.to_string();
+                        break;
+                    }
+                    j = if j == 0 {
+                        button_states.len() - 1
+                    } else {
+                        j - 1
+                    };
+                }
+                break;
+            }
+        }
+    } else if is_key_pressed(KeyCode::Right) {
+        if !*config_opened {
+            return false;
+        }
+        for (i, (label, _state_val, visible)) in button_states.iter().enumerate() {
+            if *visible && *selected_config == *label {
+                if i == button_states.len() - 1 {
+                    *selected_config = button_states[0].0.to_string();
+                } else {
+                    let mut next = i + 1;
+                    if button_states[next].0 == "|" {
+                        next += 1;
+                    }
+                    while next != i {
+                        if next >= button_states.len() {
+                            next = 0;
+                        }
+                        if button_states[next].2 {
+                            *selected_config = button_states[next].0.to_string();
+                            break;
+                        }
+                        next += 1;
+                    }
+                }
+                break;
+            }
+        }
+    } else if is_key_pressed(KeyCode::Enter) {
+        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size);
+    }
+
     let mut any_button_hovered = false;
 
     for (label, state_val, visible) in button_states.iter_mut() {
@@ -175,6 +247,7 @@ pub fn handle_settings_buttons(
             inactive_color,
             *visible,
             font_size,
+            selected_config == label && *config_opened,
         );
         total_width += btni_width;
         
@@ -183,55 +256,7 @@ pub fn handle_settings_buttons(
         }
         
         if clicked && *label != "|"  && (!is_active || (*label == "! punctuation" || *label == "# numbers")) {
-            match *label {
-                "! punctuation" => {
-                    *punctuation = !*punctuation;
-                    *quote = false;
-                },
-                "# numbers" => {
-                    *numbers = !*numbers;
-                    *quote = false;
-                },
-                "time" => {
-                    *time_mode = true;
-                    *word_mode = false;
-                    *quote = false;
-                },
-                "words" => {
-                    *word_mode = true;
-                    *time_mode = false;
-                    *quote = false;
-                },
-                "quote" => {
-                    *quote = true;
-                    *punctuation = false;
-                    *numbers = false;
-                    *time_mode = false;
-                    *word_mode = false;
-                },
-                "15" => {
-                    *test_time = 15.0;
-                },
-                "30" => {
-                    *test_time = 30.0;
-                },
-                "60" => {
-                    *test_time = 60.0;
-                },
-                "120" => {
-                    *test_time = 120.0;
-                },
-                "25" => {
-                    *batch_size = 25;
-                },
-                "50" => {
-                    *batch_size = 50;
-                },
-                "100" => {
-                    *batch_size = 100;
-                },
-                _ => {}
-            }
+            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size);
 
             if *quote {
                 *reference = utils::get_random_quote();
@@ -247,4 +272,56 @@ pub fn handle_settings_buttons(
     }
 
     any_button_hovered
+}
+
+fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize) {
+    match label {
+        "! punctuation" => {
+            *punctuation = !*punctuation;
+            *quote = false;
+        },
+        "# numbers" => {
+            *numbers = !*numbers;
+            *quote = false;
+        },
+        "time" => {
+            *time_mode = true;
+            *word_mode = false;
+            *quote = false;
+        },
+        "words" => {
+            *word_mode = true;
+            *time_mode = false;
+            *quote = false;
+        },
+        "quote" => {
+            *quote = true;
+            *punctuation = false;
+            *numbers = false;
+            *time_mode = false;
+            *word_mode = false;
+        },
+        "15" => {
+            *test_time = 15.0;
+        },
+        "30" => {
+            *test_time = 30.0;
+        },
+        "60" => {
+            *test_time = 60.0;
+        },
+        "120" => {
+            *test_time = 120.0;
+        },
+        "25" => {
+            *batch_size = 25;
+        },
+        "50" => {
+            *batch_size = 50;
+        },
+        "100" => {
+            *batch_size = 100;
+        },
+        _ => {}
+    }
 }

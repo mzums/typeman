@@ -379,13 +379,13 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
     let mut errors: Vec<f64> = Vec::new();
     errors.push(0.0);
     errors.extend(errors_per_second.iter().cloned());
+    
     egui_macroquad::ui(|ctx| {
         Area::new("chart_area".into())
             .fixed_pos(pos2(chart_x, chart_y))
             .show(ctx, |ui| {
                 let size = egui::Vec2::new(chart_width, chart_height);
                 let (rect, _response) = ui.allocate_exact_size(size, egui::Sense::hover());
-                ui.painter().rect_filled(rect, 5.0, Color32::from_rgb(20, 17, 15));
 
                 let mut child_ui = ui.child_ui(rect, *ui.layout(), None);
 
@@ -413,7 +413,6 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                         max_y = point[1];
                     }
                 }
-                max_y += 10.0;
 
                 Plot::new("performance_plot")
                     .include_y(0.0)
@@ -433,25 +432,32 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                             .name("Performance");
                         plot_ui.line(line);
 
-                        let error_points: Vec<([f64; 2], f32)> = errors
-                            .iter()
-                            .enumerate()
-                            .filter_map(|(i, &val)| {
-                                if val > 0.0 {
-                                    Some(([i as f64, val + 5.0], 2.0 + (val as f32 * 1.5)))
-                                } else {
-                                    None
+                        for (i, &val) in errors.iter().enumerate() {
+                            if val > 0.0 {
+                                if let Some(&[x,_]) = points.get(i) {
+                                    let size = if val <= 1.0 {
+                                        5.0
+                                    } else if val <= 2.0 {
+                                        8.0
+                                    } else if val <= 3.0 {
+                                        11.0
+                                    } else {
+                                        15.0
+                                    };
+
+                                    let cross_y = size;
+                                    
+                                    let cross = egui_plot::Points::new(
+                                        "Error",
+                                        vec![[x, cross_y]]
+                                    )
+                                    .color(Color32::from_rgb(255, 50, 50))
+                                    .radius(size as f32)
+                                    .shape(egui_plot::MarkerShape::Cross);
+                                    
+                                    plot_ui.points(cross);
                                 }
-                            })
-                            .collect();
-                        for (point, radius) in error_points.iter() {
-                            let num_errors = errors[point[0] as usize];
-                            let dots = egui_plot::Points::new(format!("Errors at t={}", point[0]), vec![*point])
-                                .color(Color32::RED)
-                                .radius(*radius)
-                                .shape(egui_plot::MarkerShape::Circle)
-                                .name(format!("Errors: {}", num_errors as u32));
-                            plot_ui.points(dots);
+                            }
                         }
                     });
             });
