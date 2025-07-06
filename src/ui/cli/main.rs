@@ -6,6 +6,9 @@ use crossterm::{
 use std::io::{stdout, Write};
 use std::time::Instant;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
+use std::fs::{self, OpenOptions};
+use std::path::Path;
+
 
 struct RawModeGuard;
 
@@ -47,7 +50,7 @@ fn initial_display(reference: &str, timer_pos: (u16, u16)) {
     stdout.flush().unwrap();
 }
 
-pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant) -> i32 {
+pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, practice: Option<usize>) -> i32 {
     let ref_chars: Vec<char> = reference.chars().collect();
     let mut stdout = stdout();
     let _raw_guard = RawModeGuard::new();
@@ -95,6 +98,52 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant) 
 
         if position >= ref_chars.len() {
             break;
+        }
+    }
+    if practice.is_some() {
+        let elapsed = start_time.elapsed().as_secs_f64();
+        let error_count = error_positions.iter().filter(|&&e| e).count();
+        let accuracy = 100.0 - (error_count as f64 / reference.len() as f64 * 100.0);
+        let wpm = (user_input.len() as f64 / 5.0) / (elapsed / 60.0);
+
+        let results_dir = "practice_results";
+        fs::create_dir_all(results_dir).ok();
+
+        let filename = format!("{}/level_{:?}.txt", results_dir, practice.unwrap());
+
+        let stats = format!(
+            "Time: {:.2}s\nAccuracy: {:.1}%\nWPM: {:.1}\n---\n",
+            elapsed, accuracy, wpm
+        );
+
+        let file_path = Path::new(&filename);
+
+        let mut prev_best_wpm = None;
+        if file_path.exists() {
+            if let Ok(contents) = fs::read_to_string(file_path) {
+            for line in contents.lines() {
+                if line.starts_with("WPM:") {
+                    if let Some(wpm_str) = line.split_whitespace().nth(1) {
+                        if let Ok(val) = wpm_str.parse::<f64>() {
+                            if prev_best_wpm.map_or(true, |best| val > best) {
+                                prev_best_wpm = Some(val);
+                            }
+                        }
+                    }
+                }
+            }
+            }
+        }
+
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(file_path)
+            .unwrap();
+        file.write_all(stats.as_bytes()).unwrap();
+
+        if prev_best_wpm.map_or(true, |best| wpm > best) {
+            println!("\nNew highscore for this level!");
         }
     }
     show_final_results(reference, &user_input, &error_positions, start_time);

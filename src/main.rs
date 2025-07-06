@@ -2,8 +2,13 @@ use clap::{Parser, ValueHint};
 use std::{path::PathBuf};
 use serde::Deserialize;
 
+use crate ::ui::cli::modes;
+
 mod ui {
-    pub mod cli;
+    pub mod cli {
+        pub mod main;
+        pub mod modes;
+    }
     pub mod gui {
         pub mod main;
         pub mod results;
@@ -15,7 +20,6 @@ mod ui {
         pub mod r#mod;
     }
 }
-mod modes;
 mod practice;
 mod utils;
 
@@ -104,7 +108,7 @@ fn main() {
     } else if args.random_quote {
         modes::quotes();
     } else if args.level.is_some() {
-        practice::practice(&args);
+        modes::practice(&args);
     } else if args.word_number.is_some() &&  !args.time_limit.is_some() {
         modes::word_mode(&args);
     } else {

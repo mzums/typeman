@@ -4,19 +4,17 @@ use macroquad::prelude::*;
 use std::time::{Instant, Duration};
 
 use crate::ui::gui::main;
-use crate::{practice, utils};
+use crate::utils;
 
 
 fn draw_rounded_rect(x: f32, y: f32, w: f32, h: f32, radius: f32, color: Color) {
-    // Center rectangle
     draw_rectangle(x + radius, y, w - 2.0 * radius, h, color);
     draw_rectangle(x, y + radius, w, h - 2.0 * radius, color);
 
-    // Corners
-    draw_circle(x + radius, y + radius, radius, color); // Top-left
-    draw_circle(x + w - radius, y + radius, radius, color); // Top-right
-    draw_circle(x + radius, y + h - radius, radius, color); // Bottom-left
-    draw_circle(x + w - radius, y + h - radius, radius, color); // Bottom-right
+    draw_circle(x + radius, y + radius, radius, color);
+    draw_circle(x + w - radius, y + radius, radius, color);
+    draw_circle(x + radius, y + h - radius, radius, color);
+    draw_circle(x + w - radius, y + h - radius, radius, color);
 }
 
 fn draw_toggle_button(

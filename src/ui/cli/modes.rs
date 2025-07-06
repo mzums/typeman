@@ -11,6 +11,7 @@ use crate::Cli;
 use crate::Quote;
 use crate::utils;
 use crate::ui::tui::r#mod as tui_mod;
+    use crate ::practice;
 
 
 pub fn gui_main() {
@@ -47,7 +48,7 @@ pub fn word_mode(args: &Cli) {
 
     let reference = utils::get_reference(punctuation, digits, &word_list, word_number as usize);
     let start_time = Instant::now();
-    cli::type_loop(&reference, None, start_time);
+    cli::main::type_loop(&reference, None, start_time, None);
 }
 
 pub fn time_mode(args: &Cli) {
@@ -86,7 +87,7 @@ pub fn time_mode(args: &Cli) {
             break;
         }
 
-        let res = cli::type_loop(&reference, Some(time_limit), start_time);
+        let res = cli::main::type_loop(&reference, Some(time_limit), start_time, None);
         if res != 0 {
             println!("Test interrupted by user.");
             break;
@@ -112,7 +113,7 @@ pub fn custom_text(path: &PathBuf) {
         }
     };
     let start_time = Instant::now();
-    cli::type_loop(reference.as_str(), None, start_time);
+    cli::main::type_loop(reference.as_str(), None, start_time, None);
 }
 
 pub fn quotes() {
@@ -124,5 +125,24 @@ pub fn quotes() {
     let random_quote = quotes.choose(&mut rng).expect("No quotes available");
     let reference = format!("\"{}\" - {}", random_quote.text, random_quote.author);
     let start_time = Instant::now();
-    cli::type_loop(&reference, None, start_time);
+    cli::main::type_loop(&reference, None, start_time, None);
+}
+
+pub fn practice(args: &Cli) {
+    let level = args.level.unwrap();
+    if level < 1 || level > practice::TYPING_LEVELS.len() {
+        eprintln!("Invalid typing level. Please choose a level between 1 and {}.", practice::TYPING_LEVELS.len());
+        return;
+    }
+
+    let curr_level= level - 1;
+    let chars = practice::TYPING_LEVELS[curr_level as usize].1;
+
+    let reference = practice::create_words(&chars, args.word_number.unwrap_or(Some(50)).unwrap_or(50));
+    let start_time = Instant::now();
+    let res = cli::main::type_loop(&reference, None, start_time, Some(curr_level));
+    if res == 1 {
+        println!("Exiting practice mode.");
+        return;
+    }
 }
