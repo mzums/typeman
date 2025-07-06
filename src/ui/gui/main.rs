@@ -9,6 +9,7 @@ use std::thread;
 use crate::utils;
 use crate::ui::gui::results;
 use crate::ui::gui::config;
+use crate::practice::TYPING_LEVELS;
 
 
 pub const MAIN_COLOR: macroquad::color::Color = macroquad::color::Color::from_rgba(255, 155, 0, 255);
@@ -285,6 +286,8 @@ pub async fn gui_main_async() {
     let mut config_opened = false;
     let mut selected_config: String = "time".to_string();
 
+    let mut practice_menu = false;
+
     let words: Vec<&str> = reference.split_whitespace().collect();
     let average_word_length: f64 = if !words.is_empty() {
         words.iter().map(|w| w.len()).sum::<usize>() as f64 / words.len() as f64 + 1.0
@@ -312,7 +315,7 @@ pub async fn gui_main_async() {
             pos1 = 0;
         }
         
-        if !game_over {
+        if !game_over && !practice_menu {
             let any_button_hovered = config::handle_settings_buttons(
                 &font,
                 &word_list,
@@ -339,6 +342,7 @@ pub async fn gui_main_async() {
                 22,
                 &mut config_opened,
                 &mut selected_config,
+                &mut practice_menu,
             );
 
             
@@ -495,6 +499,8 @@ pub async fn gui_main_async() {
             else {
                 let _pressed = get_char_pressed();
             }
+        } else if practice_menu {
+            
         }
         if is_key_down(KeyCode::Escape) {
             break;

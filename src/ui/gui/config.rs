@@ -4,8 +4,20 @@ use macroquad::prelude::*;
 use std::time::{Instant, Duration};
 
 use crate::ui::gui::main;
-use crate::utils;
+use crate::{practice, utils};
 
+
+fn draw_rounded_rect(x: f32, y: f32, w: f32, h: f32, radius: f32, color: Color) {
+    // Center rectangle
+    draw_rectangle(x + radius, y, w - 2.0 * radius, h, color);
+    draw_rectangle(x, y + radius, w, h - 2.0 * radius, color);
+
+    // Corners
+    draw_circle(x + radius, y + radius, radius, color); // Top-left
+    draw_circle(x + w - radius, y + radius, radius, color); // Top-right
+    draw_circle(x + radius, y + h - radius, radius, color); // Bottom-left
+    draw_circle(x + w - radius, y + h - radius, radius, color); // Bottom-right
+}
 
 fn draw_toggle_button(
     x: f32,
@@ -37,13 +49,14 @@ fn draw_toggle_button(
     let mut bg_color = Color::from_rgba(255, 0, 0, 0);
     if selected && is_active {
         text_color = macroquad::color::BLACK;
-        bg_color = Color::from_rgba(255, 155, 0, 200);
+        bg_color = Color::from_rgba(150, 90, 0, 255);
     } else if selected {
         text_color = macroquad::color::BLACK;
-        bg_color = Color::from_rgba(255, 155, 0, 80);
+        bg_color = Color::from_rgba(100, 60, 0, 255);
     }
     
-    draw_rectangle(x, y, btn_width, btn_height, bg_color);
+    let corner_radius = 8.0;
+    draw_rounded_rect(x, y, btn_width, btn_height, corner_radius, bg_color);
     draw_text_ex(
         &label,
         x + padding,
@@ -140,6 +153,7 @@ pub fn handle_settings_buttons(
     font_size: u16,
     config_opened: &mut bool,
     selected_config: &mut String,
+    practice_menu: &mut bool,
 ) -> bool {
     let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = 200.0;
@@ -154,6 +168,7 @@ pub fn handle_settings_buttons(
         ("time", *time_mode, true),
         ("words", *word_mode, true),
         ("quote", *quote, true),
+        ("practice", *practice_menu, true),
         ("|", divider, true),
         ("15", test_time == &15.0, *time_mode),
         ("30", test_time == &30.0, *time_mode),
@@ -223,7 +238,7 @@ pub fn handle_settings_buttons(
             }
         }
     } else if is_key_pressed(KeyCode::Enter) {
-        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size);
+        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu);
     }
 
     let mut any_button_hovered = false;
@@ -232,7 +247,7 @@ pub fn handle_settings_buttons(
         let x = start_x + total_width;
         let is_active = *state_val;
         let mut y = btn_y;
-        if *label == "! punctuation" || *label == "quote" {
+        if *label == "! punctuation" || *label == "quote" || *label == "practice" {
             y -= (measure_text("p", font.as_ref(), font_size, 1.0).height - 
                    measure_text("n", font.as_ref(), font_size, 1.0).height) / 2.0;
         }
@@ -256,7 +271,7 @@ pub fn handle_settings_buttons(
         }
         
         if clicked && *label != "|"  && (!is_active || (*label == "! punctuation" || *label == "# numbers")) {
-            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size);
+            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu);
 
             if *quote {
                 *reference = utils::get_random_quote();
@@ -274,7 +289,7 @@ pub fn handle_settings_buttons(
     any_button_hovered
 }
 
-fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize) {
+fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize, practice_menu: &mut bool) {
     match label {
         "! punctuation" => {
             *punctuation = !*punctuation;
@@ -300,6 +315,14 @@ fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_m
             *numbers = false;
             *time_mode = false;
             *word_mode = false;
+        },
+        "practice" => {
+            *quote = false;
+            *punctuation = false;
+            *numbers = false;
+            *time_mode = false;
+            *word_mode = false;
+            *practice_menu = true;
         },
         "15" => {
             *test_time = 15.0;
