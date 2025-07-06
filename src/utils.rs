@@ -112,7 +112,9 @@ pub fn count_correct_words(reference: &str, is_correct: &VecDeque<i32>) -> (usiz
         }
         if c == ' ' {
             if word_correct && char_idx > 0 {
-                correct_words += 1;
+                if is_correct[char_idx] == 1 || is_correct[char_idx] == 2 {
+                    correct_words += 1;
+                }
                 all_words += 1;
             }
             word_correct = true;

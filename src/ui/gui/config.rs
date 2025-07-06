@@ -7,7 +7,7 @@ use crate::ui::gui::main;
 use crate::utils;
 
 
-fn draw_rounded_rect(x: f32, y: f32, w: f32, h: f32, radius: f32, color: Color) {
+pub fn draw_rounded_rect(x: f32, y: f32, w: f32, h: f32, radius: f32, color: Color) {
     draw_rectangle(x + radius, y, w - 2.0 * radius, h, color);
     draw_rectangle(x, y + radius, w, h - 2.0 * radius, color);
 

@@ -19,10 +19,10 @@ pub const TYPING_LEVELS: [(&str, &[char]); 32] = [
     ("repetition: stretch row 1", &['r', 'u', 't', 'y', 'e', 'i']),
     ("new: w & o", &['w', 'o']),
     ("new: q & p", &['q', 'p']),
-    ("repetition: top row left-right", &['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p']),
+    ("repetition: top row letters", &['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p']),
     ("new: v, b, n", &['v', 'b', 'n']),
     ("new: c & m", &['c', 'm']),
-    ("repetition: bottom row left-right", &['z', 'x', 'c', 'v', 'b', 'n', 'm']),
+    ("repetition: bottom row letters", &['z', 'x', 'c', 'v', 'b', 'n', 'm']),
     ("new: x & ,", &['x', ',']),
     ("new: z & . & /", &['z', '.', '/']),
     ("repetition: full lowercase", &[
@@ -51,7 +51,7 @@ pub fn create_words(chars: &[char], word_number: usize) -> String {
     for i in 0..word_number {
         let word_length = rand::random::<u16>() % 5 + 2;
         let word: String = (0..word_length)
-            .map(|i| *chars.choose(&mut rand::rng()).unwrap())
+            .map(|_| *chars.choose(&mut rand::rng()).unwrap())
             .collect();
         reference.push_str(&word);
         if i != word_number - 1 {

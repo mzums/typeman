@@ -28,11 +28,12 @@ impl Drop for RawModeGuard {
     }
 }
 
-fn display_results(elapsed: f64, accuracy: f64, wpm: f64) {
-    println!("\n\nTime: {:.2}s | Accuracy: {:.1}% | WPM: {:.1}",
+fn display_results(elapsed: f64, accuracy: f64, wpm: f64, raw: f64) {
+    println!("\n\nTime: {:.0}s | Accuracy: {:.0}% | WPM: {:.0} | Raw WPM: {:.0}",
         elapsed,
         accuracy,
-        wpm
+        wpm,
+        raw
     );
 }
 
@@ -110,6 +111,9 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
         let accuracy = 100.0 - (error_count as f64 / reference.len() as f64 * 100.0);
         let wpm = (user_input.len() as f64 / 5.0) / (elapsed / 60.0);
 
+        let term_width = crossterm::terminal::size().map(|(w, _)| w as usize).unwrap_or(80);
+        let lines = (reference.len() + term_width - 1) / term_width;
+
         let results_dir = "practice_results";
         fs::create_dir_all(results_dir).ok();
 
@@ -119,6 +123,16 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
             "Time: {:.2}s\nAccuracy: {:.1}%\nWPM: {:.1}\n---\n",
             elapsed, accuracy, wpm
         );
+        queue!(
+            stdout,
+            cursor::MoveTo(0, (lines as u16) + 1)
+        ).unwrap();
+
+        if wpm >= 35.0 {
+            println!("\nLevel passed!\n")
+        } else {
+            println!("\nAchive WPM of 35 to pass this level.\n");
+        }
 
         let file_path = Path::new(&filename);
 
@@ -150,7 +164,7 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
             println!("\nNew highscore for this level!");
         }
     }
-    show_final_results(reference, &user_input, &error_positions, start_time, is_correct);
+    show_final_results(reference, &error_positions, start_time, is_correct);
 
     0
 }
@@ -303,7 +317,6 @@ fn handle_typing(
 
 fn show_final_results(
     reference: &str,
-    user_input: &str,
     error_positions: &[bool],
     start_time: Instant,
     is_correct: &VecDeque<i32>,
@@ -314,6 +327,7 @@ fn show_final_results(
     let accuracy = 100.0 - (error_count as f64 / reference.len() as f64 * 100.0);
     let wpm = correct_words as f64 / (elapsed / 60.0);
     let raw = all_words as f64 / (elapsed / 60.0);
+    println!("{correct_words} {all_words}");
 
     let term_width = crossterm::terminal::size().map(|(w, _)| w as usize).unwrap_or(80);
     let lines = (reference.len() + term_width - 1) / term_width;
@@ -325,5 +339,5 @@ fn show_final_results(
     )
     .unwrap();
     stdout.flush().unwrap();
-    display_results(elapsed, accuracy, wpm);
+    display_results(elapsed, accuracy, wpm, raw);
 }
