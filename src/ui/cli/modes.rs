@@ -4,6 +4,7 @@ use std::time::Instant;
 use std::fs::File;
 use std::io::BufReader;
 use rand::prelude::IndexedRandom;
+use std::collections::VecDeque;
 
 use crate::ui::cli;
 use crate::ui::gui::main as gui;
@@ -11,7 +12,7 @@ use crate::Cli;
 use crate::Quote;
 use crate::utils;
 use crate::ui::tui::r#mod as tui_mod;
-    use crate ::practice;
+use crate ::practice;
 
 
 pub fn gui_main() {
@@ -48,7 +49,9 @@ pub fn word_mode(args: &Cli) {
 
     let reference = utils::get_reference(punctuation, digits, &word_list, word_number as usize);
     let start_time = Instant::now();
-    cli::main::type_loop(&reference, None, start_time, None);
+    let mut is_correct: &mut VecDeque<i32> = &mut VecDeque::new();
+
+    cli::main::type_loop(&reference, None, start_time, None, &mut is_correct);
 }
 
 pub fn time_mode(args: &Cli) {
@@ -75,6 +78,7 @@ pub fn time_mode(args: &Cli) {
     
     'outer: while start_time.elapsed().as_secs() < time_limit {
         let reference = utils::get_reference(punctuation, digits, &word_list, batch_size) + " ";
+        let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
         
         let elapsed = start_time.elapsed().as_secs();
         let remaining_time = if time_limit > elapsed {
@@ -87,7 +91,7 @@ pub fn time_mode(args: &Cli) {
             break;
         }
 
-        let res = cli::main::type_loop(&reference, Some(time_limit), start_time, None);
+        let res = cli::main::type_loop(&reference, Some(time_limit), start_time, None, &mut is_correct);
         if res != 0 {
             println!("Test interrupted by user.");
             break;
@@ -112,8 +116,9 @@ pub fn custom_text(path: &PathBuf) {
             return;
         }
     };
+    let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
     let start_time = Instant::now();
-    cli::main::type_loop(reference.as_str(), None, start_time, None);
+    cli::main::type_loop(reference.as_str(), None, start_time, None, &mut is_correct);
 }
 
 pub fn quotes() {
@@ -125,7 +130,9 @@ pub fn quotes() {
     let random_quote = quotes.choose(&mut rng).expect("No quotes available");
     let reference = format!("\"{}\" - {}", random_quote.text, random_quote.author);
     let start_time = Instant::now();
-    cli::main::type_loop(&reference, None, start_time, None);
+    let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
+
+    cli::main::type_loop(&reference, None, start_time, None, &mut is_correct);
 }
 
 pub fn practice(args: &Cli) {
@@ -134,13 +141,14 @@ pub fn practice(args: &Cli) {
         eprintln!("Invalid typing level. Please choose a level between 1 and {}.", practice::TYPING_LEVELS.len());
         return;
     }
-
+    
     let curr_level= level - 1;
     let chars = practice::TYPING_LEVELS[curr_level as usize].1;
-
-    let reference = practice::create_words(&chars, args.word_number.unwrap_or(Some(50)).unwrap_or(50));
+    
+    let reference = practice::create_words(&chars, args.word_number.unwrap_or(Some(5)).unwrap_or(5));
+    let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
     let start_time = Instant::now();
-    let res = cli::main::type_loop(&reference, None, start_time, Some(curr_level));
+    let res = cli::main::type_loop(&reference, None, start_time, Some(curr_level), &mut is_correct);
     if res == 1 {
         println!("Exiting practice mode.");
         return;

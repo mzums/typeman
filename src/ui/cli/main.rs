@@ -8,6 +8,9 @@ use std::time::Instant;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
 use std::fs::{self, OpenOptions};
 use std::path::Path;
+use std::collections::VecDeque;
+
+use crate ::utils;
 
 
 struct RawModeGuard;
@@ -50,7 +53,7 @@ fn initial_display(reference: &str, timer_pos: (u16, u16)) {
     stdout.flush().unwrap();
 }
 
-pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, practice: Option<usize>) -> i32 {
+pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, practice: Option<usize>, is_correct: &mut VecDeque<i32>) -> i32 {
     let ref_chars: Vec<char> = reference.chars().collect();
     let mut stdout = stdout();
     let _raw_guard = RawModeGuard::new();
@@ -92,6 +95,7 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
             &mut position,
             &mut error_positions,
             &mut stdout,
+            is_correct,
         );
 
         stdout.flush().unwrap();
@@ -121,17 +125,17 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
         let mut prev_best_wpm = None;
         if file_path.exists() {
             if let Ok(contents) = fs::read_to_string(file_path) {
-            for line in contents.lines() {
-                if line.starts_with("WPM:") {
-                    if let Some(wpm_str) = line.split_whitespace().nth(1) {
-                        if let Ok(val) = wpm_str.parse::<f64>() {
-                            if prev_best_wpm.map_or(true, |best| val > best) {
-                                prev_best_wpm = Some(val);
+                for line in contents.lines() {
+                    if line.starts_with("WPM:") {
+                        if let Some(wpm_str) = line.split_whitespace().nth(1) {
+                            if let Ok(val) = wpm_str.parse::<f64>() {
+                                if prev_best_wpm.map_or(true, |best| val > best) {
+                                    prev_best_wpm = Some(val);
+                                }
                             }
                         }
                     }
                 }
-            }
             }
         }
 
@@ -146,7 +150,7 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
             println!("\nNew highscore for this level!");
         }
     }
-    show_final_results(reference, &user_input, &error_positions, start_time);
+    show_final_results(reference, &user_input, &error_positions, start_time, is_correct);
 
     0
 }
@@ -221,10 +225,12 @@ fn handle_typing(
     position: &mut usize,
     error_positions: &mut Vec<bool>,
     stdout: &mut std::io::Stdout,
+    is_correct: &mut VecDeque<i32>,
 ) {
     match byte {
         // backspace
         8 | 127 if *position > 0 => {
+            is_correct[*position] = 0;
             *position -= 1;
             user_input.pop();
 
@@ -245,6 +251,7 @@ fn handle_typing(
 
             if c == ref_char {
                 if error_positions[*position] {
+                    is_correct[*position] = 1;
                     // Corrected an error: yellow
                     queue!(
                         stdout,
@@ -255,6 +262,7 @@ fn handle_typing(
                     .unwrap();
                 } else {
                     // Correct on first try: green
+                    is_correct[*position] = 2;
                     queue!(
                         stdout,
                         SetForegroundColor(Color::Green),
@@ -266,14 +274,25 @@ fn handle_typing(
                 user_input.push(c);
                 *position += 1;
             } else {
+                is_correct[*position] = -1;
                 error_positions[*position] = true;
-                queue!(
-                    stdout,
-                    SetForegroundColor(Color::Red),
-                    Print(ref_char),
-                    SetForegroundColor(Color::Reset)
-                )
+                if ref_char == ' ' {
+                    queue!(
+                        stdout,
+                        SetForegroundColor(Color::Red),
+                        Print('_'),
+                        SetForegroundColor(Color::Reset)
+                    )
                 .unwrap();
+                } else {
+                    queue!(
+                        stdout,
+                        SetForegroundColor(Color::Red),
+                        Print(ref_char),
+                        SetForegroundColor(Color::Reset)
+                    )
+                    .unwrap();
+                }
                 user_input.push(c);
                 *position += 1;
             }
@@ -287,11 +306,14 @@ fn show_final_results(
     user_input: &str,
     error_positions: &[bool],
     start_time: Instant,
+    is_correct: &VecDeque<i32>,
 ) {
+    let (correct_words, all_words) = utils::count_correct_words(&reference, &is_correct);
     let elapsed = start_time.elapsed().as_secs_f64();
     let error_count = error_positions.iter().filter(|&&e| e).count();
     let accuracy = 100.0 - (error_count as f64 / reference.len() as f64 * 100.0);
-    let wpm = (user_input.len() as f64 / 5.0) / (elapsed / 60.0);
+    let wpm = correct_words as f64 / (elapsed / 60.0);
+    let raw = all_words as f64 / (elapsed / 60.0);
 
     let term_width = crossterm::terminal::size().map(|(w, _)| w as usize).unwrap_or(80);
     let lines = (reference.len() + term_width - 1) / term_width;

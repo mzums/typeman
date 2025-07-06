@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use rand::Rng;
 use rand::prelude::IndexedRandom;
 use rand::prelude::SliceRandom;
+use std::collections::VecDeque;
 
 use crate::Quote;
 
@@ -97,4 +98,34 @@ pub fn get_random_quote() -> String {
     };
     let random_quote = quotes.choose(&mut rng).unwrap_or(&fallback);
     format!("\"{}\" - {}", random_quote.text, random_quote.author)
+}
+
+pub fn count_correct_words(reference: &str, is_correct: &VecDeque<i32>) -> (usize, usize) {
+    let mut correct_words = 0;
+    let mut all_words = 0;
+    let mut word_correct = true;
+    let mut char_idx = 0;
+
+    for c in reference.chars() {
+        if is_correct[char_idx] == 0 {
+            break;
+        }
+        if c == ' ' {
+            if word_correct && char_idx > 0 {
+                correct_words += 1;
+                all_words += 1;
+            }
+            word_correct = true;
+        } else {
+            if char_idx < is_correct.len() && is_correct[char_idx] <= 0 {
+                word_correct = false;
+            }
+        }
+        char_idx += 1;
+    }
+    if word_correct && char_idx > 0 && !reference.ends_with(' ') {
+        correct_words += 1;
+        all_words += 1;
+    }
+    (correct_words, all_words)
 }

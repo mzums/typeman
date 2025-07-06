@@ -48,13 +48,15 @@ pub const TYPING_LEVELS: [(&str, &[char]); 32] = [
 
 pub fn create_words(chars: &[char], word_number: usize) -> String {
     let mut reference = String::new();
-    for _ in 0..word_number {
+    for i in 0..word_number {
         let word_length = rand::random::<u16>() % 5 + 2;
         let word: String = (0..word_length)
-            .map(|_| *chars.choose(&mut rand::rng()).unwrap())
+            .map(|i| *chars.choose(&mut rand::rng()).unwrap())
             .collect();
         reference.push_str(&word);
-        reference.push(' ');
+        if i != word_number - 1 {
+            reference.push(' ');
+        }
     }
     return reference;
 }
