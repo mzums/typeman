@@ -287,6 +287,7 @@ pub async fn gui_main_async() {
     let mut selected_config: String = "time".to_string();
 
     let mut practice_menu = true;
+    let mut scroll_offset: f32 = 0.0;
 
     let words: Vec<&str> = reference.split_whitespace().collect();
     let average_word_length: f64 = if !words.is_empty() {
@@ -500,7 +501,7 @@ pub async fn gui_main_async() {
                 let _pressed = get_char_pressed();
             }
         } else if practice_menu {
-            display_practice_menu(font.clone(), &mut timer.as_secs_f32());
+            display_practice_menu(font.clone(), &mut scroll_offset);
         }
         if is_key_down(KeyCode::Escape) {
             break;
@@ -518,36 +519,47 @@ fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32) -> Option<
     let mut selected_level = None;
 
     let (_, y_scroll) = mouse_wheel();
-    *scroll_offset -= y_scroll * 30.0;
+    *scroll_offset -= y_scroll * 60.0;
 
-    let max_scroll = (TYPING_LEVELS.len() as f32 * 60.0 - screen_height() + 200.0).max(0.0);
+    let total_height = TYPING_LEVELS.len() as f32 * 60.0;
+    let visible_height = screen_height() - 100.0;
+    let max_scroll = (total_height - visible_height).max(0.0);
+    
     *scroll_offset = scroll_offset.clamp(0.0, max_scroll);
 
     draw_text_ex(
-        "Wybierz Poziom",
-        screen_width() / 2.0 - 150.0,
+        "Select Typing Level",
         50.0,
+        100.0,
         TextParams {
             font: font.as_ref(),
-            font_size: 48,
+            font_size: 40,
             color: LIGHTGRAY,
             ..Default::default()
         },
     );
 
     let start_index = (*scroll_offset / 60.0).floor() as usize;
-    let end_index = (start_index + (screen_height() / 60.0).ceil() as usize + 1).min(TYPING_LEVELS.len());
+    let end_index = (start_index + (visible_height / 60.0).ceil() as usize + 1).min(TYPING_LEVELS.len());
 
     for i in start_index..end_index {
         let (level_name, _) = &TYPING_LEVELS[i];
         let y = 100.0 + i as f32 * 60.0 - *scroll_offset;
+        
+        if y < 100.0 - 60.0 || y > screen_height() + 60.0 {
+            continue;
+        }
+
         let x = screen_width() / 2.0;
-        let text = format!("{}. {}", i + 1, level_name);
+        let mut text = format!("{}. {}", i + 1, level_name);
+        if i + 1 < 10 {
+            text = format!("{}.  {}", i + 1, level_name);
+        }
         
         let text_size = measure_text(&text, font.as_ref(), 36, 1.0);
         let button_rect = Rect::new(
-            x - text_size.width / 2.0 - 20.0,
-            y - text_size.height / 2.0 - 10.0,
+            50.0,
+            y - text_size.height / 2.0 + 100.0,
             text_size.width + 40.0,
             text_size.height + 20.0,
         );
@@ -555,81 +567,50 @@ fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32) -> Option<
         let is_hovered = button_rect.contains(vec2(mouse_pos.0, mouse_pos.1));
         let is_clicked = is_hovered && is_mouse_button_pressed(MouseButton::Left);
 
-        let bg_color = if is_hovered {
-            Color::from_rgba(70, 130, 180, 180)
-        } else {
-            Color::from_rgba(40, 40, 40, 180)
-        };
-
         let text_color = if is_hovered {
-            Color::from_rgba(255, 255, 255, 255)
+            Color::from_rgba(255, 150, 0, 255)
         } else {
             Color::from_rgba(200, 200, 200, 230)
         };
 
-        config::draw_rounded_rect(
-            button_rect.x,
-            button_rect.y,
-            button_rect.w,
-            button_rect.h,
-            10.0,
-            bg_color,
-        );
-
         draw_text_ex(
             &text,
-            x - text_size.width / 2.0,
-            y + text_size.height / 2.0,
+            80.0,
+            button_rect.y + button_rect.h / 2.0 + 30.0,
             TextParams {
                 font: font.as_ref(),
-                font_size: 36,
+                font_size: 26,
                 color: text_color,
                 ..Default::default()
             },
         );
-
-        if is_hovered {
-            draw_rectangle_lines(
-                button_rect.x,
-                button_rect.y,
-                button_rect.w,
-                button_rect.h,
-                2.0,
-                GOLD,
-            );
-        }
 
         if is_clicked {
             selected_level = Some(i);
         }
     }
 
-    if is_key_down(KeyCode::Down) {
-        *scroll_offset += 10.0;
+    if is_key_pressed(KeyCode::Down) {
+        *scroll_offset = (*scroll_offset + 100.0).min(max_scroll);
     }
-    if is_key_down(KeyCode::Up) {
-        *scroll_offset -= 10.0;
+    if is_key_pressed(KeyCode::Up) {
+        *scroll_offset = (*scroll_offset - 100.0).max(0.0);
     }
 
     if max_scroll > 0.0 {
-        let scroll_area_height = screen_height() - 200.0;
-        let scrollbar_height = scroll_area_height * (scroll_area_height / (TYPING_LEVELS.len() as f32 * 60.0));
-        let scroll_ratio = *scroll_offset / max_scroll;
-        let scrollbar_y = 100.0 + scroll_ratio * (scroll_area_height - scrollbar_height);
-        
-        draw_rectangle(
-            screen_width() - 20.0,
-            100.0,
-            10.0,
-            scroll_area_height,
-            Color::from_rgba(100, 100, 100, 100),
-        );
+        let scroll_area_height = screen_height() - 100.0;
+        let thumb_height = scroll_area_height * (visible_height / total_height);
+        let thumb_position = if max_scroll > 0.0 {
+            100.0 + (*scroll_offset / max_scroll) * (scroll_area_height - thumb_height)
+        } else {
+            100.0
+        };
         
         config::draw_rounded_rect(
             screen_width() - 20.0,
-            scrollbar_y,
+            thumb_position,
             10.0,
-            scrollbar_height,
+            thumb_height,
             5.0,
             Color::from_rgba(180, 180, 180, 220),
         );
