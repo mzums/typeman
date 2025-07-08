@@ -10,6 +10,7 @@ use crate::utils;
 use crate::ui::gui::results;
 use crate::ui::gui::config;
 use crate::ui::gui::practice as gui_practice;
+use crate::practice::{self, TYPING_LEVELS};
 
 
 pub const MAIN_COLOR: macroquad::color::Color = macroquad::color::Color::from_rgba(255, 155, 0, 255);
@@ -360,6 +361,7 @@ pub async fn gui_main_async() {
     let mut selected_config: String = "time".to_string();
 
     let mut practice_menu = false;
+    let mut practice_mode = false;
     let mut scroll_offset: f32 = 0.0;
     let mut selected_practice_level: Option<usize> = None;
 
@@ -378,7 +380,6 @@ pub async fn gui_main_async() {
         } else {
             40.0 - (3840.0 / screen_width()) * 5.0
         };
-        println!("Font size: {}", font_size);
         let line_h = measure_text("Gy", font.as_ref(), font_size as u16, 1.0).height * 1.6;
         let char_w = measure_text("G", font.as_ref(), font_size as u16, 1.0).width;
         lines = create_lines(&reference, font.clone(), font_size, max_width, quote, word_mode);
@@ -424,6 +425,7 @@ pub async fn gui_main_async() {
                 &mut selected_config,
                 &mut practice_menu,
                 &mut selected_practice_level,
+                &mut practice_mode,
             );
 
             
@@ -541,7 +543,25 @@ pub async fn gui_main_async() {
                 &errors_per_second,
             );
         } else if practice_menu {
-            gui_practice::display_practice_menu(font.clone(), &mut scroll_offset, emoji_font.clone().unwrap(), &mut selected_practice_level);
+            let level = gui_practice::display_practice_menu(font.clone(), &mut scroll_offset, emoji_font.clone().unwrap(), &mut selected_practice_level);
+            if level.is_some() {
+                config::reset_game_state(
+                    &mut pressed_vec,
+                    &mut is_correct,
+                    &mut pos1,
+                    &mut timer,
+                    &mut start_time,
+                    &mut game_started,
+                    &mut game_over,
+                    &mut speed_per_second,
+                    &mut last_recorded_time,
+                    &mut words_done,
+                    &mut errors_per_second,
+                    &mut practice_menu,
+                );
+                practice_mode = true;
+                reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 50);
+        }
         }
         if is_key_down(KeyCode::Escape) {
             break;
@@ -569,7 +589,6 @@ pub async fn gui_main_async() {
         else {
             let _pressed = get_char_pressed();
         }
-
 
         draw_shortcut_info(font.as_ref(), f32::max(font_size / 1.7, 15.0), screen_width() / 2.0 - max_width / 2.0, screen_height() - 100.0, emoji_font.clone().unwrap(), practice_menu, game_over);
 

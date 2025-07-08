@@ -145,7 +145,6 @@ pub fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32, emoji_
         } else {
             Some(0)
         };
-        println!("{selected_level:?}");
         std::thread::sleep(std::time::Duration::from_millis(200));
     }
     if is_key_down(KeyCode::Up) {
@@ -157,6 +156,11 @@ pub fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32, emoji_
         };
         println!("{selected_level:?}");
         std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    if is_key_pressed(KeyCode::Enter) {
+        if let Some(level) = *selected_level {
+            return Some(level);
+        }
     }
 
     if max_scroll > 0.0 {
@@ -178,5 +182,5 @@ pub fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32, emoji_
         );
     }
 
-    *selected_level
+    None
 }
