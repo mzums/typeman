@@ -6,7 +6,7 @@ use miniquad::CursorIcon;
 use std::time::{Duration, Instant};
 use std::thread;
 
-use crate::utils;
+use crate::{practice, utils};
 use crate::ui::gui::results;
 use crate::ui::gui::config;
 use crate::practice::TYPING_LEVELS;
@@ -36,22 +36,74 @@ fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32) {
     }
 }
 
-fn draw_shortcut_info(font: Option<&Font>, font_size: f32, x: f32, y: f32) {
-    draw_text_ex(
-        "Tab + Enter - reset",
-        x,
-        y,
-        TextParams {
-            font,
-            font_size: font_size as u16,
-            color: macroquad::color::Color::from_rgba(255, 255, 255, 80),
-            ..Default::default()
-        },
-    );
+fn draw_shortcut_info(font: Option<&Font>, font_size: f32, x: f32, y: f32, emoji_font: Font, practice_menu: bool, game_over: bool) {
+    let mut esc_y = 3.0 * y + font_size * 1.2;
+    if practice_menu {
+        let arrow_text = "↑ or ↓ to navigate, ↵ to select (or click)";
+        draw_text_ex(
+            arrow_text,
+            x,
+            y,
+            TextParams {
+                font: Some(&emoji_font),
+                font_size: font_size as u16,
+                color: macroquad::color::Color::from_rgba(255, 255, 255, 80),
+                ..Default::default()
+            },
+        );
+        draw_text_ex(
+            "Tab + Enter - quit menu",
+            x,
+            y + font_size * 1.2,
+            TextParams {
+                font,
+                font_size: font_size as u16,
+                color: macroquad::color::Color::from_rgba(255, 255, 255, 80),
+                ..Default::default()
+            },
+        );
+    } else if game_over {
+        draw_text_ex(
+            "Tab + Enter - reset",
+            x,
+            y + font_size * 1.2,
+            TextParams {
+                font,
+                font_size: font_size as u16,
+                color: macroquad::color::Color::from_rgba(255, 255, 255, 80),
+                ..Default::default()
+            },
+        );
+        esc_y = 2.0 * y + font_size * 1.2;
+    } else {
+        let arrow_text = "↑ to navigate to config, ← → to change settings (or click)";
+        draw_text_ex(
+            arrow_text,
+            x,
+            y,
+            TextParams {
+                font: Some(&emoji_font),
+                font_size: font_size as u16,
+                color: macroquad::color::Color::from_rgba(255, 255, 255, 80),
+                ..Default::default()
+            },
+        );
+        draw_text_ex(
+            "Tab + Enter - reset",
+            x,
+            y + 2.0 * font_size * 1.2,
+            TextParams {
+                font,
+                font_size: font_size as u16,
+                color: macroquad::color::Color::from_rgba(255, 255, 255, 80),
+                ..Default::default()
+            },
+        );
+    }
     draw_text_ex(
         "Esc - quit",
         x,
-        y + font_size * 1.2,
+        esc_y,
         TextParams {
             font,
             font_size: font_size as u16,
@@ -253,8 +305,9 @@ pub async fn gui_main_async() {
     let mut time_mode = true;
     let mut word_mode = false;
 
-    let font = load_font_async("assets/font/RobotoMono-VariableFont_wght.ttf").await;
-    let title_font = load_font_async("assets/font/static/RobotoMono-Medium.ttf").await;
+    let font = load_font_async("assets/fonts/RobotoMono-VariableFont_wght.ttf").await;
+    let title_font = load_font_async("assets/fonts/RobotoMono-VariableFont_wght.ttf").await;
+    let emoji_font = load_font_async("assets/fonts/DejaVuSansCondensed.ttf").await;
 
     let top_words = 500;
     let word_list = utils::read_first_n_words(top_words as usize);
@@ -449,6 +502,7 @@ pub async fn gui_main_async() {
                     &mut last_recorded_time,
                     &mut words_done,
                     &mut errors_per_second,
+                    &mut practice_menu,
                 );
                 reference = utils::get_reference(punctuation, false, &word_list, batch_size);
                 is_correct = VecDeque::from(vec![0; reference.len()]);
@@ -492,6 +546,7 @@ pub async fn gui_main_async() {
                     &mut last_recorded_time,
                     &mut words_done,
                     &mut errors_per_second,
+                    &mut practice_menu,
                 );
                 reference = utils::get_reference(punctuation, false, &word_list, batch_size);
                 is_correct = VecDeque::from(vec![0; reference.len()]);
@@ -501,20 +556,20 @@ pub async fn gui_main_async() {
                 let _pressed = get_char_pressed();
             }
         } else if practice_menu {
-            display_practice_menu(font.clone(), &mut scroll_offset);
+            display_practice_menu(font.clone(), &mut scroll_offset, emoji_font.clone().unwrap());
         }
         if is_key_down(KeyCode::Escape) {
             break;
         }
 
 
-        draw_shortcut_info(font.as_ref(), 20.0, screen_width() / 2.0 - max_width / 2.0, screen_height() - 100.0);
+        draw_shortcut_info(font.as_ref(), 20.0, screen_width() / 2.0 - max_width / 2.0, screen_height() - 100.0, emoji_font.clone().unwrap(), practice_menu, game_over);
 
         next_frame().await;
     }
 }
 
-fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32) -> Option<usize> {
+fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32, emoji_font: Font) -> Option<usize> {
     let mouse_pos = mouse_position();
     let mut selected_level = None;
 
@@ -523,7 +578,7 @@ fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32) -> Option<
 
     let total_height = TYPING_LEVELS.len() as f32 * 60.0;
     let visible_height = screen_height() - 100.0;
-    let max_scroll = (total_height - visible_height).max(0.0);
+    let max_scroll = (total_height - visible_height).max(0.0) + 120.0;
     
     *scroll_offset = scroll_offset.clamp(0.0, max_scroll);
 
@@ -534,7 +589,7 @@ fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32) -> Option<
         TextParams {
             font: font.as_ref(),
             font_size: 40,
-            color: LIGHTGRAY,
+            color: Color::from_rgba(255, 150, 0, 255),
             ..Default::default()
         },
     );
@@ -542,20 +597,67 @@ fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32) -> Option<
     let start_index = (*scroll_offset / 60.0).floor() as usize;
     let end_index = (start_index + (visible_height / 60.0).ceil() as usize + 1).min(TYPING_LEVELS.len());
 
+    let mut first_incomplete: Option<usize> = None;
+    for i in 0..TYPING_LEVELS.len() {
+        let results_path = format!("practice_results/level_{}.txt", i + 1);
+        let mut done = false;
+        if let Ok(contents) = std::fs::read_to_string(&results_path) {
+            for line in contents.lines() {
+                if line.starts_with("WPM:") {
+                    if let Some(wpm_str) = line.strip_prefix("WPM:").map(str::trim) {
+                        if let Ok(wpm) = wpm_str.parse::<f32>() {
+                            if wpm >= 35.0 {
+                                done = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if !done {
+            first_incomplete = Some(i);
+            break;
+        }
+    }
+
+    // Check if any visible level is hovered
+    let mut any_hovered = false;
+    let mut hovered_index: Option<usize> = None;
+    for i in start_index..end_index {
+        let y = 100.0 + i as f32 * 60.0 - *scroll_offset;
+        let text = if i + 1 < 10 {
+            format!("{}.  {}", i + 1, TYPING_LEVELS[i].0)
+        } else {
+            format!("{}. {}", i + 1, TYPING_LEVELS[i].0)
+        };
+        let text_size = measure_text(&text, font.as_ref(), 36, 1.0);
+        let button_rect = Rect::new(
+            50.0,
+            y - text_size.height / 2.0 + 100.0,
+            text_size.width + 40.0,
+            text_size.height + 20.0,
+        );
+        if button_rect.contains(vec2(mouse_pos.0, mouse_pos.1)) {
+            any_hovered = true;
+            hovered_index = Some(i);
+            break;
+        }
+    }
+
     for i in start_index..end_index {
         let (level_name, _) = &TYPING_LEVELS[i];
         let y = 100.0 + i as f32 * 60.0 - *scroll_offset;
-        
+
         if y < 100.0 - 60.0 || y > screen_height() + 60.0 {
             continue;
         }
 
-        let x = screen_width() / 2.0;
         let mut text = format!("{}. {}", i + 1, level_name);
         if i + 1 < 10 {
             text = format!("{}.  {}", i + 1, level_name);
         }
-        
+
         let text_size = measure_text(&text, font.as_ref(), 36, 1.0);
         let button_rect = Rect::new(
             50.0,
@@ -564,7 +666,32 @@ fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32) -> Option<
             text_size.height + 20.0,
         );
 
-        let is_hovered = button_rect.contains(vec2(mouse_pos.0, mouse_pos.1));
+        let mut show_tick = false;
+        let results_path = format!("practice_results/level_{}.txt", i + 1);
+        if let Ok(contents) = std::fs::read_to_string(&results_path) {
+            for line in contents.lines() {
+                if line.starts_with("WPM:") {
+                    if let Some(wpm_str) = line.strip_prefix("WPM:").map(str::trim) {
+                        if let Ok(wpm) = wpm_str.parse::<f32>() {
+                            if wpm >= 35.0 {
+                                show_tick = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Determine hover state: hovered by mouse, or if none hovered, auto-hover first incomplete
+        let is_hovered = if any_hovered {
+            button_rect.contains(vec2(mouse_pos.0, mouse_pos.1))
+        } else if let Some(first) = first_incomplete {
+            first == i && !show_tick
+        } else {
+            false
+        };
+
         let is_clicked = is_hovered && is_mouse_button_pressed(MouseButton::Left);
 
         let text_color = if is_hovered {
@@ -573,13 +700,28 @@ fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32) -> Option<
             Color::from_rgba(200, 200, 200, 230)
         };
 
+        let tick_offset = 40.0;
+        if show_tick {
+            draw_text_ex(
+                "✓",
+                tick_offset + 20.0,
+                button_rect.y + button_rect.h / 2.0 + 40.0,
+                TextParams {
+                    font: Some(&emoji_font),
+                    font_size: 50,
+                    color: Color::from_rgba(0, 255, 0, 255),
+                    ..Default::default()
+                },
+            );
+        }
+
         draw_text_ex(
             &text,
-            80.0,
+            80.0 + tick_offset,
             button_rect.y + button_rect.h / 2.0 + 30.0,
             TextParams {
                 font: font.as_ref(),
-                font_size: 26,
+                font_size: 20,
                 color: text_color,
                 ..Default::default()
             },

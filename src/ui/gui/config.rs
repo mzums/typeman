@@ -111,6 +111,7 @@ pub fn reset_game_state(
     last_recorded_time: &mut Instant,
     words_done: &mut usize,
     errors_per_second: &mut Vec<f64>,
+    practice_menu: &mut bool,
 ) {
     *is_correct = VecDeque::from(vec![0; is_correct.len()]);
     pressed_vec.clear();
@@ -123,6 +124,7 @@ pub fn reset_game_state(
     *errors_per_second = vec![];
     *last_recorded_time = Instant::now();
     *words_done = 0;
+    * practice_menu = false;
 }
 
 pub fn handle_settings_buttons(
@@ -280,7 +282,7 @@ pub fn handle_settings_buttons(
                 *reference = utils::get_reference(*punctuation, *numbers, word_list, *batch_size);
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
             }
-            reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second);
+            reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, practice_menu);
         }
     }
 
