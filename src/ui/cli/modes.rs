@@ -145,7 +145,7 @@ pub fn practice(args: &Cli) {
     let curr_level= level - 1;
     let chars = practice::TYPING_LEVELS[curr_level as usize].1;
     
-    let reference = practice::create_words(&chars, args.word_number.unwrap_or(Some(50)).unwrap_or(50));
+    let reference = practice::create_words(&chars, args.word_number.unwrap_or(Some(5)).unwrap_or(5));
     let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
     let start_time = Instant::now();
     let res = cli::main::type_loop(&reference, None, start_time, Some(curr_level), &mut is_correct);

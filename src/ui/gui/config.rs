@@ -4,7 +4,7 @@ use macroquad::prelude::*;
 use std::time::{Instant, Duration};
 
 use crate::ui::gui::main;
-use crate::utils;
+use crate::{practice, utils};
 use crate::practice::TYPING_LEVELS;
 
 
@@ -119,6 +119,7 @@ pub fn reset_game_state(
     words_done: &mut usize,
     errors_per_second: &mut Vec<f64>,
     practice_menu: &mut bool,
+    saved_results: &mut bool,
 ) {
     *is_correct = VecDeque::from(vec![0; is_correct.len()]);
     pressed_vec.clear();
@@ -132,6 +133,7 @@ pub fn reset_game_state(
     *last_recorded_time = Instant::now();
     *words_done = 0;
     *practice_menu = false;
+    *saved_results = false;
 }
 
 pub fn handle_settings_buttons(
@@ -163,6 +165,7 @@ pub fn handle_settings_buttons(
     practice_menu: &mut bool,
     selected_practice_level: &mut Option<usize>,
     practice_mode: &mut bool,
+    saved_results: &mut bool,
 ) -> bool {
     let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = 200.0;
@@ -285,13 +288,13 @@ pub fn handle_settings_buttons(
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
                 *punctuation = false;
                 *numbers = false;
-                reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, practice_menu);
+                reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, practice_menu, saved_results);
             } else if *practice_menu {
                 *practice_menu = true;
             } else {
                 *reference = utils::get_reference(*punctuation, *numbers, word_list, *batch_size);
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
-                reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, practice_menu);
+                reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, practice_menu, saved_results);
             }
         }
     }
@@ -344,7 +347,7 @@ fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_m
                         if line.starts_with("WPM:") {
                             if let Some(wpm_str) = line.strip_prefix("WPM:").map(str::trim) {
                                 if let Ok(wpm) = wpm_str.parse::<f32>() {
-                                    if wpm >= 35.0 {
+                                    if wpm >= practice::WPM_MIN as f32 {
                                         done = true;
                                         break;
                                     }

@@ -1,5 +1,11 @@
 use rand::prelude::IndexedRandom;
+use std::io::Write;
+use std::path::Path;
+use std::fs;
 
+
+
+pub const WPM_MIN: f64 = 35.0;
 
 pub const TYPING_LEVELS: [(&str, &[char]); 32] = [
     ("new: f & j", &['f', 'j']),
@@ -59,4 +65,46 @@ pub fn create_words(chars: &[char], word_number: usize) -> String {
         }
     }
     return reference;
+}
+
+
+pub fn save_results(time: f64, accuracy: f64, wpm: f64, level:usize) {
+    let results_dir = "practice_results";
+    fs::create_dir_all(results_dir).ok();
+
+    let filename = format!("{}/level_{:?}.txt", results_dir, level);
+    let file_path = Path::new(&filename);
+
+    let stats = format!(
+        "Time: {:.2}s\nAccuracy: {:.1}%\nWPM: {:.1}\n---\n",
+        time, accuracy, wpm
+    );
+    
+    let mut file = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(file_path)
+        .unwrap();
+    file.write_all(stats.as_bytes()).unwrap();
+
+    //println!("Results saved to {}", file_path.display());
+}
+
+
+pub fn get_prev_best_wpm(level: usize) -> f64 {
+    let results_path = format!("practice_results/level_{}.txt", level);
+    let contents = match fs::read_to_string(&results_path) {
+        Ok(c) if !c.trim().is_empty() => c,
+        _ => return 0.0,
+    };
+    for line in contents.lines() {
+        if line.starts_with("WPM:") {
+            if let Some(wpm_str) = line.strip_prefix("WPM:").map(str::trim) {
+                if let Ok(wpm) = wpm_str.parse::<f64>() {
+                    return wpm;
+                }
+            }
+        }
+    }
+    0.0
 }

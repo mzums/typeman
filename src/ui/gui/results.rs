@@ -4,7 +4,9 @@ use eframe::egui;
 use egui::{Color32,  Area, pos2};
 use egui_plot::{Line, Plot};
 
+use crate::ui::gui::main::MAIN_COLOR;
 use crate::utils;
+use crate::practice;
 
 
 fn calc_standard_deviation(values: &[f64], average_word_length: f64) -> f64 {
@@ -22,13 +24,14 @@ pub fn write_results(
     test_time: f32,
     speed_per_second: &Vec<f64>,
     average_word_length: f64,
-    words_done: usize,
     mode: &str,
     punctuation: bool,
     numbers: bool,
     errors_per_second: &Vec<f64>,
     reference: &String,
     error_positions: &Vec<bool>,
+    practice_level: Option<usize>,
+    saved_results: &mut bool,
 ) {
     let (correct_words, all_words) = utils::count_correct_words(&reference, &is_correct);
     let error_count = error_positions.iter().filter(|&&e| e).count();
@@ -56,10 +59,9 @@ pub fn write_results(
 
     let avg_wpm = write_wpm(
         font,
-        test_time,
         (screen_width - chart_width) / 2.0 - text_size.width,
         (screen_height - chart_height) / 3.8,
-        words_done,
+        wpm,
     );
     write_acc(
         accuracy,
@@ -109,6 +111,30 @@ pub fn write_results(
     draw_chart(&chart_points, chart_width, chart_height, chart_x, chart_y, errors_per_second);
     egui_macroquad::draw();
     
+    if practice_level.is_some() {
+        let practice_text = if wpm >= practice::WPM_MIN as f32 {
+            "Congratulations! You passed this level.".to_string()
+        } else {
+            format!("You need at least {} WPM to pass this level.", practice::WPM_MIN)
+        };
+        let text_size = measure_text(&practice_text, font, 30, 1.0);
+
+        draw_text_ex(practice_text.as_str(), (screen_width - text_size.width) / 2.0, chart_y + chart_height + 200.0, TextParams { font: font, font_size: 30, font_scale: 1.0, color: MAIN_COLOR, ..Default::default() });
+        if practice::get_prev_best_wpm(practice_level.unwrap() + 1) > wpm as f64 {
+            let new_highscore_text = "New highscore for this level!";
+            let text_size = measure_text(new_highscore_text, font, 30, 1.0);
+            draw_text_ex(new_highscore_text, (screen_width - text_size.width) / 2.0, chart_y + chart_height + 250.0, TextParams { font: font, font_size: 30, font_scale: 1.0, color: MAIN_COLOR, ..Default::default() });
+        }
+        if !*saved_results {
+            *saved_results = true;
+            practice::save_results(
+                test_time as f64,
+                accuracy as f64,
+                wpm as f64,
+                practice_level.unwrap() + 1,
+            );
+        }
+    }
 }
 
 fn write_mode(
@@ -263,12 +289,10 @@ fn write_consistency(
 
 fn write_wpm(
     font: Option<&Font>,
-    test_time: f32,
     x: f32,
     y: f32,
-    words_done: usize,
+    wpm: f32,
 ) -> f32 {
-    let wpm = words_done as f32 * 60.0 / test_time;
     let wpm_text = format!("{:.0}", wpm);
     draw_text_ex(
         "wpm",
@@ -322,7 +346,7 @@ fn write_acc(accuracy: f64, font: Option<&Font>, x: f32, y: f32) {
 }
 
 fn write_raw_wpm(raw_wpm: f32, font: Option<&Font>, x: f32, y: f32) {
-    let raw_text = format!("{:.0}%", raw_wpm);
+    let raw_text = format!("{:.0}", raw_wpm);
     draw_text_ex(
         "raw wpm",
         x,

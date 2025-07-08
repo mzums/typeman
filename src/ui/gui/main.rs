@@ -367,6 +367,7 @@ pub async fn gui_main_async() {
     let mut practice_mode = false;
     let mut scroll_offset: f32 = 0.0;
     let mut selected_practice_level: Option<usize> = None;
+    let mut saved_results = false;
 
     let words: Vec<&str> = reference.split_whitespace().collect();
     let average_word_length: f64 = if !words.is_empty() {
@@ -429,6 +430,7 @@ pub async fn gui_main_async() {
                 &mut practice_menu,
                 &mut selected_practice_level,
                 &mut practice_mode,
+                &mut saved_results,
             );
 
             
@@ -540,13 +542,14 @@ pub async fn gui_main_async() {
                 timer.as_secs_f32(),
                 &speed_per_second,
                 average_word_length,
-                words_done,
                 &mode,
                 punctuation,
                 numbers,
                 &errors_per_second,
                 &reference,
                 &error_positions,
+                selected_practice_level,
+                &mut saved_results,
             );
         } else if practice_menu {
             let level = gui_practice::display_practice_menu(font.clone(), &mut scroll_offset, emoji_font.clone().unwrap(), &mut selected_practice_level);
@@ -564,6 +567,7 @@ pub async fn gui_main_async() {
                     &mut words_done,
                     &mut errors_per_second,
                     &mut practice_menu,
+                    &mut saved_results,
                 );
                 reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 5);
                 is_correct = VecDeque::from(vec![0; reference.len()]);
@@ -589,6 +593,7 @@ pub async fn gui_main_async() {
                 &mut words_done,
                 &mut errors_per_second,
                 &mut practice_menu,
+                &mut saved_results,
             );
             reference = utils::get_reference(punctuation, false, &word_list, batch_size);
             is_correct = VecDeque::from(vec![0; reference.len()]);

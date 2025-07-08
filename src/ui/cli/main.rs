@@ -6,11 +6,9 @@ use crossterm::{
 use std::io::{stdout, Write};
 use std::time::Instant;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
-use std::fs::{self, OpenOptions};
-use std::path::Path;
 use std::collections::VecDeque;
-
-use crate ::utils;
+use crate::utils;
+use crate::practice;
 
 
 struct RawModeGuard;
@@ -114,53 +112,27 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
         let term_width = crossterm::terminal::size().map(|(w, _)| w as usize).unwrap_or(80);
         let lines = (reference.len() + term_width - 1) / term_width;
 
-        let results_dir = "practice_results";
-        fs::create_dir_all(results_dir).ok();
-
-        let filename = format!("{}/level_{:?}.txt", results_dir, practice.unwrap());
-
-        let stats = format!(
-            "Time: {:.2}s\nAccuracy: {:.1}%\nWPM: {:.1}\n---\n",
-            elapsed, accuracy, wpm
+        practice::save_results(
+            elapsed,
+            accuracy,
+            wpm,
+            practice.unwrap(),
         );
+
         queue!(
             stdout,
             cursor::MoveTo(0, (lines as u16) + 1)
         ).unwrap();
 
-        if wpm >= 35.0 {
+        if wpm >= practice::WPM_MIN {
             println!("\nLevel passed!\n")
         } else {
             println!("\nAchive WPM of 35 to pass this level.\n");
         }
 
-        let file_path = Path::new(&filename);
+        let prev_best_wpm = practice::get_prev_best_wpm(practice.unwrap());
 
-        let mut prev_best_wpm = None;
-        if file_path.exists() {
-            if let Ok(contents) = fs::read_to_string(file_path) {
-                for line in contents.lines() {
-                    if line.starts_with("WPM:") {
-                        if let Some(wpm_str) = line.split_whitespace().nth(1) {
-                            if let Ok(val) = wpm_str.parse::<f64>() {
-                                if prev_best_wpm.map_or(true, |best| val > best) {
-                                    prev_best_wpm = Some(val);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        let mut file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(file_path)
-            .unwrap();
-        file.write_all(stats.as_bytes()).unwrap();
-
-        if prev_best_wpm.map_or(true, |best| wpm > best) {
+        if prev_best_wpm < wpm as f64 {
             println!("\nNew highscore for this level!");
         }
     }
@@ -327,7 +299,6 @@ fn show_final_results(
     let accuracy = 100.0 - (error_count as f64 / reference.len() as f64 * 100.0);
     let wpm = correct_words as f64 / (elapsed / 60.0);
     let raw = all_words as f64 / (elapsed / 60.0);
-    println!("{correct_words} {all_words}");
 
     let term_width = crossterm::terminal::size().map(|(w, _)| w as usize).unwrap_or(80);
     let lines = (reference.len() + term_width - 1) / term_width;
