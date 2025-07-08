@@ -4,6 +4,8 @@ use eframe::egui;
 use egui::{Color32,  Area, pos2};
 use egui_plot::{Line, Plot};
 
+use crate::utils;
+
 
 fn calc_standard_deviation(values: &[f64], average_word_length: f64) -> f64 {
     let wpm_values: Vec<f64> = values.iter().map(|&cpm| cpm / average_word_length).collect();
@@ -14,7 +16,6 @@ fn calc_standard_deviation(values: &[f64], average_word_length: f64) -> f64 {
 
 pub fn write_results(
     is_correct: &VecDeque<i32>,
-    pressed_vec: &Vec<char>,
     screen_width: f32,
     screen_height: f32,
     font: Option<&Font>,
@@ -26,48 +27,48 @@ pub fn write_results(
     punctuation: bool,
     numbers: bool,
     errors_per_second: &Vec<f64>,
+    reference: &String,
+    error_positions: &Vec<bool>,
 ) {
-    let correct_count = is_correct.iter().filter(|&&x| x == 2 || x == 1).count();
-    let accuracy = if pressed_vec.len() > 0 {
-        (correct_count as f32 / pressed_vec.len() as f32 * 100.0).round()
-    } else {
-        0.0
-    };
+    let (correct_words, all_words) = utils::count_correct_words(&reference, &is_correct);
+    let error_count = error_positions.iter().filter(|&&e| e).count();
+    let accuracy = (100.0 - (error_count as f64 / reference.len() as f64 * 100.0)).round();
+    let wpm = (correct_words as f32 / (test_time / 60.0)).round();
+    let raw = all_words as f32 / (test_time / 60.0);
 
-    let wpm = (words_done as f32 * 60.0 / test_time) as i32;
 
     let text_size = {
-        let a = measure_text(&format!("{}%", accuracy), font, 60, 1.0);
-        let b = measure_text(&format!("{wpm}"), font, 60, 1.0);
+        let a = measure_text(&format!("{:0}%", accuracy), font, 60, 1.0);
+        let b = measure_text(&format!("{:0}", wpm), font, 60, 1.0);
         if a.width > b.width { a } else { b }
     };
 
     let chart_width = f32::min(0.7 * screen_width, 1800.0);
     let chart_height: f32 = f32::min(chart_width / 5.0, 360.0);
 
-    let chart_x = (screen_width - chart_width + 1.5 * text_size.width) / 2.0;
+    let chart_x = (screen_width - chart_width + text_size.width + 20.0) / 2.0;
     let chart_y = (screen_height - chart_height) / 4.0;
 
     let text2_width = measure_text("consistency", font, 25, 1.0).width;
-    let padding = (chart_width - 4.0 * text2_width) / 3.0;
+    let padding = (chart_width - 4.5 * text2_width) / 3.0;
+
+    //println!("{:?}", text_size.width);
 
     let avg_wpm = write_wpm(
         font,
         test_time,
-        (screen_width - chart_width - 2.0 * text_size.width) / 2.0,
+        (screen_width - chart_width) / 2.0 - text_size.width,
         (screen_height - chart_height) / 3.8,
         words_done,
     );
     write_acc(
-        &is_correct,
-        pressed_vec.len(),
+        accuracy,
         font,
-        (screen_width - chart_width - 2.0 * text_size.width) / 2.0,
+        (screen_width - chart_width) / 2.0 - text_size.width,
         (screen_height - chart_height) / 3.8 + text_size.height * 3.0,
     );
-    write_err_rate(
-        &is_correct,
-        pressed_vec.len(),
+    write_raw_wpm(
+        raw,
         font,
         (screen_width - chart_width + 2.0 * text_size.width) / 2.0,
         chart_y + chart_height + 20.0,
@@ -140,7 +141,7 @@ fn write_mode(
         font_size = 20;
         mode_pos = y + 40.0;
     }
-    else if punctuation || numbers {
+    else if punctuation || numbers || mode == "practice" {
         font_size = 20;
         mode_pos = y + 40.0;
         if punctuation {
@@ -294,13 +295,7 @@ fn write_wpm(
     return wpm;
 }
 
-fn write_acc(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&Font>, x: f32, y: f32) {
-    let correct_count = is_correct.iter().filter(|&&x| x == 2 || x == 1).count();
-    let accuracy = if typed_chars > 0 {
-        (correct_count as f32 / typed_chars as f32 * 100.0).round()
-    } else {
-        0.0
-    };
+fn write_acc(accuracy: f64, font: Option<&Font>, x: f32, y: f32) {
     let acc_text = format!("{:.0}%", accuracy);
     draw_text_ex(
         "acc",
@@ -326,16 +321,10 @@ fn write_acc(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&Font>
     );
 }
 
-fn write_err_rate(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&Font>, x: f32, y: f32) {
-    let error_count = is_correct.iter().filter(|&&x| x == -1 || x == 1).count();
-    let error_rate = if typed_chars > 0 {
-        (error_count as f32 / typed_chars as f32 * 100.0).round()
-    } else {
-        0.0
-    };
-    let err_text = format!("{:.0}%", error_rate);
+fn write_raw_wpm(raw_wpm: f32, font: Option<&Font>, x: f32, y: f32) {
+    let raw_text = format!("{:.0}%", raw_wpm);
     draw_text_ex(
-        "err rate",
+        "raw wpm",
         x,
         y,
         TextParams {
@@ -346,7 +335,7 @@ fn write_err_rate(is_correct: &VecDeque<i32>, typed_chars: usize, font: Option<&
         },
     );
     draw_text_ex(
-        &err_text,
+        &raw_text,
         x,
         y + 60.0,
         TextParams {

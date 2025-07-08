@@ -37,7 +37,7 @@ fn draw_toggle_button(
         
     let text_dims = measure_text(&label, Some(font.as_ref().unwrap()), font_size, 1.0);
     let btn_width = text_dims.width + padding * 2.0;
-    let btn_height = text_dims.height + padding * 2.0;
+    let btn_height = measure_text("t", font.as_ref(), font_size, 1.0).height + padding * 2.0;
 
     let rect = Rect::new(x, y, btn_width, btn_height);
     let (mx, my) = mouse_position();
@@ -53,6 +53,12 @@ fn draw_toggle_button(
         text_color = macroquad::color::BLACK;
         bg_color = Color::from_rgba(100, 60, 0, 255);
     }
+
+    let font_size: u16 = if label == "|" {
+        (font_size as f32 * 1.5) as u16
+    } else {
+        font_size
+    };
     
     let corner_radius = 8.0;
     draw_rounded_rect(x, y, btn_width, btn_height, corner_radius, bg_color);
@@ -86,7 +92,7 @@ pub fn update_game_state(
     words_done: &mut usize,
     errors_this_second: &mut f64,
 ) {
-    if !*game_started && main::handle_input(reference, pressed_vec, is_correct, pos1, words_done, errors_this_second, &mut false) {
+    if !*game_started && main::handle_input(reference, pressed_vec, is_correct, pos1, words_done, errors_this_second, &mut false, &mut vec![false; reference.chars().count()]) {
         *game_started = true;
         *start_time = Instant::now();
     }

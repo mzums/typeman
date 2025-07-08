@@ -182,6 +182,7 @@ pub fn handle_input(
     words_done: &mut usize,
     errors_this_second: &mut f64,
     config_opened: &mut bool,
+    error_positions: &mut Vec<bool>,
 ) -> bool {
     let pressed = get_char_pressed();
     if let Some(ch) = pressed {
@@ -201,10 +202,11 @@ pub fn handle_input(
             let ref_char: Option<char> = reference.chars().nth(*pos1);
             if is_correct.len() > *pos1 && ref_char == Some(ch) && is_correct[*pos1] != -1 && is_correct[*pos1] != 1 {
                 is_correct[*pos1] = 2; // Correct
-            } else if ref_char == Some(ch) && is_correct[*pos1] == -1 {
+            } else if ref_char == Some(ch) && (is_correct[*pos1] == -1 || is_correct[*pos1] == 1) {
                 is_correct[*pos1] = 1; // Corrected
             } else {
                 is_correct[*pos1] = -1; // Incorrect
+                error_positions[*pos1] = true;
                 *errors_this_second += 1.0;
             }
             *pos1 += 1;
@@ -351,6 +353,7 @@ pub async fn gui_main_async() {
     let mut errors_per_second: Vec<f64> = vec![];
     let mut errors_this_second: f64 = 0.0;
     let mut char_number = 0;
+    let mut error_positions = vec![false; reference.len()];
 
     let mut lines: Vec<String>;
     let mut last_recorded_time = Instant::now();
@@ -450,7 +453,7 @@ pub async fn gui_main_async() {
                 &mut errors_this_second,
             );
 
-            if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened) {
+            if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened, &mut error_positions) {
                 game_started = true;
             }
             
@@ -472,7 +475,7 @@ pub async fn gui_main_async() {
                 140.0,
             );
             
-            handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened);
+            handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened, &mut error_positions);
             
             if time_mode {
                 draw_timer(font.as_ref(), font_size, start_x, start_y, timer, test_time);
@@ -524,12 +527,13 @@ pub async fn gui_main_async() {
                 "time".to_string()
             } else if word_mode {
                 "word".to_string()
-            } else {
+            } else if quote {
                 "quote".to_string()
+            } else {
+                "practice".to_string()
             };
             results::write_results(
                 &is_correct,
-                &pressed_vec,
                 screen_width(),
                 screen_height(),
                 font.as_ref(),
@@ -541,6 +545,8 @@ pub async fn gui_main_async() {
                 punctuation,
                 numbers,
                 &errors_per_second,
+                &reference,
+                &error_positions,
             );
         } else if practice_menu {
             let level = gui_practice::display_practice_menu(font.clone(), &mut scroll_offset, emoji_font.clone().unwrap(), &mut selected_practice_level);
@@ -559,8 +565,10 @@ pub async fn gui_main_async() {
                     &mut errors_per_second,
                     &mut practice_menu,
                 );
+                reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 5);
+                is_correct = VecDeque::from(vec![0; reference.len()]);
                 practice_mode = true;
-                reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 50);
+                config_opened = false;
         }
         }
         if is_key_down(KeyCode::Escape) {

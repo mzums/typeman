@@ -154,7 +154,6 @@ pub fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32, emoji_
         } else {
             Some(TYPING_LEVELS.len() - 1)
         };
-        println!("{selected_level:?}");
         std::thread::sleep(std::time::Duration::from_millis(200));
     }
     if is_key_pressed(KeyCode::Enter) {
