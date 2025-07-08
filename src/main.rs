@@ -13,6 +13,7 @@ mod ui {
         pub mod main;
         pub mod results;
         pub mod config;
+        pub mod practice;
     }
     pub mod tui {
         pub mod app;

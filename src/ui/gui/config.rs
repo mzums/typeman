@@ -278,11 +278,14 @@ pub fn handle_settings_buttons(
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
                 *punctuation = false;
                 *numbers = false;
+                reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, practice_menu);
+            } else if *practice_menu {
+                *practice_menu = true;
             } else {
                 *reference = utils::get_reference(*punctuation, *numbers, word_list, *batch_size);
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
+                reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, practice_menu);
             }
-            reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, practice_menu);
         }
     }
 
