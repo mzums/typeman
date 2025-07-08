@@ -5,6 +5,7 @@ use std::time::{Instant, Duration};
 
 use crate::ui::gui::main;
 use crate::utils;
+use crate::practice::TYPING_LEVELS;
 
 
 pub fn draw_rounded_rect(x: f32, y: f32, w: f32, h: f32, radius: f32, color: Color) {
@@ -124,7 +125,7 @@ pub fn reset_game_state(
     *errors_per_second = vec![];
     *last_recorded_time = Instant::now();
     *words_done = 0;
-    * practice_menu = false;
+    *practice_menu = false;
 }
 
 pub fn handle_settings_buttons(
@@ -154,6 +155,7 @@ pub fn handle_settings_buttons(
     config_opened: &mut bool,
     selected_config: &mut String,
     practice_menu: &mut bool,
+    selected_practice_level: &mut Option<usize>,
 ) -> bool {
     let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = 200.0;
@@ -238,7 +240,7 @@ pub fn handle_settings_buttons(
             }
         }
     } else if is_key_pressed(KeyCode::Enter) {
-        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu);
+        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level);
     }
 
     let mut any_button_hovered = false;
@@ -271,7 +273,7 @@ pub fn handle_settings_buttons(
         }
         
         if clicked && *label != "|"  && (!is_active || (*label == "! punctuation" || *label == "# numbers")) {
-            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu);
+            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level);
 
             if *quote {
                 *reference = utils::get_random_quote();
@@ -292,7 +294,7 @@ pub fn handle_settings_buttons(
     any_button_hovered
 }
 
-fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize, practice_menu: &mut bool) {
+fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize, practice_menu: &mut bool, selected_practice_level: &mut Option<usize>) {
     match label {
         "! punctuation" => {
             *punctuation = !*punctuation;
@@ -326,6 +328,28 @@ fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_m
             *time_mode = false;
             *word_mode = false;
             *practice_menu = true;
+            for i in 0..TYPING_LEVELS.len() {
+                let results_path = format!("practice_results/level_{}.txt", i + 1);
+                let mut done = false;
+                if let Ok(contents) = std::fs::read_to_string(&results_path) {
+                    for line in contents.lines() {
+                        if line.starts_with("WPM:") {
+                            if let Some(wpm_str) = line.strip_prefix("WPM:").map(str::trim) {
+                                if let Ok(wpm) = wpm_str.parse::<f32>() {
+                                    if wpm >= 35.0 {
+                                        done = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if !done {
+                    *selected_practice_level = Some(i);
+                    break;
+                }
+            }
         },
         "15" => {
             *test_time = 15.0;

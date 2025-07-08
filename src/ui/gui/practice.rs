@@ -28,8 +28,8 @@ pub fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32, emoji_
         },
     );
 
-    let start_index = (*scroll_offset / 60.0).floor() as usize;
-    let end_index = (start_index + (visible_height / 60.0).ceil() as usize + 1).min(TYPING_LEVELS.len());
+    let start_index = 0;
+    let end_index = TYPING_LEVELS.len();
 
     let mut any_hovered = false;
     for i in start_index..end_index {
@@ -93,7 +93,7 @@ pub fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32, emoji_
         let is_hovered = if any_hovered {
             button_rect.contains(vec2(mouse_pos.0, mouse_pos.1))
         } else if let Some(selected) = selected_level {
-            *selected == i && !show_tick
+            *selected == i
         } else {
             false
         };
@@ -137,27 +137,31 @@ pub fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32, emoji_
             *selected_level = Some(i);
         }
     }
-
-    if is_key_pressed(KeyCode::Down) {
-        *scroll_offset = (*scroll_offset + 100.0).min(max_scroll);
+    
+    if is_key_down(KeyCode::Down) {
+        *scroll_offset = (*scroll_offset + 50.0).min(max_scroll);
         *selected_level = if let Some(level) = *selected_level {
             Some((level + 1).min(TYPING_LEVELS.len() - 1))
         } else {
             Some(0)
         };
+        println!("{selected_level:?}");
+        std::thread::sleep(std::time::Duration::from_millis(200));
     }
-    if is_key_pressed(KeyCode::Up) {
-        *scroll_offset = (*scroll_offset - 100.0).max(0.0);
+    if is_key_down(KeyCode::Up) {
+        *scroll_offset = (*scroll_offset - 50.0).max(0.0);
         *selected_level = if let Some(level) = *selected_level {
             Some((level as isize - 1).max(0) as usize)
         } else {
             Some(TYPING_LEVELS.len() - 1)
         };
+        println!("{selected_level:?}");
+        std::thread::sleep(std::time::Duration::from_millis(200));
     }
 
     if max_scroll > 0.0 {
         let scroll_area_height = screen_height() - 100.0;
-        let thumb_height = scroll_area_height * (visible_height / total_height);
+        let thumb_height = f32::min(scroll_area_height * (visible_height / total_height), screen_height() - 200.0);
         let thumb_position = if max_scroll > 0.0 {
             100.0 + (*scroll_offset / max_scroll) * (scroll_area_height - thumb_height)
         } else {

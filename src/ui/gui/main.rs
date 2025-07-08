@@ -10,7 +10,6 @@ use crate::utils;
 use crate::ui::gui::results;
 use crate::ui::gui::config;
 use crate::ui::gui::practice as gui_practice;
-use crate::practice::TYPING_LEVELS;
 
 
 pub const MAIN_COLOR: macroquad::color::Color = macroquad::color::Color::from_rgba(255, 155, 0, 255);
@@ -48,54 +47,76 @@ fn draw_shortcut_info(
 ) {
     let mut x = x;
     let mut next_y = y;
-    let (lines, _use_emoji) = if practice_menu {
-        (
-            vec![
-                ("↑ or ↓ to navigate, ↵ to select (or click)", true),
-                ("Tab + Enter - quit menu", false),
-            ],
-            true,
-        )
+    let lines = if practice_menu {
+        x = screen_width() - measure_text("↑ or ↓ to navigate, ↵ to select (or click)", font, font_size as u16, 1.0).width - 70.0;
+        vec![
+            "↑ or ↓ to navigate, ↵ to select (or click)",
+            "Tab + Enter - quit menu",
+        ]
     } else if game_over {
-        (vec![("Tab + Enter - reset", false)], false)
+        vec!["Tab + Enter - reset"]
     } else {
-        (
-            vec![
-                ("↑ to navigate to config, ← → to change settings (or click)", true),
-                ("Tab + Enter - reset", false),
-            ],
-            true,
-        )
+        vec![
+            "↑ to navigate to config, ← → to change settings (or click)",
+            "Tab + Enter - reset",
+        ]
     };
 
-    for (i, (text, emoji)) in lines.iter().enumerate() {
-        if *emoji {
-            if i == 0 && practice_menu {
-                x = screen_width() - measure_text(text, Some(&emoji_font), font_size as u16, 1.0).width - 100.0;
+    fn is_emoji_char(c: char) -> bool {
+        matches!(c, '↑' | '↓' | '←' | '→' | '↵')
+    }
+
+    for line in lines.iter() {
+        let mut curr_x = x;
+        let mut chars = line.chars().peekable();
+        while let Some(c) = chars.peek() {
+            if is_emoji_char(*c) {
+                let mut emoji_str = String::new();
+                while let Some(&ec) = chars.peek() {
+                    if is_emoji_char(ec) {
+                        emoji_str.push(ec);
+                        chars.next();
+                    } else {
+                        break;
+                    }
+                }
+                let dims = measure_text(&emoji_str, Some(&emoji_font), font_size as u16, 1.0);
+                draw_text_ex(
+                    &emoji_str,
+                    curr_x,
+                    next_y,
+                    TextParams {
+                        font: Some(&emoji_font),
+                        font_size: font_size as u16,
+                        color: Color::from_rgba(255, 255, 255, 80),
+                        ..Default::default()
+                    },
+                );
+                curr_x += dims.width;
+            } else {
+                let mut normal_str = String::new();
+                while let Some(&nc) = chars.peek() {
+                    if !is_emoji_char(nc) {
+                        normal_str.push(nc);
+                        chars.next();
+                    } else {
+                        break;
+                    }
+                }
+                let dims = measure_text(&normal_str, font, font_size as u16, 1.0);
+                draw_text_ex(
+                    &normal_str,
+                    curr_x,
+                    next_y,
+                    TextParams {
+                        font,
+                        font_size: font_size as u16,
+                        color: Color::from_rgba(255, 255, 255, 80),
+                        ..Default::default()
+                    },
+                );
+                curr_x += dims.width;
             }
-            draw_text_ex(
-                text,
-                x,
-                next_y,
-                TextParams {
-                    font: Some(&emoji_font),
-                    font_size: font_size as u16,
-                    color: Color::from_rgba(255, 255, 255, 80),
-                    ..Default::default()
-                },
-            );
-        } else {
-            draw_text_ex(
-                text,
-                x,
-                next_y,
-                TextParams {
-                    font,
-                    font_size: font_size as u16,
-                    color: Color::from_rgba(255, 255, 255, 80),
-                    ..Default::default()
-                },
-            );
         }
         next_y += font_size * 1.5;
     }
@@ -201,7 +222,7 @@ fn draw_timer(font: Option<&Font>, font_size: f32, start_x: f32, start_y: f32, t
     draw_text_ex(
         &timer_str,
         start_x,
-        start_y - screen_height() / 20.0,
+        start_y - 2.0 * font_size,
         TextParams {
             font,
             font_size: font_size as u16,
@@ -338,9 +359,9 @@ pub async fn gui_main_async() {
     let mut config_opened = false;
     let mut selected_config: String = "time".to_string();
 
-    let mut practice_menu = true;
+    let mut practice_menu = false;
     let mut scroll_offset: f32 = 0.0;
-    let mut selected_config_level: Option<usize> = None;
+    let mut selected_practice_level: Option<usize> = None;
 
     let words: Vec<&str> = reference.split_whitespace().collect();
     let average_word_length: f64 = if !words.is_empty() {
@@ -351,8 +372,13 @@ pub async fn gui_main_async() {
     
     loop {
         clear_background(macroquad::color::Color::from_rgba(20, 17, 15, 255));
-        let max_width = f32::min(screen_width() * 0.9, 1700.0);
-        let font_size = 40.0;
+        let max_width = f32::min(if screen_height() > screen_width() {screen_width() * 0.9} else {screen_width() * 0.7}, 1700.0);
+        let font_size = if screen_height() > 2000.0 || screen_width() > 3800.0 {
+            40.0
+        } else {
+            40.0 - (3840.0 / screen_width()) * 5.0
+        };
+        println!("Font size: {}", font_size);
         let line_h = measure_text("Gy", font.as_ref(), font_size as u16, 1.0).height * 1.6;
         let char_w = measure_text("G", font.as_ref(), font_size as u16, 1.0).width;
         lines = create_lines(&reference, font.clone(), font_size, max_width, quote, word_mode);
@@ -393,10 +419,11 @@ pub async fn gui_main_async() {
                 &mut last_recorded_time,
                 &mut words_done,
                 &mut errors_per_second,
-                22,
+                u16::max((font_size / 1.5) as u16, 20),
                 &mut config_opened,
                 &mut selected_config,
                 &mut practice_menu,
+                &mut selected_practice_level,
             );
 
             
@@ -440,7 +467,7 @@ pub async fn gui_main_async() {
                 title_font.clone(),
                 50.0,
                 start_x,
-                screen_height() / 15.0,
+                140.0,
             );
             
             handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened);
@@ -514,30 +541,7 @@ pub async fn gui_main_async() {
                 &errors_per_second,
             );
         } else if practice_menu {
-                
-                for i in 0..TYPING_LEVELS.len() {
-                    let results_path = format!("practice_results/level_{}.txt", i + 1);
-                    let mut done = false;
-                    if let Ok(contents) = std::fs::read_to_string(&results_path) {
-                        for line in contents.lines() {
-                            if line.starts_with("WPM:") {
-                                if let Some(wpm_str) = line.strip_prefix("WPM:").map(str::trim) {
-                                    if let Ok(wpm) = wpm_str.parse::<f32>() {
-                                        if wpm >= 35.0 {
-                                            done = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if !done {
-                        selected_config_level = Some(i);
-                        break;
-                    }
-                }
-            gui_practice::display_practice_menu(font.clone(), &mut scroll_offset, emoji_font.clone().unwrap(), &mut selected_config_level);
+            gui_practice::display_practice_menu(font.clone(), &mut scroll_offset, emoji_font.clone().unwrap(), &mut selected_practice_level);
         }
         if is_key_down(KeyCode::Escape) {
             break;
@@ -567,7 +571,7 @@ pub async fn gui_main_async() {
         }
 
 
-        draw_shortcut_info(font.as_ref(), 20.0, screen_width() / 2.0 - max_width / 2.0, screen_height() - 100.0, emoji_font.clone().unwrap(), practice_menu, game_over);
+        draw_shortcut_info(font.as_ref(), f32::max(font_size / 1.7, 15.0), screen_width() / 2.0 - max_width / 2.0, screen_height() - 100.0, emoji_font.clone().unwrap(), practice_menu, game_over);
 
         next_frame().await;
     }
