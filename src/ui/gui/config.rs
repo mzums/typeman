@@ -33,11 +33,11 @@ fn draw_toggle_button(
     if !visible {
         return (false, false, 0.0);
     }
-    let padding = 10.0;
+    let padding = font_size as f32 * 0.5;
         
     let text_dims = measure_text(&label, Some(font.as_ref().unwrap()), font_size, 1.0);
-    let btn_width = text_dims.width + padding * 2.0;
-    let btn_height = measure_text("t", font.as_ref(), font_size, 1.0).height + padding * 2.0;
+    let btn_width = text_dims.width + btn_padding * 2.0;
+    let btn_height = measure_text("t", font.as_ref(), font_size, 1.0).height + padding as f32 * 2.0;
 
     let rect = Rect::new(x, y, btn_width, btn_height);
     let (mx, my) = mouse_position();
@@ -60,12 +60,16 @@ fn draw_toggle_button(
         font_size
     };
     
-    let corner_radius = 8.0;
-    draw_rounded_rect(x, y, btn_width, btn_height, corner_radius, bg_color);
+    let corner_radius: f32 = font_size as f32 / 3.0;
+    let mut btn_x = x;
+    if screen_width() < 800.0 {
+        btn_x += 4.0;
+    }
+    draw_rounded_rect(btn_x, y, btn_width, btn_height, corner_radius, bg_color);
     draw_text_ex(
         &label,
-        x + padding,
-        y + btn_height - padding,
+        x + btn_padding,
+        y + btn_height - padding as f32,
         TextParams {
             font: font.as_ref(),
             font_size,
@@ -169,7 +173,7 @@ pub fn handle_settings_buttons(
 ) -> bool {
     let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = 200.0;
-    let btn_padding = 10.0;
+    let btn_padding = font_size as f32 * 0.5;
     let divider = true;
     let mut total_width = 0.0;
 

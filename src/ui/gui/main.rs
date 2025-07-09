@@ -55,6 +55,7 @@ fn draw_shortcut_info(
             "Tab + Enter - quit menu",
         ]
     } else if game_over {
+        x = x / 2.0;
         vec!["Tab + Enter - reset"]
     } else {
         vec![
@@ -424,7 +425,7 @@ pub async fn gui_main_async() {
                 &mut last_recorded_time,
                 &mut words_done,
                 &mut errors_per_second,
-                u16::max((font_size / 1.5) as u16, 20),
+                u16::max((font_size / 1.5) as u16, 15),
                 &mut config_opened,
                 &mut selected_config,
                 &mut practice_menu,

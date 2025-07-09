@@ -49,7 +49,7 @@ pub fn word_mode(args: &Cli) {
 
     let reference = utils::get_reference(punctuation, digits, &word_list, word_number as usize);
     let start_time = Instant::now();
-    let mut is_correct: &mut VecDeque<i32> = &mut VecDeque::new();
+    let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
 
     cli::main::type_loop(&reference, None, start_time, None, &mut is_correct);
 }

@@ -115,8 +115,8 @@ pub fn count_correct_words(reference: &str, is_correct: &VecDeque<i32>) -> (usiz
                 if is_correct[char_idx] == 1 || is_correct[char_idx] == 2 {
                     correct_words += 1;
                 }
-                all_words += 1;
             }
+            all_words += 1;
             word_correct = true;
         } else {
             if char_idx < is_correct.len() && is_correct[char_idx] <= 0 {
@@ -125,9 +125,12 @@ pub fn count_correct_words(reference: &str, is_correct: &VecDeque<i32>) -> (usiz
         }
         char_idx += 1;
     }
-    if word_correct && char_idx > 0 && !reference.ends_with(' ') {
-        correct_words += 1;
+    if !reference.ends_with(' ') && char_idx > 0 {
+        if word_correct {
+            correct_words += 1;
+        }
         all_words += 1;
     }
+    //println!("Correct words: {}, All words: {}", correct_words, all_words);
     (correct_words, all_words)
 }
