@@ -249,8 +249,20 @@ pub fn handle_settings_buttons(
             break;
             }
         }
-    } else if is_key_pressed(KeyCode::Enter) {
+    } else if is_key_pressed(KeyCode::Enter) && *config_opened {
         update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode);
+        if *quote {
+            *reference = utils::get_random_quote();
+        } else if *practice_mode {
+            *reference = practice::create_words(
+                &practice::TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1,
+                *batch_size,
+            );
+        } else {
+            *reference = utils::get_reference(*punctuation, *numbers, word_list, *batch_size);
+        }
+        *is_correct = VecDeque::from(vec![0; reference.len()]);
+        reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, saved_results);
     }
 
     let mut any_button_hovered = false;
@@ -283,8 +295,8 @@ pub fn handle_settings_buttons(
         }
         
         if clicked && *label != "|"  && (!is_active || (*label == "! punctuation" || *label == "# numbers")) {
+            
             update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode);
-
             if *quote {
                 *reference = utils::get_random_quote();
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);

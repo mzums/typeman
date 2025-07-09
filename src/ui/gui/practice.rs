@@ -1,4 +1,6 @@
 use macroquad::prelude::*;
+use miniquad::window::set_mouse_cursor;
+use miniquad::CursorIcon;
 
 use crate::ui::gui::config;
 use crate::practice::TYPING_LEVELS;
@@ -90,7 +92,10 @@ pub fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32, emoji_
             }
         }
 
+        let mut is_hovered2 = false;
+
         let is_hovered = if any_hovered {
+            is_hovered2 = true;
             button_rect.contains(vec2(mouse_pos.0, mouse_pos.1))
         } else if let Some(selected) = selected_level {
             *selected == i
@@ -98,7 +103,20 @@ pub fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32, emoji_
             false
         };
 
-        let is_clicked = is_hovered && is_mouse_button_pressed(MouseButton::Left);
+        set_mouse_cursor(if any_hovered {
+            CursorIcon::Pointer
+        } else {
+            CursorIcon::Default
+        });
+
+        let is_clicked = is_hovered2 && is_mouse_button_pressed(MouseButton::Left);
+
+        if is_clicked {
+            *selected_level = Some(i);
+            if let Some(level) = *selected_level {
+                return Some(level);
+            }
+        }
 
         let text_color = if is_hovered {
             Color::from_rgba(255, 150, 0, 255)
@@ -132,10 +150,6 @@ pub fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32, emoji_
                 ..Default::default()
             },
         );
-
-        if is_clicked {
-            *selected_level = Some(i);
-        }
     }
     
     if is_key_down(KeyCode::Down) {

@@ -8,7 +8,7 @@ use std::thread;
 
 use crate::utils;
 use crate::ui::gui::results;
-use crate::ui::gui::config;
+use crate::ui::gui::config::{self, reset_game_state};
 use crate::ui::gui::practice as gui_practice;
 use crate::practice::{self, TYPING_LEVELS};
 
@@ -543,6 +543,12 @@ pub async fn gui_main_async() {
             } else {
                 "practice".to_string()
             };
+
+            let practice_level = if !practice_mode {
+                None
+            } else {
+                selected_practice_level
+            };
             
             results::write_results(
                 &is_correct,
@@ -558,7 +564,7 @@ pub async fn gui_main_async() {
                 &errors_per_second,
                 &reference,
                 &error_positions,
-                selected_practice_level,
+                practice_level,
                 &mut saved_results,
             );
         } else if practice_menu {
@@ -583,14 +589,12 @@ pub async fn gui_main_async() {
                 practice_mode = true;
                 practice_menu = false;
                 config_opened = false;
-                word_mode = true;
             }
         }
         if is_key_down(KeyCode::Escape) {
             break;
         }
 
-        //println!("{practice_mode}");
         if is_key_down(KeyCode::Tab) && is_key_down(KeyCode::Enter) && !practice_menu {
             config::reset_game_state(
                 &mut pressed_vec,
@@ -608,18 +612,24 @@ pub async fn gui_main_async() {
             );
             if !practice_mode {
                 reference = utils::get_reference(punctuation, false, &word_list, batch_size);
+            } else if quote {
+                reference = utils::get_random_quote();
             } else {
                 reference = practice::create_words(TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1, 5);
             }
             is_correct = VecDeque::from(vec![0; reference.len()]);
             thread::sleep(time::Duration::from_millis(80));
         }
-        else if is_key_down(KeyCode::Q) {
-            if practice_mode {
+        else if is_key_pressed(KeyCode::Q) {
+            if practice_mode && !practice_menu {
                 practice_menu = true;
             } else if practice_menu {
                 practice_menu = false;
+                practice_mode = false;
                 game_over = false;
+                time_mode = true;
+                reset_game_state(&mut pressed_vec, &mut is_correct, &mut pos1, &mut timer, &mut start_time, &mut game_started, &mut game_over, &mut speed_per_second, &mut last_recorded_time, &mut words_done, &mut errors_per_second, &mut saved_results);
+                reset_game_state(&mut pressed_vec, &mut is_correct, &mut pos1, &mut timer, &mut start_time, &mut game_started, &mut game_over, &mut speed_per_second, &mut last_recorded_time, &mut words_done, &mut errors_per_second, &mut saved_results);
             }
         }
         else {

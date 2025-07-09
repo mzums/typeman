@@ -32,7 +32,6 @@ pub fn write_results(
     practice_level: Option<usize>,
     saved_results: &mut bool,
 ) {
-    println!("{:?}", font);
     let (correct_words, all_words) = utils::count_correct_words(&reference, &is_correct);
     let error_count = error_positions.iter().filter(|&&e| e).count();
     let accuracy = (100.0 - (error_count as f64 / reference.len() as f64 * 100.0)).round();
@@ -41,7 +40,6 @@ pub fn write_results(
     
     let chart_width = f32::min(f32::max(0.8 * f32::min(screen_width, screen_height), 0.6 * screen_width), 1800.0);
     let chart_height: f32 = f32::min(chart_width / 5.0, 360.0);
-    //println!("{chart_height}");
     
     let fontsize_1 = (chart_height / 3.0) as u16;
     let fontsize_2 = (chart_height / 7.0) as u16;
@@ -60,7 +58,6 @@ pub fn write_results(
     let text2_width = measure_text("consistency", font, 25, 1.0).width;
     let padding = (chart_width - 4.0 * text2_width) / 4.0;
 
-    //println!("{:?}", text_size.width);
 
     let avg_wpm = write_wpm(
         font,
@@ -178,7 +175,7 @@ fn write_mode(
         x,
         y,
         TextParams {
-            //font,
+            font,
             font_size: fontsize_4,
             color: Color::from_rgba(255, 255, 255, 80),
             ..Default::default()

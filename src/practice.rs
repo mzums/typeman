@@ -86,8 +86,6 @@ pub fn save_results(time: f64, accuracy: f64, wpm: f64, level:usize) {
         .open(file_path)
         .unwrap();
     file.write_all(stats.as_bytes()).unwrap();
-
-    //println!("Results saved to {}", file_path.display());
 }
 
 
