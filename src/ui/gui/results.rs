@@ -4,7 +4,6 @@ use eframe::egui;
 use egui::{Color32,  Area, pos2};
 use egui_plot::{Line, Plot};
 
-use crate::ui::gui::main::MAIN_COLOR;
 use crate::utils;
 use crate::practice;
 
@@ -113,6 +112,7 @@ pub fn write_results(
         numbers,
         fontsize_3,
         fontsize_4,
+        practice_level
     );
 
     let mut speed2: Vec<f64> = speed_per_second.clone();
@@ -136,11 +136,11 @@ pub fn write_results(
         };
         let text_size = measure_text(&practice_text, font, 30, 1.0);
 
-        draw_text_ex(practice_text.as_str(), (screen_width - text_size.width) / 2.0, chart_y + chart_height + 200.0, TextParams { font: font, font_size: 30, font_scale: 1.0, color: MAIN_COLOR, ..Default::default() });
+        draw_text_ex(practice_text.as_str(), (screen_width - text_size.width) / 2.0, chart_y + chart_height + 200.0, TextParams { font: font, font_size: 30, font_scale: 1.0, color: Color::from_rgba(255, 255, 255, 100), ..Default::default() });
         if practice::get_prev_best_wpm(practice_level.unwrap() + 1) < wpm as f64 {
             let new_highscore_text = "New highscore for this level!";
             let text_size = measure_text(new_highscore_text, font, 30, 1.0);
-            draw_text_ex(new_highscore_text, (screen_width - text_size.width) / 2.0, chart_y + chart_height + 250.0, TextParams { font: font, font_size: 30, font_scale: 1.0, color: MAIN_COLOR, ..Default::default() });
+            draw_text_ex(new_highscore_text, (screen_width - text_size.width) / 2.0, chart_y + chart_height + 250.0, TextParams { font: font, font_size: 30, font_scale: 1.0, color: Color::from_rgba(255, 255, 255, 100), ..Default::default() });
         }
         if !*saved_results {
             *saved_results = true;
@@ -163,6 +163,7 @@ fn write_mode(
     numbers: bool,
     fontsize_3: u16,
     fontsize_4: u16,
+    practice_level: Option<usize>,
 ) {
     let mut fontsize_3 = fontsize_3;
     let fontsize_4 = fontsize_4;
@@ -170,6 +171,7 @@ fn write_mode(
     let mut punct_pos: f32 = y;
     let mut number_pos: f32 = y;
     let mut mode_pos: f32 = y + fontsize_3 as f32;
+    let level_pos = y + fontsize_3 as f32 * 1.25;
     draw_text_ex(
         "mode",
         x,
@@ -187,7 +189,7 @@ fn write_mode(
         fontsize_3 = (fontsize_3 as f32 * 0.7) as u16;
         mode_pos = y + fontsize_3 as f32;
     }
-    else if punctuation || numbers || mode == "practice" {
+    else if punctuation || numbers {
         fontsize_3 = (fontsize_3 as f32 * 0.8) as u16;
         mode_pos = y + fontsize_3 as f32;
         if punctuation {
@@ -195,6 +197,9 @@ fn write_mode(
         } else {
             number_pos = y + fontsize_3 as f32 * 1.65;
         }
+    } else if practice_level.is_some() {
+        fontsize_3 = (fontsize_3 as f32 * 0.65) as u16;
+        mode_pos = y + fontsize_3 as f32 * 0.9;
     }
 
     draw_text_ex(
@@ -226,6 +231,20 @@ fn write_mode(
             "numbers",
             x,
             number_pos,
+            TextParams {
+                font,
+                font_size: fontsize_4,
+                color: Color::from_rgba(255, 155, 0, 255),
+                ..Default::default()
+            },
+        );
+    }
+    if practice_level.is_some() && mode == "practice" {
+        let level_text = format!("level {}", practice_level.unwrap() + 1);
+        draw_text_ex(
+            &level_text,
+            x,
+            level_pos,
             TextParams {
                 font,
                 font_size: fontsize_4,

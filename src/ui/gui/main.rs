@@ -45,6 +45,7 @@ fn draw_shortcut_info(
     emoji_font: Font,
     practice_menu: bool,
     game_over: bool,
+    practice_mode: bool,
 ) {
     let mut x = x;
     let mut next_y = y;
@@ -52,7 +53,14 @@ fn draw_shortcut_info(
         x = screen_width() - measure_text("↑ or ↓ to navigate, ↵ to select (or click)", font, font_size as u16, 1.0).width - 70.0;
         vec![
             "↑ or ↓ to navigate, ↵ to select (or click)",
-            "Tab + Enter - quit menu",
+            "q - quit menu",
+        ]
+    } else if practice_mode {
+        next_y -= font_size * 1.5;
+        vec![
+            "↑ to navigate to config, ← → to change settings (or click)",
+            "Tab + Enter - reset",
+            "q - back to menu",
         ]
     } else if game_over {
         x = x / 2.0;
@@ -567,20 +575,22 @@ pub async fn gui_main_async() {
                     &mut last_recorded_time,
                     &mut words_done,
                     &mut errors_per_second,
-                    &mut practice_menu,
                     &mut saved_results,
                 );
                 reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 5);
                 is_correct = VecDeque::from(vec![0; reference.len()]);
                 practice_mode = true;
+                practice_menu = false;
                 config_opened = false;
-        }
+                word_mode = true;
+            }
         }
         if is_key_down(KeyCode::Escape) {
             break;
         }
 
-        if is_key_down(KeyCode::Tab) && is_key_down(KeyCode::Enter) {
+        println!("{practice_mode}");
+        if is_key_down(KeyCode::Tab) && is_key_down(KeyCode::Enter) && !practice_menu {
             config::reset_game_state(
                 &mut pressed_vec,
                 &mut is_correct,
@@ -593,18 +603,29 @@ pub async fn gui_main_async() {
                 &mut last_recorded_time,
                 &mut words_done,
                 &mut errors_per_second,
-                &mut practice_menu,
                 &mut saved_results,
             );
-            reference = utils::get_reference(punctuation, false, &word_list, batch_size);
+            if !practice_mode {
+                reference = utils::get_reference(punctuation, false, &word_list, batch_size);
+            } else {
+                reference = practice::create_words(TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1, 5);
+            }
             is_correct = VecDeque::from(vec![0; reference.len()]);
             thread::sleep(time::Duration::from_millis(80));
+        }
+        else if is_key_down(KeyCode::Q) {
+            if practice_mode {
+                practice_menu = true;
+            } else if practice_menu {
+                practice_menu = false;
+                game_over = false;
+            }
         }
         else {
             let _pressed = get_char_pressed();
         }
 
-        draw_shortcut_info(font.as_ref(), f32::max(font_size / 1.7, 15.0), screen_width() / 2.0 - max_width / 2.0, screen_height() - 100.0, emoji_font.clone().unwrap(), practice_menu, game_over);
+        draw_shortcut_info(font.as_ref(), f32::max(font_size / 1.7, 15.0), screen_width() / 2.0 - max_width / 2.0, screen_height() - 100.0, emoji_font.clone().unwrap(), practice_menu, game_over, practice_mode);
 
         next_frame().await;
     }

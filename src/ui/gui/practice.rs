@@ -156,7 +156,7 @@ pub fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32, emoji_
         };
         std::thread::sleep(std::time::Duration::from_millis(200));
     }
-    if is_key_pressed(KeyCode::Enter) {
+    if is_key_pressed(KeyCode::Enter) && !is_key_down(KeyCode::Tab) {
         if let Some(level) = *selected_level {
             return Some(level);
         }
