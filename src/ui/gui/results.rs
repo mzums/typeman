@@ -38,42 +38,53 @@ pub fn write_results(
     let accuracy = (100.0 - (error_count as f64 / reference.len() as f64 * 100.0)).round();
     let wpm = (correct_words as f32 / (test_time / 60.0)).round();
     let raw = all_words as f32 / (test_time / 60.0);
-
-
+    
+    let chart_width = f32::min(f32::max(0.8 * f32::min(screen_width, screen_height), 0.6 * screen_width), 1800.0);
+    let chart_height: f32 = f32::min(chart_width / 5.0, 360.0);
+    //println!("{chart_height}");
+    
+    let fontsize_1 = (chart_height / 3.0) as u16;
+    let fontsize_2 = (chart_height / 7.0) as u16;
+    let fontsize_3 = (chart_height / 5.0) as u16;
+    let fontsize_4 = (chart_height / 12.0) as u16;
+    
     let text_size = {
-        let a = measure_text(&format!("{:0}%", accuracy), font, 60, 1.0);
-        let b = measure_text(&format!("{:0}", wpm), font, 60, 1.0);
+        let a = measure_text(&format!("{:0}%", accuracy), font, fontsize_1, 1.0);
+        let b = measure_text(&format!("{:0}", wpm), font, fontsize_1 , 1.0);
         if a.width > b.width { a } else { b }
     };
 
-    let chart_width = f32::min(0.7 * screen_width, 1800.0);
-    let chart_height: f32 = f32::min(chart_width / 5.0, 360.0);
-
     let chart_x = (screen_width - chart_width + text_size.width + 20.0) / 2.0;
     let chart_y = (screen_height - chart_height) / 4.0;
-
+    
     let text2_width = measure_text("consistency", font, 25, 1.0).width;
-    let padding = (chart_width - 4.5 * text2_width) / 3.0;
+    let padding = (chart_width - 4.0 * text2_width) / 4.0;
 
     //println!("{:?}", text_size.width);
 
     let avg_wpm = write_wpm(
         font,
-        (screen_width - chart_width) / 2.0 - text_size.width,
+        (screen_width - chart_width - text_size.width) / 2.0,
         (screen_height - chart_height) / 3.8,
         wpm,
+        fontsize_1,
+        fontsize_2,
     );
     write_acc(
         accuracy,
         font,
-        (screen_width - chart_width) / 2.0 - text_size.width,
-        (screen_height - chart_height) / 3.8 + text_size.height * 3.0,
+        (screen_width - chart_width - text_size.width) / 2.0,
+        (screen_height - chart_height) / 3.8 + text_size.height * 2.0,
+        fontsize_1,
+        fontsize_2,
     );
     write_raw_wpm(
         raw,
         font,
         (screen_width - chart_width + 2.0 * text_size.width) / 2.0,
         chart_y + chart_height + 20.0,
+        fontsize_3,
+        fontsize_4,
     );
     write_consistency(
         speed_per_second,
@@ -82,12 +93,16 @@ pub fn write_results(
         (screen_width - chart_width + 2.0 * text_size.width) / 2.0 + text2_width + padding,
         chart_y + chart_height + 20.0,
         avg_wpm,
+        fontsize_3,
+        fontsize_4,
     );
     write_time(
         test_time,
         font,
         (screen_width - chart_width + 2.0 * text_size.width) / 2.0 + (text2_width + padding) * 2.0,
         chart_y + chart_height + 20.0,
+        fontsize_3,
+        fontsize_4,
     );
     write_mode(
         font,
@@ -96,6 +111,8 @@ pub fn write_results(
         mode,
         punctuation,
         numbers,
+        fontsize_3,
+        fontsize_4,
     );
 
     let mut speed2: Vec<f64> = speed_per_second.clone();
@@ -144,36 +161,39 @@ fn write_mode(
     mode: &str,
     punctuation: bool,
     numbers: bool,
+    fontsize_3: u16,
+    fontsize_4: u16,
 ) {
+    let mut fontsize_3 = fontsize_3;
+    let fontsize_4 = fontsize_4;
     let mode_text = format!("{mode}");
-    let mut font_size = 50;
     let mut punct_pos: f32 = y;
     let mut number_pos: f32 = y;
-    let mut mode_pos: f32 = y + 50.0;
+    let mut mode_pos: f32 = y + fontsize_3 as f32;
     draw_text_ex(
         "mode",
         x,
         y,
         TextParams {
             font,
-            font_size: 25.0 as u16,
+            font_size: fontsize_4,
             color: Color::from_rgba(255, 255, 255, 80),
             ..Default::default()
         },
     );
     if punctuation && numbers{
-        punct_pos = y + 70.0;
-        number_pos = y + 90.0;
-        font_size = 20;
-        mode_pos = y + 40.0;
+        punct_pos = y + fontsize_3 as f32 * 1.2;
+        number_pos = y + fontsize_3 as f32 * 1.65;
+        fontsize_3 = (fontsize_3 as f32 * 0.7) as u16;
+        mode_pos = y + fontsize_3 as f32;
     }
     else if punctuation || numbers || mode == "practice" {
-        font_size = 20;
-        mode_pos = y + 40.0;
+        fontsize_3 = (fontsize_3 as f32 * 0.8) as u16;
+        mode_pos = y + fontsize_3 as f32;
         if punctuation {
-            punct_pos = y + 70.0;
+            punct_pos = y + fontsize_3 as f32 * 1.65;
         } else {
-            number_pos = y + 70.0;
+            number_pos = y + fontsize_3 as f32 * 1.65;
         }
     }
 
@@ -183,7 +203,7 @@ fn write_mode(
         mode_pos,
         TextParams {
             font,
-            font_size: font_size + 10,
+            font_size: fontsize_3,
             color: Color::from_rgba(255, 155, 0, 255),
             ..Default::default()
         },
@@ -195,7 +215,7 @@ fn write_mode(
             punct_pos,
             TextParams {
                 font,
-                font_size: font_size,
+                font_size: fontsize_4,
                 color: Color::from_rgba(255, 155, 0, 255),
                 ..Default::default()
             },
@@ -208,7 +228,7 @@ fn write_mode(
             number_pos,
             TextParams {
                 font,
-                font_size: font_size,
+                font_size: fontsize_4,
                 color: Color::from_rgba(255, 155, 0, 255),
                 ..Default::default()
             },
@@ -221,6 +241,8 @@ fn write_time(
     font: Option<&Font>,
     x: f32,
     y: f32,
+    fontsize_3: u16,
+    fontsize_4: u16,
 ) {
     let time_text = format!("{:.0}s", test_time);
     draw_text_ex(
@@ -229,7 +251,7 @@ fn write_time(
         y,
         TextParams {
             font,
-            font_size: 25.0 as u16,
+            font_size: fontsize_4,
             color: Color::from_rgba(255, 255, 255, 80),
             ..Default::default()
         },
@@ -237,10 +259,10 @@ fn write_time(
     draw_text_ex(
         &time_text,
         x,
-        y + 60.0,
+        y + fontsize_3 as f32,
         TextParams {
             font,
-            font_size: 60,
+            font_size: fontsize_3,
             color: Color::from_rgba(255, 155, 0, 255),
             ..Default::default()
         },
@@ -254,6 +276,8 @@ fn write_consistency(
     x: f32,
     y: f32,
     avg_wpm: f32,
+    fontsize_3: u16,
+    fontsize_4: u16,
 ) {
     let standard_deviation = calc_standard_deviation(speed_per_second, average_word_length);
     let consistency = if avg_wpm > 0.0 {
@@ -269,7 +293,7 @@ fn write_consistency(
         y,
         TextParams {
             font,
-            font_size: 25.0 as u16,
+            font_size: fontsize_4,
             color: Color::from_rgba(255, 255, 255, 80),
             ..Default::default()
         },
@@ -277,10 +301,10 @@ fn write_consistency(
     draw_text_ex(
         &consistency_text,
         x,
-        y + 60.0,
+        y + fontsize_3 as f32,
         TextParams {
             font,
-            font_size: 60,
+            font_size: fontsize_3,
             color: Color::from_rgba(255, 155, 0, 255),
             ..Default::default()
         },
@@ -292,6 +316,8 @@ fn write_wpm(
     x: f32,
     y: f32,
     wpm: f32,
+    fontsize_1: u16,
+    fontsize_2: u16,
 ) -> f32 {
     let wpm_text = format!("{:.0}", wpm);
     draw_text_ex(
@@ -300,7 +326,7 @@ fn write_wpm(
         y,
         TextParams {
             font,
-            font_size: 40.0 as u16,
+            font_size: fontsize_2,
             color: Color::from_rgba(255, 255, 255, 80),
             ..Default::default()
         },
@@ -308,10 +334,10 @@ fn write_wpm(
     draw_text_ex(
         &wpm_text,
         x,
-        y + 85.0,
+        y + fontsize_1 as f32,
         TextParams {
             font,
-            font_size: 90,
+            font_size: fontsize_1,
             color: Color::from_rgba(255, 155, 0, 255),
             ..Default::default()
         },
@@ -319,7 +345,7 @@ fn write_wpm(
     return wpm;
 }
 
-fn write_acc(accuracy: f64, font: Option<&Font>, x: f32, y: f32) {
+fn write_acc(accuracy: f64, font: Option<&Font>, x: f32, y: f32, fontsize_1: u16, fontsize_2: u16) {
     let acc_text = format!("{:.0}%", accuracy);
     draw_text_ex(
         "acc",
@@ -327,7 +353,7 @@ fn write_acc(accuracy: f64, font: Option<&Font>, x: f32, y: f32) {
         y,
         TextParams {
             font,
-            font_size: 40.0 as u16,
+            font_size: fontsize_2,
             color: Color::from_rgba(255, 255, 255, 80),
             ..Default::default()
         },
@@ -335,17 +361,17 @@ fn write_acc(accuracy: f64, font: Option<&Font>, x: f32, y: f32) {
     draw_text_ex(
         &acc_text,
         x,
-        y + 85.0,
+        y + fontsize_1 as f32,
         TextParams {
             font,
-            font_size: 90,
+            font_size: fontsize_1,
             color: Color::from_rgba(255, 155, 0, 255),
             ..Default::default()
         },
     );
 }
 
-fn write_raw_wpm(raw_wpm: f32, font: Option<&Font>, x: f32, y: f32) {
+fn write_raw_wpm(raw_wpm: f32, font: Option<&Font>, x: f32, y: f32, fontsize_3: u16, fontsize_4: u16) {
     let raw_text = format!("{:.0}", raw_wpm);
     draw_text_ex(
         "raw wpm",
@@ -353,7 +379,7 @@ fn write_raw_wpm(raw_wpm: f32, font: Option<&Font>, x: f32, y: f32) {
         y,
         TextParams {
             font,
-            font_size: 25.0 as u16,
+            font_size: fontsize_4,
             color: Color::from_rgba(255, 255, 255, 80),
             ..Default::default()
         },
@@ -361,10 +387,10 @@ fn write_raw_wpm(raw_wpm: f32, font: Option<&Font>, x: f32, y: f32) {
     draw_text_ex(
         &raw_text,
         x,
-        y + 60.0,
+        y + fontsize_3 as f32,
         TextParams {
             font,
-            font_size: 60,
+            font_size: fontsize_3,
             color: Color::from_rgba(255, 155, 0, 255),
             ..Default::default()
         },
