@@ -211,9 +211,9 @@ pub fn handle_input(
             let ref_char: Option<char> = reference.chars().nth(*pos1);
             if is_correct.len() > *pos1 && ref_char == Some(ch) && is_correct[*pos1] != -1 && is_correct[*pos1] != 1 {
                 is_correct[*pos1] = 2; // Correct
-            } else if ref_char == Some(ch) && (is_correct[*pos1] == -1 || is_correct[*pos1] == 1) {
+            } else if is_correct.len() > *pos1 && ref_char == Some(ch) && (is_correct[*pos1] == -1 || is_correct[*pos1] == 1) {
                 is_correct[*pos1] = 1; // Corrected
-            } else {
+            } else if is_correct.len() > *pos1 {
                 is_correct[*pos1] = -1; // Incorrect
                 error_positions[*pos1] = true;
                 *errors_this_second += 1.0;
@@ -411,7 +411,7 @@ pub async fn gui_main_async() {
         
         if !game_over && !practice_menu {
             let any_button_hovered = config::handle_settings_buttons(
-                &font,
+                &font.clone(),
                 &word_list,
                 &mut punctuation,
                 &mut numbers,
@@ -543,6 +543,7 @@ pub async fn gui_main_async() {
             } else {
                 "practice".to_string()
             };
+            
             results::write_results(
                 &is_correct,
                 screen_width(),
@@ -589,7 +590,7 @@ pub async fn gui_main_async() {
             break;
         }
 
-        println!("{practice_mode}");
+        //println!("{practice_mode}");
         if is_key_down(KeyCode::Tab) && is_key_down(KeyCode::Enter) && !practice_menu {
             config::reset_game_state(
                 &mut pressed_vec,

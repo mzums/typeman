@@ -32,6 +32,7 @@ pub fn write_results(
     practice_level: Option<usize>,
     saved_results: &mut bool,
 ) {
+    println!("{:?}", font);
     let (correct_words, all_words) = utils::count_correct_words(&reference, &is_correct);
     let error_count = error_positions.iter().filter(|&&e| e).count();
     let accuracy = (100.0 - (error_count as f64 / reference.len() as f64 * 100.0)).round();
@@ -177,7 +178,7 @@ fn write_mode(
         x,
         y,
         TextParams {
-            font,
+            //font,
             font_size: fontsize_4,
             color: Color::from_rgba(255, 255, 255, 80),
             ..Default::default()
