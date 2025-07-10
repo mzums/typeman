@@ -95,14 +95,17 @@ pub fn get_prev_best_wpm(level: usize) -> f64 {
         Ok(c) if !c.trim().is_empty() => c,
         _ => return 0.0,
     };
+    let mut best_wpm = 0.0;
     for line in contents.lines() {
         if line.starts_with("WPM:") {
             if let Some(wpm_str) = line.strip_prefix("WPM:").map(str::trim) {
                 if let Ok(wpm) = wpm_str.parse::<f64>() {
-                    return wpm;
+                    if wpm > best_wpm {
+                        best_wpm = wpm;
+                    }
                 }
             }
         }
     }
-    0.0
+    best_wpm
 }

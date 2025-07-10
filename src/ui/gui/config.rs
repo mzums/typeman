@@ -96,7 +96,7 @@ pub fn update_game_state(
     words_done: &mut usize,
     errors_this_second: &mut f64,
 ) {
-    if !*game_started && main::handle_input(reference, pressed_vec, is_correct, pos1, words_done, errors_this_second, &mut false, &mut vec![false; reference.chars().count()]) {
+    if !*game_started && main::handle_input(reference, pressed_vec, is_correct, pos1, words_done, errors_this_second, &mut false, &mut vec![false; reference.chars().count()], false) {
         *game_started = true;
         *start_time = Instant::now();
     }

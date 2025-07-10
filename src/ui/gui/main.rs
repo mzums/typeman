@@ -192,6 +192,7 @@ pub fn handle_input(
     errors_this_second: &mut f64,
     config_opened: &mut bool,
     error_positions: &mut Vec<bool>,
+    practice_mode: bool,
 ) -> bool {
     let pressed = get_char_pressed();
     if let Some(ch) = pressed {
@@ -217,6 +218,9 @@ pub fn handle_input(
                 is_correct[*pos1] = -1; // Incorrect
                 error_positions[*pos1] = true;
                 *errors_this_second += 1.0;
+            }
+            if practice_mode && is_correct[*pos1] == -1 {
+                return true;
             }
             *pos1 += 1;
             pressed_vec.push(ch);
@@ -354,7 +358,7 @@ pub async fn gui_main_async() {
     let mut pos1: usize = 0;
     let mut timer = time::Duration::from_secs(0);
     let mut start_time: Instant = Instant::now();
-    let mut test_time = 5.0;
+    let mut test_time = 30.0;
     let mut game_started = false;
     let mut game_over = false;
 
@@ -391,7 +395,7 @@ pub async fn gui_main_async() {
         let font_size = if screen_height() > 2000.0 || screen_width() > 3800.0 {
             40.0
         } else {
-            40.0 - (3840.0 / screen_width()) * 5.0
+            (40.0 - (3840.0 / screen_width()) * 5.0).round()
         };
         let line_h = measure_text("Gy", font.as_ref(), font_size as u16, 1.0).height * 1.6;
         let char_w = measure_text("G", font.as_ref(), font_size as u16, 1.0).width;
@@ -464,7 +468,7 @@ pub async fn gui_main_async() {
                 &mut errors_this_second,
             );
 
-            if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened, &mut error_positions) {
+            if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened, &mut error_positions, practice_mode) {
                 game_started = true;
             }
             
@@ -486,12 +490,14 @@ pub async fn gui_main_async() {
                 140.0,
             );
             
-            handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened, &mut error_positions);
+            handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened, &mut error_positions, practice_mode);
             
             if time_mode {
                 draw_timer(font.as_ref(), font_size, start_x, start_y, timer, test_time);
             } else if word_mode {
                 draw_word_count(font.as_ref(), font_size, start_x, start_y, &mut words_done, batch_size);
+            } else if practice_mode {
+                draw_word_count(font.as_ref(), font_size, start_x, start_y, &mut words_done, 50);
             }
 
             draw_reference_text(
@@ -554,7 +560,7 @@ pub async fn gui_main_async() {
                 &is_correct,
                 screen_width(),
                 screen_height(),
-                font.as_ref(),
+                title_font.as_ref(),
                 timer.as_secs_f32(),
                 &speed_per_second,
                 average_word_length,
@@ -563,7 +569,6 @@ pub async fn gui_main_async() {
                 numbers,
                 &errors_per_second,
                 &reference,
-                &error_positions,
                 practice_level,
                 &mut saved_results,
             );
@@ -584,7 +589,7 @@ pub async fn gui_main_async() {
                     &mut errors_per_second,
                     &mut saved_results,
                 );
-                reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 5);
+                reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 50);
                 is_correct = VecDeque::from(vec![0; reference.len()]);
                 practice_mode = true;
                 practice_menu = false;
@@ -610,12 +615,12 @@ pub async fn gui_main_async() {
                 &mut errors_per_second,
                 &mut saved_results,
             );
-            if !practice_mode {
-                reference = utils::get_reference(punctuation, false, &word_list, batch_size);
+            if practice_mode {
+                reference = practice::create_words(TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1, 50);
             } else if quote {
                 reference = utils::get_random_quote();
             } else {
-                reference = practice::create_words(TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1, 5);
+                reference = utils::get_reference(punctuation, false, &word_list, batch_size);
             }
             is_correct = VecDeque::from(vec![0; reference.len()]);
             thread::sleep(time::Duration::from_millis(80));
