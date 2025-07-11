@@ -1,12 +1,34 @@
 use macroquad::prelude::*;
 use miniquad::window::set_mouse_cursor;
 use miniquad::CursorIcon;
+use std::collections::VecDeque;
+use std::thread;
+use std::time::{Instant, Duration};
 
 use crate::ui::gui::config;
 use crate::practice::TYPING_LEVELS;
 
 
-pub fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32, emoji_font: Font, selected_level: &mut Option<usize>) -> Option<usize> {
+pub fn display_practice_menu(
+    font: Option<Font>,
+    scroll_offset: &mut f32,
+    emoji_font: Font,
+    selected_level: &mut Option<usize>,
+    practice_menu: &mut bool, 
+    time_mode: &mut bool,
+    pressed_vec: &mut Vec<char>,
+    is_correct: &mut VecDeque<i32>,
+    pos1: &mut usize,
+    timer: &mut Duration,
+    start_time: &mut Instant,
+    game_started: &mut bool,
+    game_over: &mut bool,
+    speed_per_second: &mut Vec<f64>,
+    last_recorded_time: &mut Instant,
+    words_done: &mut usize,
+    errors_per_second: &mut Vec<f64>,
+    saved_results: &mut bool,
+) -> Option<usize> {
     let mouse_pos = mouse_position();
 
     let (_, y_scroll) = mouse_wheel();
@@ -174,6 +196,30 @@ pub fn display_practice_menu(font: Option<Font>, scroll_offset: &mut f32, emoji_
         if let Some(level) = *selected_level {
             return Some(level);
         }
+    }
+    if is_key_pressed(KeyCode::Q) {
+        if *practice_menu {
+            *practice_menu = false;
+            //practice_mode = false;
+            *time_mode = true;
+            config::reset_game_state(
+                pressed_vec,
+                is_correct,
+                pos1,
+                timer,
+                start_time,
+                game_started,
+                game_over,
+                speed_per_second,
+                last_recorded_time,
+                words_done,
+                errors_per_second,
+                saved_results,
+            );
+        }
+        thread::sleep(Duration::from_millis(200));
+    } else {
+        let _pressed = get_char_pressed();
     }
 
     if max_scroll > 0.0 {

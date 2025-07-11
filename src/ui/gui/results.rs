@@ -31,7 +31,8 @@ pub fn write_results(
     practice_level: Option<usize>,
     saved_results: &mut bool,
 ) {
-    let (correct_words, all_words) = utils::count_correct_words(&reference, &is_correct);
+    let (no_corrected_words, correct_words, all_words) = utils::count_correct_words(&reference, &is_correct);
+    //println!("{no_corrected_words}");
     //println!("{:?}", error_positions);
     //let error_count = error_positions.iter().filter(|&&e| e).count();
     let error_count1 = is_correct.iter().filter(|&&v| v == 1 || v == -1).count();
@@ -43,7 +44,12 @@ pub fn write_results(
     };
     //println!("{error_count}");
     //let accuracy = (100.0 - (error_count as f64 / (all_words as f64 * 6.0)) * 100.0).round();
-    let wpm = (correct_words as f32 / (test_time / 60.0)).round();
+    let wpm = if practice_level.is_some() {
+        (no_corrected_words as f32 / (test_time / 60.0)).round()
+    } else {
+        (correct_words as f32 / (test_time / 60.0)).round()
+    };
+    //let wpm = (correct_words as f32 / (test_time / 60.0)).round();
     let raw = all_words as f32 / (test_time / 60.0);
     
     let chart_width = f32::min(f32::max(0.8 * f32::min(screen_width, screen_height), 0.6 * screen_width), 1800.0);
@@ -87,7 +93,7 @@ pub fn write_results(
         raw,
         font,
         (screen_width - chart_width + 2.0 * text_size.width) / 2.0,
-        chart_y + chart_height + 20.0,
+        chart_y + chart_height + fontsize_4 as f32 * 1.5,
         fontsize_3,
         fontsize_4,
     );
@@ -96,7 +102,7 @@ pub fn write_results(
         average_word_length,
         font,
         (screen_width - chart_width + 2.0 * text_size.width) / 2.0 + text2_width + padding,
-        chart_y + chart_height + 20.0,
+        chart_y + chart_height + fontsize_4 as f32 * 1.5,
         avg_wpm,
         fontsize_3,
         fontsize_4,
@@ -105,14 +111,14 @@ pub fn write_results(
         test_time,
         font,
         (screen_width - chart_width + 2.0 * text_size.width) / 2.0 + (text2_width + padding) * 2.0,
-        chart_y + chart_height + 20.0,
+        chart_y + chart_height + fontsize_4 as f32 * 1.5,
         fontsize_3,
         fontsize_4,
     );
     write_mode(
         font,
         (screen_width - chart_width + 2.0 * text_size.width) / 2.0 + (text2_width + padding) * 3.0,
-        chart_y + chart_height + 20.0,
+        chart_y + chart_height + fontsize_4 as f32 * 1.5,
         mode,
         punctuation,
         numbers,
@@ -435,6 +441,7 @@ fn smooth(values: &[f64], window: usize, average_word_length: f64) -> Vec<f64> {
         let avg = slice.iter().sum::<f64>() / slice.len() as f64 / average_word_length;
         smoothed.push(avg);
     }
+    smoothed[0] = smoothed[1];
 
     smoothed
 }
@@ -496,30 +503,42 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                             .name("Performance");
                         plot_ui.line(line);
 
+                        let mut last_drawn_pixel_x: Option<f32> = None;
                         for (i, &val) in errors.iter().enumerate() {
                             if val > 0.0 {
-                                if let Some(&[x,_]) = points.get(i) {
-                                    let size = if val <= 1.0 {
-                                        5.0
-                                    } else if val <= 2.0 {
-                                        8.0
-                                    } else if val <= 3.0 {
-                                        11.0
-                                    } else {
-                                        15.0
+                                if let Some(&[x, _]) = points.get(i) {
+                                    let screen_pos = plot_ui.screen_from_plot(egui_plot::PlotPoint::new(x, 0.0));
+                                    let current_pixel_x = screen_pos.x;
+
+                                    let should_draw = match last_drawn_pixel_x {
+                                        None => true,
+                                        Some(last_x) => (current_pixel_x - last_x).abs() >= 10.0,
                                     };
 
-                                    let cross_y = size;
-                                    
-                                    let cross = egui_plot::Points::new(
-                                        "Error",
-                                        vec![[x, cross_y]]
-                                    )
-                                    .color(Color32::from_rgb(255, 50, 50))
-                                    .radius(size as f32)
-                                    .shape(egui_plot::MarkerShape::Cross);
-                                    
-                                    plot_ui.points(cross);
+                                    if should_draw {
+                                        let size = if val <= 1.0 {
+                                            5.0
+                                        } else if val <= 2.0 {
+                                            8.0
+                                        } else if val <= 3.0 {
+                                            11.0
+                                        } else {
+                                            15.0
+                                        };
+                                        
+                                        let cross_y = size;
+                                        
+                                        let cross = egui_plot::Points::new(
+                                            "Error",
+                                            vec![[x, cross_y]]
+                                        )
+                                        .color(Color32::from_rgb(255, 50, 50))
+                                        .radius(size as f32)
+                                        .shape(egui_plot::MarkerShape::Cross);
+                                        
+                                        plot_ui.points(cross);
+                                        last_drawn_pixel_x = Some(current_pixel_x);
+                                    }
                                 }
                             }
                         }

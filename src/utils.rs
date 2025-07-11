@@ -100,10 +100,12 @@ pub fn get_random_quote() -> String {
     format!("\"{}\" - {}", random_quote.text, random_quote.author)
 }
 
-pub fn count_correct_words(reference: &str, is_correct: &VecDeque<i32>) -> (usize, usize) {
+pub fn count_correct_words(reference: &str, is_correct: &VecDeque<i32>) -> (usize, usize, usize) {
     let mut correct_words = 0;
+    let mut no_corrected_words = 0;
     let mut all_words = 0;
     let mut word_correct = true;
+    let mut word_corrected = true;
     let mut char_idx = 0;
 
     for c in reference.chars() {
@@ -116,11 +118,20 @@ pub fn count_correct_words(reference: &str, is_correct: &VecDeque<i32>) -> (usiz
                     correct_words += 1;
                 }
             }
+            if word_corrected && char_idx > 0 {
+                if is_correct[char_idx] == 2 {
+                    no_corrected_words += 1;
+                }
+            }
             all_words += 1;
             word_correct = true;
+            word_corrected = true;
         } else {
             if char_idx < is_correct.len() && is_correct[char_idx] <= 0 {
                 word_correct = false;
+            }
+            if char_idx < is_correct.len() && is_correct[char_idx] == 1 || is_correct[char_idx] == -1 {
+                word_corrected = false;
             }
         }
         char_idx += 1;
@@ -129,8 +140,11 @@ pub fn count_correct_words(reference: &str, is_correct: &VecDeque<i32>) -> (usiz
         if word_correct {
             correct_words += 1;
         }
+        if word_corrected {
+            no_corrected_words += 1;
+        }
         all_words += 1;
     }
     //println!("Correct words: {}, All words: {}", correct_words, all_words);
-    (correct_words, all_words)
+    (no_corrected_words, correct_words, all_words)
 }

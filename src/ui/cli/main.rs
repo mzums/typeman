@@ -293,7 +293,7 @@ fn show_final_results(
     start_time: Instant,
     is_correct: &VecDeque<i32>,
 ) {
-    let (correct_words, all_words) = utils::count_correct_words(&reference, &is_correct);
+    let (_corrected_words, correct_words, all_words) = utils::count_correct_words(&reference, &is_correct);
     let elapsed = start_time.elapsed().as_secs_f64();
     let error_count = error_positions.iter().filter(|&&e| e).count();
     let accuracy = 100.0 - (error_count as f64 / reference.len() as f64 * 100.0);

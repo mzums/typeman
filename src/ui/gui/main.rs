@@ -56,11 +56,9 @@ fn draw_shortcut_info(
             "q - quit menu",
         ]
     } else if practice_mode {
-        next_y -= font_size * 1.5;
         vec![
             "↑ to navigate to config, ← → to change settings (or click)",
             "Tab + Enter - reset",
-            "q - back to menu",
         ]
     } else if game_over {
         x = x / 2.0;
@@ -398,7 +396,7 @@ pub async fn gui_main_async() {
             (40.0 - (3840.0 / screen_width()) * 5.0).round()
         };
         let line_h = measure_text("Gy", font.as_ref(), font_size as u16, 1.0).height * 1.6;
-        let char_w = measure_text("G", font.as_ref(), font_size as u16, 1.0).width;
+        let char_w = measure_text("G", font.as_ref(), font_size as u16, 1.0).width.round();
         lines = create_lines(&reference, font.clone(), font_size, max_width, quote, word_mode);
 
         let mut chars_in_line: Vec<i32> = vec![];
@@ -466,6 +464,7 @@ pub async fn gui_main_async() {
                 time_mode,
                 &mut words_done,
                 &mut errors_this_second,
+                &mut practice_mode,
             );
 
             if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened, &mut error_positions, practice_mode) {
@@ -489,6 +488,7 @@ pub async fn gui_main_async() {
                 start_x,
                 140.0,
             );
+            //println!("{game_started}");
             
             handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened, &mut error_positions, practice_mode);
             
@@ -572,8 +572,41 @@ pub async fn gui_main_async() {
                 practice_level,
                 &mut saved_results,
             );
+            
+            println!("{practice_menu}");
+            if is_key_pressed(KeyCode::Q) {
+                if practice_menu {
+                    practice_menu = false;
+                    practice_mode = false;
+                    game_over = false;
+                    time_mode = true;
+                    reset_game_state(&mut pressed_vec, &mut is_correct, &mut pos1, &mut timer, &mut start_time, &mut game_started, &mut game_over, &mut speed_per_second, &mut last_recorded_time, &mut words_done, &mut errors_per_second, &mut saved_results);
+                    reset_game_state(&mut pressed_vec, &mut is_correct, &mut pos1, &mut timer, &mut start_time, &mut game_started, &mut game_over, &mut speed_per_second, &mut last_recorded_time, &mut words_done, &mut errors_per_second, &mut saved_results);
+                }
+            } else {
+                let _pressed = get_char_pressed();
+            }
         } else if practice_menu {
-            let level = gui_practice::display_practice_menu(font.clone(), &mut scroll_offset, emoji_font.clone().unwrap(), &mut selected_practice_level);
+            let level = gui_practice::display_practice_menu(
+                font.clone(),
+                &mut scroll_offset,
+                emoji_font.clone().unwrap(),
+                &mut selected_practice_level,
+                &mut practice_menu,
+                &mut time_mode,
+                &mut pressed_vec,
+                &mut is_correct,
+                &mut pos1,
+                &mut timer,
+                &mut start_time,
+                &mut game_started,
+                &mut game_over,
+                &mut speed_per_second,
+                &mut last_recorded_time,
+                &mut words_done,
+                &mut errors_per_second,
+                &mut saved_results,
+            );
             if level.is_some() {
                 config::reset_game_state(
                     &mut pressed_vec,
@@ -588,6 +621,7 @@ pub async fn gui_main_async() {
                     &mut words_done,
                     &mut errors_per_second,
                     &mut saved_results,
+                    
                 );
                 reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 50);
                 is_correct = VecDeque::from(vec![0; reference.len()]);
@@ -624,21 +658,6 @@ pub async fn gui_main_async() {
             }
             is_correct = VecDeque::from(vec![0; reference.len()]);
             thread::sleep(time::Duration::from_millis(80));
-        }
-        else if is_key_pressed(KeyCode::Q) {
-            if practice_mode && !practice_menu {
-                practice_menu = true;
-            } else if practice_menu {
-                practice_menu = false;
-                practice_mode = false;
-                game_over = false;
-                time_mode = true;
-                reset_game_state(&mut pressed_vec, &mut is_correct, &mut pos1, &mut timer, &mut start_time, &mut game_started, &mut game_over, &mut speed_per_second, &mut last_recorded_time, &mut words_done, &mut errors_per_second, &mut saved_results);
-                reset_game_state(&mut pressed_vec, &mut is_correct, &mut pos1, &mut timer, &mut start_time, &mut game_started, &mut game_over, &mut speed_per_second, &mut last_recorded_time, &mut words_done, &mut errors_per_second, &mut saved_results);
-            }
-        }
-        else {
-            let _pressed = get_char_pressed();
         }
 
         draw_shortcut_info(font.as_ref(), f32::max(font_size / 1.7, 15.0), screen_width() / 2.0 - max_width / 2.0, screen_height() - 100.0, emoji_font.clone().unwrap(), practice_menu, game_over, practice_mode);
