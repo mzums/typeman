@@ -42,6 +42,8 @@ pub struct App {
     pub tab_pressed: bool,
     pub correct_count: usize,
     pub error_count: usize,
+    pub practice_menu: bool,
+    pub practice_mode: bool,
 }
 
 impl App {
@@ -71,6 +73,8 @@ impl App {
             tab_pressed: false,
             correct_count: 0,
             error_count: 0,
+            practice_menu: false,
+            practice_mode: false,
         }
     }
 
@@ -142,6 +146,7 @@ impl App {
             ("time", self.time_mode, true),
             ("words", self.word_mode, true),
             ("quote", self.quote, true),
+            ("practice", self.practice_mode, true),
             ("|", true, true),
             ("15", self.test_time == 15.0, self.time_mode),
             ("30", self.test_time == 30.0, self.time_mode),
@@ -215,6 +220,9 @@ impl App {
                                 self.quote = true;
                                 self.time_mode = false;
                                 self.word_mode = false;
+                            }
+                            "practice" => {
+                                self.practice_menu = !self.practice_menu;
                             }
                             "! punctuation" => {
                                 self.punctuation = !self.punctuation;

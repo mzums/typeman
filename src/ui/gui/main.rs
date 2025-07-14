@@ -396,7 +396,8 @@ pub async fn gui_main_async() {
             (40.0 - (3840.0 / screen_width()) * 5.0).round()
         };
         let line_h = measure_text("Gy", font.as_ref(), font_size as u16, 1.0).height * 1.6;
-        let char_w = measure_text("G", font.as_ref(), font_size as u16, 1.0).width.round();
+        let char_w = measure_text("G", font.as_ref(), font_size as u16, 1.0).width.floor();
+        println!("{}", measure_text("G", font.as_ref(), font_size as u16, 1.0).width);
         lines = create_lines(&reference, font.clone(), font_size, max_width, quote, word_mode);
 
         let mut chars_in_line: Vec<i32> = vec![];
@@ -573,7 +574,7 @@ pub async fn gui_main_async() {
                 &mut saved_results,
             );
             
-            println!("{practice_menu}");
+            //println!("{practice_menu}");
             if is_key_pressed(KeyCode::Q) {
                 if practice_menu {
                     practice_menu = false;

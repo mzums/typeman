@@ -428,6 +428,7 @@ fn create_config_line( app: &App) -> Line<'static> {
         ("time", app.time_mode, true),
         ("words", app.word_mode, true),
         ("quote", app.quote, true),
+        ("practice", app.practice_mode, true),
         ("|", divider, true),
         ("15", app.test_time == 15.0, app.time_mode),
         ("30", app.test_time == 30.0, app.time_mode),
