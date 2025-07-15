@@ -114,10 +114,7 @@ pub fn display_practice_menu(
             }
         }
 
-        let mut is_hovered2 = false;
-
         let is_hovered = if any_hovered {
-            is_hovered2 = true;
             button_rect.contains(vec2(mouse_pos.0, mouse_pos.1))
         } else if let Some(selected) = selected_level {
             *selected == i
@@ -125,13 +122,19 @@ pub fn display_practice_menu(
             false
         };
 
+        //println!("is_hovered: {}, any_hovered: {}", is_hovered, any_hovered);
+
+        /*if is_hovered {
+            println!("Hovered over level {}", i + 1);
+        }*/
+
         set_mouse_cursor(if any_hovered {
             CursorIcon::Pointer
         } else {
             CursorIcon::Default
         });
 
-        let is_clicked = is_hovered2 && is_mouse_button_pressed(MouseButton::Left);
+        let is_clicked = is_hovered && is_mouse_button_pressed(MouseButton::Left);
 
         if is_clicked {
             *selected_level = Some(i);

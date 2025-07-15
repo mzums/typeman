@@ -397,7 +397,6 @@ pub async fn gui_main_async() {
         };
         let line_h = measure_text("Gy", font.as_ref(), font_size as u16, 1.0).height * 1.6;
         let char_w = measure_text("G", font.as_ref(), font_size as u16, 1.0).width.floor();
-        println!("{}", measure_text("G", font.as_ref(), font_size as u16, 1.0).width);
         lines = create_lines(&reference, font.clone(), font_size, max_width, quote, word_mode);
 
         let mut chars_in_line: Vec<i32> = vec![];
@@ -499,6 +498,8 @@ pub async fn gui_main_async() {
                 draw_word_count(font.as_ref(), font_size, start_x, start_y, &mut words_done, batch_size);
             } else if practice_mode {
                 draw_word_count(font.as_ref(), font_size, start_x, start_y, &mut words_done, 50);
+            } else if quote {
+                draw_word_count(font.as_ref(), font_size, start_x, start_y, &mut words_done, reference.split_whitespace().count());
             }
 
             draw_reference_text(

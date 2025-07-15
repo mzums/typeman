@@ -295,7 +295,7 @@ pub fn handle_settings_buttons(
             any_button_hovered = true;
         }
         
-        if clicked && *label != "|"  && (!is_active || (*label == "! punctuation" || *label == "# numbers")) {
+        if clicked && *label != "|" {
             
             update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode);
             if *quote {
