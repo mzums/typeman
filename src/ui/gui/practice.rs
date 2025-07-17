@@ -6,7 +6,7 @@ use std::thread;
 use std::time::{Instant, Duration};
 
 use crate::ui::gui::config;
-use crate::practice::TYPING_LEVELS;
+use crate::practice::{check_if_completed, TYPING_LEVELS};
 
 
 pub fn display_practice_menu(
@@ -97,22 +97,8 @@ pub fn display_practice_menu(
             text_size.height + 20.0,
         );
 
-        let mut show_tick = false;
         let results_path = format!("practice_results/level_{}.txt", i + 1);
-        if let Ok(contents) = std::fs::read_to_string(&results_path) {
-            for line in contents.lines() {
-                if line.starts_with("WPM:") {
-                    if let Some(wpm_str) = line.strip_prefix("WPM:").map(str::trim) {
-                        if let Ok(wpm) = wpm_str.parse::<f32>() {
-                            if wpm >= 35.0 {
-                                show_tick = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        let show_tick = check_if_completed(results_path.as_str());
 
         let is_hovered = if any_hovered {
             button_rect.contains(vec2(mouse_pos.0, mouse_pos.1))
@@ -121,12 +107,6 @@ pub fn display_practice_menu(
         } else {
             false
         };
-
-        //println!("is_hovered: {}, any_hovered: {}", is_hovered, any_hovered);
-
-        /*if is_hovered {
-            println!("Hovered over level {}", i + 1);
-        }*/
 
         set_mouse_cursor(if any_hovered {
             CursorIcon::Pointer

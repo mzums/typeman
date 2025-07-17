@@ -1,3 +1,4 @@
+use ratatui::widgets::block::title;
 use ratatui::{
     prelude::*,
     widgets::*,
@@ -8,6 +9,8 @@ use std::collections::HashMap;
 
 use ratatui::widgets::canvas::Canvas;
 use crate::ui::tui::app::{App, GameState};
+use crate::practice::TYPING_LEVELS;
+use crate::practice::*;
 
 const BORDER_COLOR: Color = Color::Rgb(100, 60, 0);
 const REF_COLOR: Color = Color::Rgb(100, 100, 100);
@@ -45,11 +48,38 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
     
     if app.game_state == GameState::Results {
         render_results(frame, chunks[0], app);
+    } else if app.practice_menu {
+        render_practice_menu(frame, chunks[0], &app);
     }
     else {
         render_reference_frame(frame, chunks[0], &app, timer);
     }
     render_instructions(frame, chunks[1], app.game_state != GameState::Results);
+}
+
+fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App) {
+    //let lines: Vec<Line> = Vec::new();
+    let lines: Vec<Line> = TYPING_LEVELS.iter()
+        .enumerate()
+        .map(|(i, (level, _))| Line::from(format!("{}. {}", i + 1, level)))
+        .collect();
+    let text = Paragraph::new(lines)
+        .style(Style::default().fg(REF_COLOR).bg(BG_COLOR))
+        .alignment(Alignment::Left);
+
+    let title = Line::from("Select practice level")
+        .style(Style::default().fg(MAIN_COLOR).bg(BG_COLOR))
+        .alignment(Alignment::Center);
+
+    let block = create_reference_block(5);
+    let inner_area = block.inner(area);
+    let chunks = Layout::vertical([
+        Constraint::Length(2),
+        Constraint::Min(0),
+    ]).split(inner_area);
+    frame.render_widget(block, area);
+    frame.render_widget(title, chunks[0]);
+    frame.render_widget(text, chunks[1]);
 }
 
 fn smooth(

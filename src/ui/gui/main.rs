@@ -217,7 +217,7 @@ pub fn handle_input(
                 error_positions[*pos1] = true;
                 *errors_this_second += 1.0;
             }
-            if practice_mode && is_correct[*pos1] == -1 {
+            if practice_mode && is_correct.len() > *pos1 && is_correct[*pos1] == -1 {
                 return true;
             }
             *pos1 += 1;

@@ -109,3 +109,20 @@ pub fn get_prev_best_wpm(level: usize) -> f64 {
     }
     best_wpm
 }
+
+pub fn check_if_completed(results_path: &str) -> bool {
+    if let Ok(contents) = std::fs::read_to_string(&results_path) {
+        for line in contents.lines() {
+            if line.starts_with("WPM:") {
+                if let Some(wpm_str) = line.strip_prefix("WPM:").map(str::trim) {
+                    if let Ok(wpm) = wpm_str.parse::<f32>() {
+                        if wpm >= 35.0 {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
