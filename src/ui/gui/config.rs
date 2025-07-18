@@ -354,28 +354,7 @@ fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_m
             *time_mode = false;
             *word_mode = false;
             *practice_menu = true;
-            for i in 0..TYPING_LEVELS.len() {
-                let results_path = format!("practice_results/level_{}.txt", i + 1);
-                let mut done = false;
-                if let Ok(contents) = std::fs::read_to_string(&results_path) {
-                    for line in contents.lines() {
-                        if line.starts_with("WPM:") {
-                            if let Some(wpm_str) = line.strip_prefix("WPM:").map(str::trim) {
-                                if let Ok(wpm) = wpm_str.parse::<f32>() {
-                                    if wpm >= practice::WPM_MIN as f32 {
-                                        done = true;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                if !done {
-                    *selected_practice_level = Some(i);
-                    break;
-                }
-            }
+            *selected_practice_level = Some(practice::get_first_not_done());
         },
         "15" => {
             *test_time = 15.0;

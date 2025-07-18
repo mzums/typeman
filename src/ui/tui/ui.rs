@@ -1,4 +1,3 @@
-use ratatui::widgets::block::title;
 use ratatui::{
     prelude::*,
     widgets::*,
@@ -10,7 +9,9 @@ use std::collections::HashMap;
 use ratatui::widgets::canvas::Canvas;
 use crate::ui::tui::app::{App, GameState};
 use crate::practice::TYPING_LEVELS;
-use crate::practice::*;
+use crate::practice;
+use std::fs::OpenOptions;
+use std::io::Write;
 
 const BORDER_COLOR: Color = Color::Rgb(100, 60, 0);
 const REF_COLOR: Color = Color::Rgb(100, 100, 100);
@@ -58,20 +59,52 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
 }
 
 fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App) {
-    //let lines: Vec<Line> = Vec::new();
-    let lines: Vec<Line> = TYPING_LEVELS.iter()
-        .enumerate()
-        .map(|(i, (level, _))| Line::from(format!("{}. {}", i + 1, level)))
-        .collect();
+    let mut lines: Vec<Line> = Vec::new();
+    if let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("lposition.log")
+    {
+        let _ = writeln!(file, "selcted_level: {}", app.selected_level);
+    }
+    for level in TYPING_LEVELS.iter().enumerate() {
+        let mut fg_color = REF_COLOR;
+        let mut bg_color = BG_COLOR;
+        if app.selected_level == level.0 {
+            fg_color = BG_COLOR;
+            bg_color = BORDER_COLOR;
+        }
+        let line = if practice::check_if_completed(&format!("practice_results/level_{}.txt", level.0 + 1)) {
+            Line::from(vec![
+                Span::styled("✔ ", Style::default().fg(Color::Rgb(0, 255, 0)).bg(BG_COLOR)),
+                if level.0 < 9 {
+                    Span::styled(format!("  {}. {} ", level.0 + 1, level.1.0), Style::default().fg(fg_color).bg(bg_color))
+                } else {
+                    Span::styled(format!(" {}. {} ", level.0 + 1, level.1.0), Style::default().fg(fg_color).bg(bg_color))
+                }
+            ])
+        } else {
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(Color::Rgb(0, 255, 0)).bg(BG_COLOR)),
+                if level.0 < 9 {
+                    Span::styled(format!("  {}. {} ", level.0 + 1, level.1.0), Style::default().fg(fg_color).bg(bg_color))
+                } else {
+                    Span::styled(format!(" {}. {} ", level.0 + 1, level.1.0), Style::default().fg(fg_color).bg(bg_color))
+                }
+            ])
+        };
+        lines.push(line);
+    }
+
     let text = Paragraph::new(lines)
-        .style(Style::default().fg(REF_COLOR).bg(BG_COLOR))
+        .style(Style::default())
         .alignment(Alignment::Left);
 
     let title = Line::from("Select practice level")
         .style(Style::default().fg(MAIN_COLOR).bg(BG_COLOR))
         .alignment(Alignment::Center);
 
-    let block = create_reference_block(5);
+    let block = create_reference_block(3);
     let inner_area = block.inner(area);
     let chunks = Layout::vertical([
         Constraint::Length(2),

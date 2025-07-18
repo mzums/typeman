@@ -4,7 +4,8 @@ use ratatui::DefaultTerminal;
 use std::time::{Duration, Instant};
 
 use crate::ui::tui::ui::render_app;
-use crate::utils;
+use crate::{practice, utils};
+use crate::practice::TYPING_LEVELS;
 
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -44,6 +45,7 @@ pub struct App {
     pub error_count: usize,
     pub practice_menu: bool,
     pub practice_mode: bool,
+    pub selected_level: usize,
 }
 
 impl App {
@@ -75,6 +77,7 @@ impl App {
             error_count: 0,
             practice_menu: false,
             practice_mode: false,
+            selected_level: 0,
         }
     }
 
@@ -176,12 +179,22 @@ impl App {
                     self.config = false;
                 }
                 KeyCode::Up => {
-                    if self.game_state != GameState::Results {
+                    if self.game_state != GameState::Results && !self.practice_menu {
                         self.config = true;
+                    } else if self.practice_menu {
+                        if self.selected_level > 0 {
+                            self.selected_level -= 1;
+                        }
                     }
                 }
                 KeyCode::Down => {
-                    self.config = false;
+                    if self.practice_menu {
+                        if self.selected_level < TYPING_LEVELS.len() - 1 {
+                            self.selected_level += 1;
+                        }
+                    } else {
+                        self.config = true;
+                    }
                 }
                 KeyCode::Tab => {
                     self.tab_pressed = true;
@@ -223,6 +236,7 @@ impl App {
                             }
                             "practice" => {
                                 self.practice_menu = !self.practice_menu;
+                                self.selected_level = practice::get_first_not_done();
                             }
                             "! punctuation" => {
                                 self.punctuation = !self.punctuation;

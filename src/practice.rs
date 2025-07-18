@@ -4,7 +4,6 @@ use std::path::Path;
 use std::fs;
 
 
-
 pub const WPM_MIN: f64 = 35.0;
 
 pub const TYPING_LEVELS: [(&str, &[char]); 32] = [
@@ -125,4 +124,15 @@ pub fn check_if_completed(results_path: &str) -> bool {
         }
     }
     return false;
+}
+
+pub fn get_first_not_done() -> usize {
+    for i in 0..TYPING_LEVELS.len() {
+        let results_path = format!("practice_results/level_{}.txt", i + 1);
+        let done = check_if_completed(results_path.as_str());
+        if !done {
+            return i;
+        }
+    }
+    return 1;
 }
