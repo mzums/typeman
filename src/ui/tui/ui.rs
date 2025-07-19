@@ -67,12 +67,12 @@ fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App) {
     {
         let _ = writeln!(file, "selcted_level: {}", app.selected_level);
     }
-    for level in TYPING_LEVELS.iter().enumerate() {
+    for level in TYPING_LEVELS.iter().enumerate().skip(1) {
         let mut fg_color = REF_COLOR;
         let mut bg_color = BG_COLOR;
         if app.selected_level == level.0 {
             fg_color = BG_COLOR;
-            bg_color = BORDER_COLOR;
+            bg_color = Color::Rgb(150, 90, 0);
         }
         let line = if practice::check_if_completed(&format!("practice_results/level_{}.txt", level.0 + 1)) {
             Line::from(vec![
@@ -194,7 +194,7 @@ fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
     };
     let consistency_str = format!("{consistency}%");
 
-    let time_str = format!("{:.0}s", app.test_time);
+    let time_str = format!("{:.0}s", app.timer.as_secs_f32());
 
     let mut mode_str = if app.time_mode {
         "time".to_string()
@@ -273,7 +273,7 @@ fn get_chart(smoothed_speeds: &[f64], app: &App) -> Chart<'static> {
     let data: &'static [(f64, f64)] = Box::leak(data.into_boxed_slice());
 
     let max_speed: f64 = f64::max(70.0, app.speed_per_second.iter().fold(0.0_f64, |a, &b| a.max(b)).max(1.0) / 6.0 + 30.0);
-    let max_time = app.test_time as f64;
+    let max_time = app.timer.as_secs_f32().ceil() as f64;
 
     let bar_dataset = Dataset::default()
         .graph_type(GraphType::Bar)

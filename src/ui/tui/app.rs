@@ -40,12 +40,13 @@ pub struct App {
     pub speed_per_second: Vec<f64>,
     pub char_number: usize,
     pub errors_per_second: Vec<f32>,
-    pub tab_pressed: bool,
+    pub tab_pressed: Instant,
     pub correct_count: usize,
     pub error_count: usize,
     pub practice_menu: bool,
     pub practice_mode: bool,
     pub selected_level: usize,
+    pub timer: Duration,
 }
 
 impl App {
@@ -67,17 +68,18 @@ impl App {
             time_mode: true,
             word_mode: false,
             quote: false,
-            batch_size: 1,
+            batch_size: 5,
             selected_config: "time",
             speed_per_second: Vec::new(),
             char_number: 0,
             errors_per_second: Vec::new(),
-            tab_pressed: false,
+            tab_pressed: Instant::now() - Duration::from_secs(5),
             correct_count: 0,
             error_count: 0,
             practice_menu: false,
             practice_mode: false,
             selected_level: 0,
+            timer: Duration::from_secs(0),
         }
     }
 
@@ -97,21 +99,31 @@ impl App {
                     self.handle_key_event(key, &reference_chars)?;
                 }
             }
-            let timer = if let Some(start_time) = self.start_time {
+            self.timer = if let Some(start_time) = self.start_time {
                 if self.game_state == GameState::Started {
                     //println!("Y");
                     Instant::now().duration_since(start_time)
-                } else {
+                } else if self.game_state != GameState::Results {
                     Duration::from_secs(0)
+                } else {
+                    self.timer
                 }
             } else {
                 Duration::from_secs(0)
             };
-            if self.test_time - (timer.as_secs_f32()) < 0.0 {
-                if self.game_state == GameState::Started {
-                    self.errors_per_second.push(self.errors_this_second);
-                    self.game_state = GameState::Results;
-                }
+            let mut file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open("lposition.log")
+                .unwrap();
+            writeln!(file, "words_done: {}, batch_size: {}", self.words_done, self.batch_size).unwrap();
+
+            if self.test_time - (self.timer.as_secs_f32()) < 0.0 && self.game_state == GameState::Started && self.time_mode {
+                self.errors_per_second.push(self.errors_this_second);
+                self.game_state = GameState::Results;
+            } else if self.words_done >= self.batch_size && self.word_mode {
+                self.errors_per_second.push(self.errors_this_second);
+                self.game_state = GameState::Results;
             }
             let now = Instant::now();
             let time_since_last = now.duration_since(last_recorded_time);
@@ -130,7 +142,7 @@ impl App {
                 self.errors_this_second = 0.0;
                 last_recorded_time += Duration::from_secs(1);
             }
-            terminal.draw(|frame| render_app(frame, self, timer))?;
+            terminal.draw(|frame| render_app(frame, self, self.timer))?;
         }
         Ok(())
     }
@@ -197,10 +209,10 @@ impl App {
                     }
                 }
                 KeyCode::Tab => {
-                    self.tab_pressed = true;
+                    self.tab_pressed = Instant::now();
                 },
                 KeyCode::Enter => {
-                    if self.tab_pressed {
+                    if self.tab_pressed.elapsed() < Duration::from_secs(1) {
                         self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500), self.batch_size);
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pressed_vec.clear();
@@ -212,9 +224,32 @@ impl App {
                         self.speed_per_second.clear();
                         self.char_number = 0;
                         self.errors_per_second.clear();
-                        self.tab_pressed = false;
+                        self.tab_pressed = Instant::now() - Duration::from_secs(5);
                         self.correct_count = 0;
                         self.error_count = 0;
+                    }
+                    if self.practice_menu {
+                        self.practice_menu = false;
+                        self.practice_mode = true;
+                        self.time_mode = false;
+                        self.word_mode = false;
+                        self.quote = false;
+                        self.batch_size = 50;
+                        self.is_correct = vec![0; self.reference.chars().count()];
+                        self.pressed_vec.clear();
+                        self.pos1 = 0;
+                        self.words_done = 0;
+                        self.errors_this_second = 0.0;
+                        self.start_time = None;
+                        self.game_state = GameState::NotStarted;
+                        self.speed_per_second.clear();
+                        self.char_number = 0;
+                        self.errors_per_second.clear();
+                        self.tab_pressed = Instant::now() - Duration::from_secs(5);
+                        self.correct_count = 0;
+                        self.error_count = 0;
+                        self.config = false;
+                        self.reference = practice::create_words(TYPING_LEVELS[self.selected_level].1, self.batch_size)
                     }
                     if self.config {
                         match self.selected_config {
@@ -284,9 +319,10 @@ impl App {
                         self.speed_per_second.clear();
                         self.char_number = 0;
                         self.errors_per_second.clear();
-                        self.tab_pressed = false;
+                        self.tab_pressed = Instant::now() - Duration::from_secs(5);
                         self.correct_count = 0;
                         self.error_count = 0;
+                        self.config = false;
                     }
                 }
                 KeyCode::Left => {
@@ -380,24 +416,24 @@ impl App {
                     self.config = false;
 
                     if self.pos1 >= self.reference.chars().count() {
-                        let mut file = OpenOptions::new()
+                        /*let mut file = OpenOptions::new()
                             .create(true)
                             .append(true)
                             .open("lposition.log")
                             .unwrap();
-                        writeln!(file, "words_done: {}", self.words_done).unwrap();
+                        writeln!(file, "words_done: {}", self.words_done).unwrap();*/
 
                         self.words_done += 1;
                         self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500), self.batch_size);
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pos1 = 0;
 
-                        let mut file = OpenOptions::new()
+                        /*let mut file = OpenOptions::new()
                             .create(true)
                             .append(true)
                             .open("lposition.log")
                             .unwrap();
-                        writeln!(file, "words_done: {}", self.words_done).unwrap();
+                        writeln!(file, "words_done: {}", self.words_done).unwrap();*/
                     }
                 }
                 _ => {}
