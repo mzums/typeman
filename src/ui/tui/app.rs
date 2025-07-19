@@ -180,7 +180,7 @@ impl App {
                         self.words_done = self.words_done.saturating_sub(1);
                     }
                     if self.is_correct[self.pos1] == 2 || self.is_correct[self.pos1] == 1 {
-                        self.correct_count -= 1;
+                        self.correct_count = self.correct_count.saturating_sub(1);
                     } else if self.is_correct[self.pos1] == -1 {
                         self.error_count -= 1;
                     }
@@ -189,6 +189,7 @@ impl App {
                         self.pos1 -= 1;
                     }
                     self.config = false;
+                    std::thread::sleep(Duration::from_millis(70));
                 }
                 KeyCode::Up => {
                     if self.game_state != GameState::Results && !self.practice_menu {
@@ -435,6 +436,7 @@ impl App {
                             .unwrap();
                         writeln!(file, "words_done: {}", self.words_done).unwrap();*/
                     }
+                    std::thread::sleep(Duration::from_millis(70));
                 }
                 _ => {}
             }
