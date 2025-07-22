@@ -183,7 +183,6 @@ pub fn display_practice_menu(
     if is_key_pressed(KeyCode::Q) {
         if *practice_menu {
             *practice_menu = false;
-            //practice_mode = false;
             *time_mode = true;
             config::reset_game_state(
                 pressed_vec,

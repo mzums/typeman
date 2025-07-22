@@ -101,7 +101,6 @@ impl App {
             }
             self.timer = if let Some(start_time) = self.start_time {
                 if self.game_state == GameState::Started {
-                    //println!("Y");
                     Instant::now().duration_since(start_time)
                 } else if self.game_state != GameState::Results {
                     Duration::from_secs(0)
@@ -134,7 +133,6 @@ impl App {
                 let cpm = chars_in_this_second as f64 * 60.0;
 
                 self.speed_per_second.push(cpm);
-                //println!("Y");
 
                 self.char_number = total_typed;
 
@@ -417,24 +415,10 @@ impl App {
                     self.config = false;
 
                     if self.pos1 >= self.reference.chars().count() {
-                        /*let mut file = OpenOptions::new()
-                            .create(true)
-                            .append(true)
-                            .open("lposition.log")
-                            .unwrap();
-                        writeln!(file, "words_done: {}", self.words_done).unwrap();*/
-
                         self.words_done += 1;
                         self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500), self.batch_size);
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pos1 = 0;
-
-                        /*let mut file = OpenOptions::new()
-                            .create(true)
-                            .append(true)
-                            .open("lposition.log")
-                            .unwrap();
-                        writeln!(file, "words_done: {}", self.words_done).unwrap();*/
                     }
                     std::thread::sleep(Duration::from_millis(70));
                 }

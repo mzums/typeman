@@ -488,7 +488,6 @@ pub async fn gui_main_async() {
                 start_x,
                 140.0,
             );
-            //println!("{game_started}");
             
             handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened, &mut error_positions, practice_mode);
             
@@ -575,7 +574,6 @@ pub async fn gui_main_async() {
                 &mut saved_results,
             );
             
-            //println!("{practice_menu}");
             if is_key_pressed(KeyCode::Q) {
                 if practice_menu {
                     practice_menu = false;

@@ -32,9 +32,6 @@ pub fn write_results(
     saved_results: &mut bool,
 ) {
     let (no_corrected_words, correct_words, all_words) = utils::count_correct_words(&reference, &is_correct);
-    //println!("{no_corrected_words}");
-    //println!("{:?}", error_positions);
-    //let error_count = error_positions.iter().filter(|&&e| e).count();
     let error_count1 = is_correct.iter().filter(|&&v| v == 1 || v == -1).count();
     let error_count2 = is_correct.iter().filter(|&&v| v == -1).count();
     let accuracy = if practice_level.is_some() {
@@ -42,14 +39,12 @@ pub fn write_results(
     } else {
         (100.0 - (error_count2 as f64 / (all_words as f64 * 6.0)) * 100.0).round()
     };
-    //println!("{error_count}");
-    //let accuracy = (100.0 - (error_count as f64 / (all_words as f64 * 6.0)) * 100.0).round();
+
     let wpm = if practice_level.is_some() {
         (no_corrected_words as f32 / (test_time / 60.0)).round()
     } else {
         (correct_words as f32 / (test_time / 60.0)).round()
     };
-    //let wpm = (correct_words as f32 / (test_time / 60.0)).round();
     let raw = all_words as f32 / (test_time / 60.0);
     
     let chart_width = f32::min(f32::max(0.8 * f32::min(screen_width, screen_height), 0.6 * screen_width), 1800.0);

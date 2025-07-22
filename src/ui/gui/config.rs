@@ -5,7 +5,6 @@ use std::time::{Instant, Duration};
 
 use crate::ui::gui::main;
 use crate::{practice, utils};
-use crate::practice::TYPING_LEVELS;
 
 
 pub fn draw_rounded_rect(x: f32, y: f32, w: f32, h: f32, radius: f32, color: Color) {
@@ -105,7 +104,6 @@ pub fn update_game_state(
     if *game_started && !*game_over {
         *timer = start_time.elapsed();
         if (timer.as_secs_f32() >= test_time && time_mode) || *pos1 >= reference.chars().count() {
-            //*game_started = false;
             *game_over = true;
         }
     }
