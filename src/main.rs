@@ -26,23 +26,23 @@ mod utils;
 
 #[derive(Parser)]
 #[command(
-    name = "type-test",
-    about = "Welcome to the type test!",
+    name = "typeman",
+    about = "Welcome to the typeman!",
     version = "1.0",
     after_long_help = "Run examples:
-type-test --cli -c ./text.txt
-type-test --cli -q
-type-test --cli -t=30 -n=500
-type-test --cli -w=50 -n=500
-type-test --cli -w=50 -n=500 -p -d
-type_test --gui
-type_test",
+typeman --cli -c ./text.txt
+typeman --cli -q
+typeman --cli -t=30 -n=500
+typeman --cli -w=50 -n=500
+typeman --cli -w=50 -n=500 -p -d
+typeman --gui
+typeman",
     long_about = "\n
-Run 'type-test --cli -c <path/to/your/file>' to test your typing on a specified text
-Run 'type-test --cli -q' to test your typing on a random quote
-Run 'type-test --cli -w=50 (-n=500 -p -d)' to test your typing on n most common English words, specify the -w for number of words (default is 50)
-Run 'type-test --cli (-t=30 -n=500 -p -d)' to test your typing on random words for t seconds; -t sets the time limit (default is 30 seconds)
-Run 'type-test (--tui)' to start the terminal-based interface
+Run 'typeman --cli -c <path/to/your/file>' to test your typing on a specified text
+Run 'typeman --cli -q' to test your typing on a random quote
+Run 'typeman --cli -w=50 (-n=500 -p -d)' to test your typing on n most common English words, specify the -w for number of words (default is 50)
+Run 'typeman --cli (-t=30 -n=500 -p -d)' to test your typing on random words for t seconds; -t sets the time limit (default is 30 seconds)
+Run 'typeman (--tui)' to start the terminal-based interface
 
 Optional:
   - Use -p to include punctuation, -d to include digits
