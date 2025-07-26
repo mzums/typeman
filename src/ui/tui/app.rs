@@ -7,9 +7,6 @@ use crate::ui::tui::ui::render_app;
 use crate::{practice, utils};
 use crate::practice::TYPING_LEVELS;
 
-use std::fs::OpenOptions;
-use std::io::Write;
-
 
 #[derive(PartialEq, Eq)]
 pub enum GameState {
@@ -110,12 +107,12 @@ impl App {
             } else {
                 Duration::from_secs(0)
             };
-            let mut file = OpenOptions::new()
+            /*let mut file = OpenOptions::new()
                 .create(true)
                 .append(true)
                 .open("lposition.log")
                 .unwrap();
-            writeln!(file, "words_done: {}, batch_size: {}", self.words_done, self.batch_size).unwrap();
+            writeln!(file, "words_done: {}, batch_size: {}", self.words_done, self.batch_size).unwrap();*/
 
             if self.test_time - (self.timer.as_secs_f32()) < 0.0 && self.game_state == GameState::Started && self.time_mode {
                 self.errors_per_second.push(self.errors_this_second);
@@ -153,8 +150,8 @@ impl App {
         use crossterm::event::KeyCode;
 
         let button_states = vec![
-            ("! punctuation", self.punctuation, !self.quote),
-            ("# numbers", self.numbers, !self.quote),
+            ("! punctuation", self.punctuation, !self.quote && !self.practice_mode),
+            ("# numbers", self.numbers, !self.quote && !self.practice_mode),
             ("|", true, true),
             ("time", self.time_mode, true),
             ("words", self.word_mode, true),
@@ -262,11 +259,13 @@ impl App {
                                 self.time_mode = false;
                                 self.word_mode = true;
                                 self.quote = false;
+                                self.practice_mode = false;
                             }
                             "quote" => {
                                 self.quote = true;
                                 self.time_mode = false;
                                 self.word_mode = false;
+                                self.practice_mode = false;
                             }
                             "practice" => {
                                 self.practice_menu = !self.practice_menu;

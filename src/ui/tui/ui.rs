@@ -324,8 +324,47 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
         .cloned()
         .collect();
 
-    let test_time = app.test_time.round() as u32;
-    let extra_columns = *columns_for_sec.get(&test_time).unwrap_or(&1);
+    let test_time = app.timer.as_secs_f32().round() as u32;
+    let extra_columns = columns_for_sec
+        .keys()
+        .filter(|&&k| k >= test_time)
+        .min()
+        .or_else(|| columns_for_sec.keys().max())
+        .map(|k| columns_for_sec[k])
+        .unwrap_or(1);
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("lposition.log")
+        .unwrap();
+    let _ = writeln!(file, "columns: {}", extra_columns);
+
+    let mut errors_per_second = app.errors_per_second.clone();
+    let mut prev = 0.0;
+
+/*
+    if test_time >= 120 {
+        for (i, err) in app.errors_per_second.iter_mut().enumerate() {
+            if i % 2 == 0 {
+                errors_per_second.push(*err);
+            }
+            prev = *err;
+        }
+    } else {
+        errors_per_second = app.errors_per_second.clone
+    }
+     */
+
+    for (i, err) in errors_per_second.iter_mut().enumerate() {
+        let prev_val = prev;
+        if i > 0 && *err > 0.0 && prev_val > 0.0 {
+            *err = 0.0;
+        }
+        prev = *err;
+    }
+    errors_per_second[0] = 0.0;
+    errors_per_second[1] = 0.0;
+
     let smoothed_speeds = smooth(
         &app.speed_per_second,
         6.0,
@@ -396,7 +435,7 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
         .y_bounds([0.0, max_speed * 1.1])
         .background_color(BG_COLOR)
         .paint(|ctx| {
-            for (i, err) in app.errors_per_second.iter().enumerate() {
+            for (i, err) in errors_per_second.iter().enumerate() {
                 let cross: &str;
                 if *err <= 1.0 {
                     cross = "\u{00D7}";
@@ -487,12 +526,12 @@ fn create_config_line( app: &App) -> Line<'static> {
     let mut button_states = vec![
         ("! punctuation", app.punctuation, !app.quote),
         ("# numbers", app.numbers, !app.quote),
-        ("|", divider, true),
+        ("|", divider, app.word_mode || app.time_mode),
         ("time", app.time_mode, true),
         ("words", app.word_mode, true),
         ("quote", app.quote, true),
         ("practice", app.practice_mode, true),
-        ("|", divider, true),
+        ("|", divider, app.word_mode || app.time_mode),
         ("15", app.test_time == 15.0, app.time_mode),
         ("30", app.test_time == 30.0, app.time_mode),
         ("60", app.test_time == 60.0, app.time_mode),
