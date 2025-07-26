@@ -177,7 +177,7 @@ impl App {
                     if self.is_correct[self.pos1] == 2 || self.is_correct[self.pos1] == 1 {
                         self.correct_count = self.correct_count.saturating_sub(1);
                     } else if self.is_correct[self.pos1] == -1 {
-                        self.error_count -= 1;
+                        self.error_count = self.error_count.saturating_sub(1);
                     }
                     self.pressed_vec.pop();
                     if self.pos1 > 0 {

@@ -67,7 +67,19 @@ fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App) {
     {
         let _ = writeln!(file, "selcted_level: {}", app.selected_level);
     }
-    for level in TYPING_LEVELS.iter().enumerate().skip(1) {
+    let block = create_reference_block(3);
+    let inner_area = block.inner(area);
+    let chunks = Layout::vertical([
+        Constraint::Length(2),
+        Constraint::Min(0),
+    ]).split(inner_area);
+
+    let to_skip = if chunks[1].height <= app.selected_level as u16 {
+        u16::min(chunks[1].height, app.selected_level as u16)
+    } else {
+        0
+    };
+    for level in TYPING_LEVELS.iter().enumerate().skip(to_skip as usize) {
         let mut fg_color = REF_COLOR;
         let mut bg_color = BG_COLOR;
         if app.selected_level == level.0 {
@@ -104,12 +116,6 @@ fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App) {
         .style(Style::default().fg(MAIN_COLOR).bg(BG_COLOR))
         .alignment(Alignment::Center);
 
-    let block = create_reference_block(3);
-    let inner_area = block.inner(area);
-    let chunks = Layout::vertical([
-        Constraint::Length(2),
-        Constraint::Min(0),
-    ]).split(inner_area);
     frame.render_widget(block, area);
     frame.render_widget(title, chunks[0]);
     frame.render_widget(text, chunks[1]);
@@ -339,21 +345,23 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
         .unwrap();
     let _ = writeln!(file, "columns: {}", extra_columns);
 
-    let mut errors_per_second = app.errors_per_second.clone();
+    let mut errors_per_second: Vec<f32> = Vec::new();
+    let mut speed_per_second: Vec<f64> = Vec::new();
     let mut prev = 0.0;
 
-/*
     if test_time >= 120 {
-        for (i, err) in app.errors_per_second.iter_mut().enumerate() {
+        let mut errs = app.errors_per_second.clone();
+        for (i, err) in errs.iter_mut().enumerate() {
             if i % 2 == 0 {
                 errors_per_second.push(*err);
+                speed_per_second.push(app.speed_per_second[i]);
             }
             prev = *err;
         }
     } else {
-        errors_per_second = app.errors_per_second.clone
+        errors_per_second = app.errors_per_second.clone();
+        speed_per_second = app.speed_per_second.clone();
     }
-     */
 
     for (i, err) in errors_per_second.iter_mut().enumerate() {
         let prev_val = prev;
@@ -366,7 +374,7 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
     errors_per_second[1] = 0.0;
 
     let smoothed_speeds = smooth(
-        &app.speed_per_second,
+        &speed_per_second,
         6.0,
         extra_columns,
     );
@@ -524,8 +532,8 @@ fn create_words_count(all_words: usize, typed_words: usize) -> Line<'static> {
 fn create_config_line( app: &App) -> Line<'static> {
     let divider = true;
     let mut button_states = vec![
-        ("! punctuation", app.punctuation, !app.quote),
-        ("# numbers", app.numbers, !app.quote),
+        ("! punctuation", app.punctuation, !app.quote && !app.practice_mode),
+        ("# numbers", app.numbers, !app.quote && !app.practice_mode),
         ("|", divider, app.word_mode || app.time_mode),
         ("time", app.time_mode, true),
         ("words", app.word_mode, true),
