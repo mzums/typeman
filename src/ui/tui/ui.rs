@@ -60,13 +60,13 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
 
 fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App) {
     let mut lines: Vec<Line> = Vec::new();
-    if let Ok(mut file) = OpenOptions::new()
+    /*if let Ok(mut file) = OpenOptions::new()
         .create(true)
         .append(true)
         .open("lposition.log")
     {
         let _ = writeln!(file, "selcted_level: {}", app.selected_level);
-    }
+    }*/
     let block = create_reference_block(3);
     let inner_area = block.inner(area);
     let chunks = Layout::vertical([
@@ -206,8 +206,10 @@ fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
         "time".to_string()
     } else if app.word_mode {
         "words".to_string()
-    } else {
+    } else if app.quote {
         "quote".to_string()
+    } else {
+        "practice".to_string()
     };
     if app.punctuation {
         mode_str += " !";
@@ -338,12 +340,12 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
         .or_else(|| columns_for_sec.keys().max())
         .map(|k| columns_for_sec[k])
         .unwrap_or(1);
-    let mut file = OpenOptions::new()
+    /*let mut file = OpenOptions::new()
         .create(true)
         .append(true)
         .open("lposition.log")
         .unwrap();
-    let _ = writeln!(file, "columns: {}", extra_columns);
+    let _ = writeln!(file, "columns: {}", extra_columns);*/
 
     let mut errors_per_second: Vec<f32> = Vec::new();
     let mut speed_per_second: Vec<f64> = Vec::new();
@@ -371,7 +373,9 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
         prev = *err;
     }
     errors_per_second[0] = 0.0;
-    errors_per_second[1] = 0.0;
+    if errors_per_second.len() > 1 {
+        errors_per_second[1] = 0.0;
+    }
 
     let smoothed_speeds = smooth(
         &speed_per_second,
@@ -586,6 +590,19 @@ fn create_horizontal_line(area: Rect) -> Line<'static> {
 fn create_colored_lines<'a>(app: &App, max_ref_width: usize) -> Vec<Line<'a>> {
     let mut fg_colors: Vec<Color> = vec![REF_COLOR; app.reference.chars().count()];
     let mut bg_colors: Vec<Color> = vec![BG_COLOR; app.reference.chars().count()];
+
+    if let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("lposition.log")
+    {
+        let _ = writeln!(
+            file,
+            "reference.len(): {}, is_correct.len(): {}",
+            app.reference.chars().count(),
+            app.is_correct.len()
+        );
+    }
     
     for i in 0..app.is_correct.len() {
         if app.pos1 == i {
@@ -678,7 +695,7 @@ fn split_lines(text: &str, width: usize) -> Vec<String> {
             
             while let Some(word) = words.next() {
                 if current_line.len() + word.len() + 1 > width {
-                    lines.push(current_line.trim().to_string());
+                    lines.push(current_line.to_string());
                     current_line.clear();
                 }
                 if !current_line.is_empty() {

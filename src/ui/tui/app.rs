@@ -65,7 +65,7 @@ impl App {
             time_mode: true,
             word_mode: false,
             quote: false,
-            batch_size: 5,
+            batch_size: 50,
             selected_config: "time",
             speed_per_second: Vec::new(),
             char_number: 0,
@@ -117,7 +117,7 @@ impl App {
             if self.test_time - (self.timer.as_secs_f32()) < 0.0 && self.game_state == GameState::Started && self.time_mode {
                 self.errors_per_second.push(self.errors_this_second);
                 self.game_state = GameState::Results;
-            } else if self.words_done >= self.batch_size && self.word_mode {
+            } else if self.words_done >= self.batch_size && (self.word_mode || self.practice_mode) {
                 self.errors_per_second.push(self.errors_this_second);
                 self.game_state = GameState::Results;
             }
@@ -184,7 +184,6 @@ impl App {
                         self.pos1 -= 1;
                     }
                     self.config = false;
-                    std::thread::sleep(Duration::from_millis(70));
                 }
                 KeyCode::Up => {
                     if self.game_state != GameState::Results && !self.practice_menu {
@@ -231,7 +230,6 @@ impl App {
                         self.word_mode = false;
                         self.quote = false;
                         self.batch_size = 50;
-                        self.is_correct = vec![0; self.reference.chars().count()];
                         self.pressed_vec.clear();
                         self.pos1 = 0;
                         self.words_done = 0;
@@ -245,7 +243,8 @@ impl App {
                         self.correct_count = 0;
                         self.error_count = 0;
                         self.config = false;
-                        self.reference = practice::create_words(TYPING_LEVELS[self.selected_level].1, self.batch_size)
+                        self.reference = practice::create_words(TYPING_LEVELS[self.selected_level].1, self.batch_size);
+                        self.is_correct = vec![0; self.reference.chars().count()];
                     }
                     if self.config {
                         match self.selected_config {
@@ -397,15 +396,20 @@ impl App {
                             if ref_char == ch && self.is_correct[self.pos1] != -1 && self.is_correct[self.pos1] != 1 {
                                 self.is_correct[self.pos1] = 2; // Correct
                                 self.correct_count += 1;
+                                self.pos1 += 1;
                             } else if ref_char == ch && self.is_correct[self.pos1] == -1 {
                                 self.is_correct[self.pos1] = 1; // Corrected
+                                self.pos1 += 1;
                             } else {
                                 self.is_correct[self.pos1] = -1; // Incorrect
                                 self.errors_this_second += 1.0;
                                 self.error_count += 1;
+                                if !self.practice_mode {
+                                    self.pos1 += 1;
+                                }
                             }
                         }
-                        self.pos1 += 1;
+                        
                         self.pressed_vec.push(ch);
                         if reference_chars.get(self.pos1) == Some(&' ') {
                             self.words_done += 1;
@@ -419,7 +423,6 @@ impl App {
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pos1 = 0;
                     }
-                    std::thread::sleep(Duration::from_millis(70));
                 }
                 _ => {}
             }
