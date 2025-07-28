@@ -251,7 +251,7 @@ fn handle_typing(
                     is_correct[*position] = 2;
                     queue!(
                         stdout,
-                        SetForegroundColor(Color::Green),
+                        SetForegroundColor(Color::White),
                         Print(c),
                         SetForegroundColor(Color::Reset)
                     )
@@ -310,5 +310,12 @@ fn show_final_results(
     )
     .unwrap();
     stdout.flush().unwrap();
+    
     display_results(elapsed, accuracy, wpm, raw);
+    
+    queue!(
+        stdout,
+        cursor::MoveToNextLine(1)
+    ).unwrap();
+    stdout.flush().unwrap();
 }

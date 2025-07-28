@@ -56,7 +56,7 @@ impl App {
             words_done: 0,
             is_correct: Vec::new(),
             errors_this_second: 0.0,
-            test_time: 5.0,
+            test_time: 30.0,
             start_time: None,
             game_state: GameState::NotStarted,
             config: false,

@@ -37,6 +37,7 @@ pub fn display_practice_menu(
     let total_height = TYPING_LEVELS.len() as f32 * 60.0;
     let visible_height = screen_height() - 100.0;
     let max_scroll = (total_height - visible_height).max(0.0) + 120.0;
+    let font_size = 20;
     
     *scroll_offset = scroll_offset.clamp(0.0, max_scroll);
 
@@ -75,27 +76,29 @@ pub fn display_practice_menu(
             break;
         }
     }
+    let mut y = 150.0;
 
     for i in start_index..end_index {
         let (level_name, _) = &TYPING_LEVELS[i];
-        let y = 100.0 + i as f32 * 60.0 - *scroll_offset;
-
-        if y < 100.0 - 60.0 || y > screen_height() + 60.0 {
-            continue;
-        }
-
         let mut text = format!("{}. {}", i + 1, level_name);
         if i + 1 < 10 {
             text = format!("{}.  {}", i + 1, level_name);
         }
 
-        let text_size = measure_text(&text, font.as_ref(), 36, 1.0);
+        let text_size = measure_text(&text, font.as_ref(), font_size, 1.0);
+
+        if y < 100.0 - 60.0 || y > screen_height() + 60.0 {
+            continue;
+        }
+
         let button_rect = Rect::new(
-            50.0,
-            y - text_size.height / 2.0 + 100.0,
-            text_size.width + 40.0,
-            text_size.height + 20.0,
+            100.0,
+            y,
+            text_size.width,
+            2.0 * font_size as f32,
         );
+
+        draw_rectangle(button_rect.x, button_rect.y, button_rect.w, button_rect.h, Color::from_rgba(50, 50, 50, 150));
 
         let results_path = format!("practice_results/level_{}.txt", i + 1);
         let show_tick = check_if_completed(results_path.as_str());
@@ -147,14 +150,15 @@ pub fn display_practice_menu(
         draw_text_ex(
             &text,
             80.0 + tick_offset,
-            button_rect.y + button_rect.h / 2.0 + 20.0,
+            button_rect.y + 1.2 * font_size as f32,
             TextParams {
                 font: font.as_ref(),
-                font_size: 20,
+                font_size: font_size,
                 color: text_color,
                 ..Default::default()
             },
         );
+        y += 20.0 + text_size.height as f32 - *scroll_offset;
     }
     
     if is_key_down(KeyCode::Down) {
