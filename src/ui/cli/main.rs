@@ -68,7 +68,7 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
     let mut last_update = Instant::now();
 
     loop {
-        update_timer(&mut stdout, timer_pos, start_time, &mut last_update, width, position);
+        update_timer(&mut stdout, timer_pos, start_time, &mut last_update, width, position, time_limit);
 
         let byte_opt = poll_input();
         if byte_opt.is_none() {
@@ -148,12 +148,23 @@ fn update_timer(
     last_update: &mut Instant,
     width: u16,
     position: usize,
+    time_limit: Option<u64>,
 ) {
+    // Update only if at least 100ms have passed since the last update
     if last_update.elapsed().as_millis() > 100 {
-        let elapsed = start_time.elapsed();
-        let secs = elapsed.as_secs();
-        let display_secs = secs % 60;
-        let display_mins = secs / 60;
+        let elapsed_secs = start_time.elapsed().as_secs();
+        let remaining = if let Some(limit) = time_limit {
+            if elapsed_secs >= limit {
+                0
+            } else {
+                limit - elapsed_secs
+            }
+        } else {
+            elapsed_secs // Just show elapsed time if no limit
+        };
+
+        let display_mins = remaining / 60;
+        let display_secs = remaining % 60;
 
         queue!(
             stdout,
@@ -163,6 +174,7 @@ fn update_timer(
             cursor::MoveTo(position as u16 % width, position as u16 / width + 2)
         )
         .unwrap();
+
         stdout.flush().unwrap();
         *last_update = Instant::now();
     }

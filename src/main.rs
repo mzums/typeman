@@ -112,7 +112,7 @@ fn main() {
             modes::quotes();
         } else if args.level.is_some() {
             modes::practice(&args);
-        } else if args.word_number.is_some() &&  !args.time_limit.is_some() {
+        } else if args.word_number.is_some() && !args.time_limit.is_some() {
             modes::word_mode(&args);
         } else {
             modes::time_mode(&args);
