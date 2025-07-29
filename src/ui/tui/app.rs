@@ -7,6 +7,9 @@ use crate::ui::tui::ui::render_app;
 use crate::{practice, utils};
 use crate::practice::TYPING_LEVELS;
 
+use std::fs::OpenOptions;
+use std::io::Write;
+
 
 #[derive(PartialEq, Eq)]
 pub enum GameState {
@@ -84,7 +87,6 @@ impl App {
         let word_list = utils::read_first_n_words(500);
         self.reference = utils::get_reference(false, false, &word_list, self.batch_size);
         self.is_correct = vec![0; self.reference.chars().count()];
-        let reference_chars: Vec<char> = self.reference.chars().collect();
         let mut last_recorded_time = Instant::now();
         
         while !self.exit {
@@ -93,7 +95,7 @@ impl App {
             }
             if event::poll(Duration::from_millis(16))? {
                 if let CEvent::Key(key) = event::read()? {
-                    self.handle_key_event(key, &reference_chars)?;
+                    self.handle_key_event(key, self.reference.clone())?;
                 }
             }
             self.timer = if let Some(start_time) = self.start_time {
@@ -117,7 +119,7 @@ impl App {
             if self.test_time - (self.timer.as_secs_f32()) < 0.0 && self.game_state == GameState::Started && self.time_mode {
                 self.errors_per_second.push(self.errors_this_second);
                 self.game_state = GameState::Results;
-            } else if self.words_done >= self.batch_size && (self.word_mode || self.practice_mode) {
+            } else if self.words_done >= self.batch_size && (self.word_mode || self.practice_mode || self.quote) {
                 self.errors_per_second.push(self.errors_this_second);
                 self.game_state = GameState::Results;
             }
@@ -145,7 +147,7 @@ impl App {
     pub fn handle_key_event(
         &mut self,
         key_event: KeyEvent,
-        reference_chars: &[char],
+        reference: String,
     ) -> io::Result<()> {
         use crossterm::event::KeyCode;
 
@@ -167,10 +169,19 @@ impl App {
             ("100", self.batch_size == 100, self.word_mode),
         ];
 
+        let reference_chars: Vec<char> = reference.chars().collect();
+
         if key_event.kind == crossterm::event::KeyEventKind::Press {
             match key_event.code {
                 KeyCode::Esc => self.exit = true,
                 KeyCode::Backspace => {
+                    if let Ok(mut file) = OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open("lposition.log")
+                    {
+                        let _ = writeln!(file, "pos1: {}, {}", self.pos1, reference_chars.get(self.pos1).unwrap());
+                    }
                     if !self.pressed_vec.is_empty() && reference_chars.get(self.pos1) == Some(&' ') {
                         self.words_done = self.words_done.saturating_sub(1);
                     }
@@ -208,7 +219,14 @@ impl App {
                 },
                 KeyCode::Enter => {
                     if self.tab_pressed.elapsed() < Duration::from_secs(1) {
-                        self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500), self.batch_size);
+                        if self.word_mode || self.time_mode {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500), self.batch_size);
+                        } else if self.quote {
+                            self.reference = utils::get_random_quote();
+                            self.batch_size = self.reference.split_whitespace().count();
+                        } else if self.practice_mode {
+                            self.reference = practice::create_words(TYPING_LEVELS[self.selected_level].1, self.batch_size);
+                        }
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pressed_vec.clear();
                         self.pos1 = 0;
@@ -255,6 +273,9 @@ impl App {
                                 self.batch_size = 50;
                             }
                             "words" => {
+                                if !self.word_mode {
+                                    self.batch_size = 50;
+                                }
                                 self.time_mode = false;
                                 self.word_mode = true;
                                 self.quote = false;
@@ -301,10 +322,10 @@ impl App {
                         }
                         if self.selected_config == "quote" {
                             self.reference = utils::get_random_quote();
+                            self.batch_size = self.reference.split_whitespace().count();
                         }
                         else {
                             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500), self.batch_size);
-
                         }
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pressed_vec.clear();

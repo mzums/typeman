@@ -28,6 +28,7 @@ pub fn display_practice_menu(
     words_done: &mut usize,
     errors_per_second: &mut Vec<f64>,
     saved_results: &mut bool,
+    error_positions: &mut Vec<bool>,
 ) -> Option<usize> {
     let mouse_pos = mouse_position();
 
@@ -201,6 +202,7 @@ pub fn display_practice_menu(
                 words_done,
                 errors_per_second,
                 saved_results,
+                error_positions,
             );
         }
         thread::sleep(Duration::from_millis(200));

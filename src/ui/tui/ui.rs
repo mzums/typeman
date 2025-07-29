@@ -591,7 +591,7 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize) -> Vec<Line<'a>> {
     let mut fg_colors: Vec<Color> = vec![REF_COLOR; app.reference.chars().count()];
     let mut bg_colors: Vec<Color> = vec![BG_COLOR; app.reference.chars().count()];
 
-    if let Ok(mut file) = OpenOptions::new()
+    /*if let Ok(mut file) = OpenOptions::new()
         .create(true)
         .append(true)
         .open("lposition.log")
@@ -602,7 +602,7 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize) -> Vec<Line<'a>> {
             app.reference.chars().count(),
             app.is_correct.len()
         );
-    }
+    }*/
     
     for i in 0..app.is_correct.len() {
         if app.pos1 == i {

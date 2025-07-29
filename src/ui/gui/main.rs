@@ -345,7 +345,7 @@ pub async fn gui_main_async() {
 
     let top_words = 500;
     let word_list = utils::read_first_n_words(top_words as usize);
-    let mut batch_size = 100;
+    let mut batch_size = 50;
     if screen_height() > screen_width() {
         batch_size = 50;
     }
@@ -442,6 +442,7 @@ pub async fn gui_main_async() {
                 &mut selected_practice_level,
                 &mut practice_mode,
                 &mut saved_results,
+                &mut error_positions,
             );
 
             
@@ -580,8 +581,8 @@ pub async fn gui_main_async() {
                     practice_mode = false;
                     game_over = false;
                     time_mode = true;
-                    reset_game_state(&mut pressed_vec, &mut is_correct, &mut pos1, &mut timer, &mut start_time, &mut game_started, &mut game_over, &mut speed_per_second, &mut last_recorded_time, &mut words_done, &mut errors_per_second, &mut saved_results);
-                    reset_game_state(&mut pressed_vec, &mut is_correct, &mut pos1, &mut timer, &mut start_time, &mut game_started, &mut game_over, &mut speed_per_second, &mut last_recorded_time, &mut words_done, &mut errors_per_second, &mut saved_results);
+                    reset_game_state(&mut pressed_vec, &mut is_correct, &mut pos1, &mut timer, &mut start_time, &mut game_started, &mut game_over, &mut speed_per_second, &mut last_recorded_time, &mut words_done, &mut errors_per_second, &mut saved_results, &mut error_positions);
+                    reset_game_state(&mut pressed_vec, &mut is_correct, &mut pos1, &mut timer, &mut start_time, &mut game_started, &mut game_over, &mut speed_per_second, &mut last_recorded_time, &mut words_done, &mut errors_per_second, &mut saved_results, &mut error_positions);
                 }
             } else {
                 let _pressed = get_char_pressed();
@@ -606,6 +607,7 @@ pub async fn gui_main_async() {
                 &mut words_done,
                 &mut errors_per_second,
                 &mut saved_results,
+                &mut error_positions,
             );
             if level.is_some() {
                 config::reset_game_state(
@@ -621,7 +623,7 @@ pub async fn gui_main_async() {
                     &mut words_done,
                     &mut errors_per_second,
                     &mut saved_results,
-                    
+                    &mut error_positions,
                 );
                 reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 50);
                 is_correct = VecDeque::from(vec![0; reference.len()]);
@@ -648,6 +650,7 @@ pub async fn gui_main_async() {
                 &mut words_done,
                 &mut errors_per_second,
                 &mut saved_results,
+                &mut error_positions,
             );
             if practice_mode {
                 reference = practice::create_words(TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1, 50);
@@ -658,6 +661,13 @@ pub async fn gui_main_async() {
             }
             is_correct = VecDeque::from(vec![0; reference.len()]);
             thread::sleep(time::Duration::from_millis(80));
+        }
+
+        if pos1 >= reference.chars().count() {
+            words_done += 1;
+            reference = utils::get_reference(punctuation, numbers, &utils::read_first_n_words(500), batch_size);
+            is_correct = VecDeque::from(vec![0; reference.len()]);
+            pos1 = 0;
         }
 
         draw_shortcut_info(font.as_ref(), f32::max(font_size / 1.7, 15.0), screen_width() / 2.0 - max_width / 2.0, screen_height() - 100.0, emoji_font.clone().unwrap(), practice_menu, game_over, practice_mode);
