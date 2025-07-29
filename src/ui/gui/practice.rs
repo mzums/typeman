@@ -7,6 +7,8 @@ use std::time::{Instant, Duration};
 
 use crate::ui::gui::config;
 use crate::practice::{check_if_completed, TYPING_LEVELS};
+/*use std::fs::OpenOptions;
+use std::io::Write;*/
 
 
 pub fn display_practice_menu(
@@ -42,17 +44,20 @@ pub fn display_practice_menu(
     
     *scroll_offset = scroll_offset.clamp(0.0, max_scroll);
 
-    draw_text_ex(
-        "Select Typing Level",
-        50.0,
-        100.0,
-        TextParams {
-            font: font.as_ref(),
-            font_size: 40,
-            color: Color::from_rgba(255, 150, 0, 255),
-            ..Default::default()
-        },
-    );
+
+    if *scroll_offset < 20.0 {
+        draw_text_ex(
+            "Select Typing Level",
+            50.0,
+            100.0,
+            TextParams {
+                font: font.as_ref(),
+                font_size: 40,
+                color: Color::from_rgba(255, 150, 0, 255),
+                ..Default::default()
+            },
+        );
+    }
 
     let start_index = 0;
     let end_index = TYPING_LEVELS.len();
@@ -67,10 +72,10 @@ pub fn display_practice_menu(
         };
         let text_size = measure_text(&text, font.as_ref(), 36, 1.0);
         let button_rect = Rect::new(
-            50.0,
-            y - text_size.height / 2.0 + 100.0,
-            text_size.width + 40.0,
-            text_size.height + 20.0,
+            100.0,
+            y - *scroll_offset,
+            text_size.width + 3.0 * font_size as f32,
+            font_size as f32 + 20.0,
         );
         if button_rect.contains(vec2(mouse_pos.0, mouse_pos.1)) {
             any_hovered = true;
@@ -92,11 +97,19 @@ pub fn display_practice_menu(
             continue;
         }
 
+        /*if let Ok(mut file) = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("lposition.log")
+        {
+            let _ = writeln!(file, "{}", *scroll_offset);
+        }*/
+
         let button_rect = Rect::new(
             100.0,
-            y,
-            text_size.width,
-            2.0 * font_size as f32,
+            y - *scroll_offset,
+            text_size.width + 2.0 * font_size as f32,
+            20.0 + font_size as f32,
         );
 
         draw_rectangle(button_rect.x, button_rect.y, button_rect.w, button_rect.h, Color::from_rgba(50, 50, 50, 150));
@@ -138,7 +151,7 @@ pub fn display_practice_menu(
             draw_text_ex(
                 "✓",
                 tick_offset + 20.0,
-                button_rect.y + button_rect.h / 2.0 + 30.0,
+                button_rect.y + button_rect.h / 2.0 + 30.0 - *scroll_offset,
                 TextParams {
                     font: Some(&emoji_font),
                     font_size: 50,
@@ -148,10 +161,18 @@ pub fn display_practice_menu(
             );
         }
 
+        /*if let Ok(mut file) = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("lposition.log")
+        {
+            let _ = writeln!(file, "   {}", *scroll_offset);
+        }*/
+
         draw_text_ex(
             &text,
             80.0 + tick_offset,
-            button_rect.y + 1.2 * font_size as f32,
+            y + 1.2 * font_size as f32 - *scroll_offset,
             TextParams {
                 font: font.as_ref(),
                 font_size: font_size,
@@ -159,11 +180,11 @@ pub fn display_practice_menu(
                 ..Default::default()
             },
         );
-        y += 20.0 + text_size.height as f32 - *scroll_offset;
+        y += 20.0 + font_size as f32;
     }
     
     if is_key_down(KeyCode::Down) {
-        *scroll_offset = (*scroll_offset + 50.0).min(max_scroll);
+        *scroll_offset = (*scroll_offset + 20.0 + font_size as f32).min(max_scroll);
         *selected_level = if let Some(level) = *selected_level {
             Some((level + 1).min(TYPING_LEVELS.len() - 1))
         } else {
@@ -172,7 +193,7 @@ pub fn display_practice_menu(
         std::thread::sleep(std::time::Duration::from_millis(200));
     }
     if is_key_down(KeyCode::Up) {
-        *scroll_offset = (*scroll_offset - 50.0).max(0.0);
+        *scroll_offset = (*scroll_offset - 20.0 - font_size as f32).max(0.0);
         *selected_level = if let Some(level) = *selected_level {
             Some((level as isize - 1).max(0) as usize)
         } else {

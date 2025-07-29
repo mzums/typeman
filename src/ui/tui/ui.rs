@@ -10,8 +10,8 @@ use ratatui::widgets::canvas::Canvas;
 use crate::ui::tui::app::{App, GameState};
 use crate::practice::TYPING_LEVELS;
 use crate::practice;
-use std::fs::OpenOptions;
-use std::io::Write;
+/*use std::fs::OpenOptions;
+use std::io::Write;*/
 
 const BORDER_COLOR: Color = Color::Rgb(100, 60, 0);
 const REF_COLOR: Color = Color::Rgb(100, 100, 100);
