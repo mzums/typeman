@@ -7,9 +7,6 @@ use egui_plot::{Line, Plot};
 use crate::utils;
 use crate::practice;
 
-/*use std::fs::OpenOptions;
-use std::io::Write;*/
-
 
 fn calc_standard_deviation(values: &[f64], average_word_length: f64) -> f64 {
     let wpm_values: Vec<f64> = values.iter().map(|&cpm| cpm / average_word_length).collect();

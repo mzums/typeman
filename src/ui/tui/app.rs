@@ -7,9 +7,6 @@ use crate::ui::tui::ui::render_app;
 use crate::{practice, utils};
 use crate::practice::TYPING_LEVELS;
 
-use std::fs::OpenOptions;
-use std::io::Write;
-
 
 #[derive(PartialEq, Eq)]
 pub enum GameState {
@@ -109,12 +106,6 @@ impl App {
             } else {
                 Duration::from_secs(0)
             };
-            /*let mut file = OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open("lposition.log")
-                .unwrap();
-            writeln!(file, "words_done: {}, batch_size: {}", self.words_done, self.batch_size).unwrap();*/
 
             if self.test_time - (self.timer.as_secs_f32()) < 0.0 && self.game_state == GameState::Started && self.time_mode {
                 self.errors_per_second.push(self.errors_this_second);
@@ -175,13 +166,6 @@ impl App {
             match key_event.code {
                 KeyCode::Esc => self.exit = true,
                 KeyCode::Backspace => {
-                    if let Ok(mut file) = OpenOptions::new()
-                        .create(true)
-                        .append(true)
-                        .open("lposition.log")
-                    {
-                        let _ = writeln!(file, "pos1: {}, {}", self.pos1, reference_chars.get(self.pos1).unwrap());
-                    }
                     if !self.pressed_vec.is_empty() && reference_chars.get(self.pos1) == Some(&' ') {
                         self.words_done = self.words_done.saturating_sub(1);
                     }

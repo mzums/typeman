@@ -10,8 +10,7 @@ use ratatui::widgets::canvas::Canvas;
 use crate::ui::tui::app::{App, GameState};
 use crate::practice::TYPING_LEVELS;
 use crate::practice;
-/*use std::fs::OpenOptions;
-use std::io::Write;*/
+
 
 const BORDER_COLOR: Color = Color::Rgb(100, 60, 0);
 const REF_COLOR: Color = Color::Rgb(100, 100, 100);
@@ -60,13 +59,7 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
 
 fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App) {
     let mut lines: Vec<Line> = Vec::new();
-    /*if let Ok(mut file) = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("lposition.log")
-    {
-        let _ = writeln!(file, "selcted_level: {}", app.selected_level);
-    }*/
+
     let block = create_reference_block(3);
     let inner_area = block.inner(area);
     let chunks = Layout::vertical([
@@ -340,12 +333,6 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
         .or_else(|| columns_for_sec.keys().max())
         .map(|k| columns_for_sec[k])
         .unwrap_or(1);
-    /*let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("lposition.log")
-        .unwrap();
-    let _ = writeln!(file, "columns: {}", extra_columns);*/
 
     let mut errors_per_second: Vec<f32> = Vec::new();
     let mut speed_per_second: Vec<f64> = Vec::new();
@@ -591,19 +578,6 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize) -> Vec<Line<'a>> {
     let mut fg_colors: Vec<Color> = vec![REF_COLOR; app.reference.chars().count()];
     let mut bg_colors: Vec<Color> = vec![BG_COLOR; app.reference.chars().count()];
 
-    /*if let Ok(mut file) = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("lposition.log")
-    {
-        let _ = writeln!(
-            file,
-            "reference.len(): {}, is_correct.len(): {}",
-            app.reference.chars().count(),
-            app.is_correct.len()
-        );
-    }*/
-    
     for i in 0..app.is_correct.len() {
         if app.pos1 == i {
             fg_colors[i] = BG_COLOR;

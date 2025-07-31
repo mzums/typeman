@@ -7,8 +7,6 @@ use std::time::{Instant, Duration};
 
 use crate::ui::gui::config;
 use crate::practice::{check_if_completed, TYPING_LEVELS};
-/*use std::fs::OpenOptions;
-use std::io::Write;*/
 
 
 pub fn display_practice_menu(
@@ -97,14 +95,6 @@ pub fn display_practice_menu(
             continue;
         }
 
-        /*if let Ok(mut file) = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("lposition.log")
-        {
-            let _ = writeln!(file, "{}", *scroll_offset);
-        }*/
-
         let button_rect = Rect::new(
             100.0,
             y - *scroll_offset,
@@ -151,7 +141,7 @@ pub fn display_practice_menu(
             draw_text_ex(
                 "✓",
                 tick_offset + 20.0,
-                button_rect.y + button_rect.h / 2.0 + 30.0 - *scroll_offset,
+                y + 1.8 * font_size as f32 - *scroll_offset,
                 TextParams {
                     font: Some(&emoji_font),
                     font_size: 50,
@@ -160,15 +150,7 @@ pub fn display_practice_menu(
                 },
             );
         }
-
-        /*if let Ok(mut file) = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("lposition.log")
-        {
-            let _ = writeln!(file, "   {}", *scroll_offset);
-        }*/
-
+        
         draw_text_ex(
             &text,
             80.0 + tick_offset,
