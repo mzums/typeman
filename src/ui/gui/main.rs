@@ -389,7 +389,10 @@ pub async fn gui_main_async() {
     
     loop {
         clear_background(macroquad::color::Color::from_rgba(20, 17, 15, 255));
-        let max_width = f32::min(if screen_height() > screen_width() {screen_width() * 0.9} else {screen_width() * 0.7}, 1700.0);
+        let mut max_width = f32::min(if screen_height() > screen_width() {screen_width() * 0.9} else {screen_width() * 0.7}, 1700.0);
+        if screen_width() < 1000.0 && screen_height() < 600.0 {
+            max_width = 0.85 * screen_width();
+        }
         let font_size = if screen_height() > 2000.0 || screen_width() > 3800.0 {
             40.0
         } else {
@@ -482,12 +485,17 @@ pub async fn gui_main_async() {
             let total_height = lines.len() as f32 * font_size * 1.2;
             let start_y = screen_height() / 2.0 - total_height / 2.0 + font_size;
             let start_x = screen_width() / 2.0 - max_width / 2.0;
+            let title_y = screen_height() / 7.5;
             
             write_title(
                 title_font.clone(),
-                50.0,
+                    if screen_height() > 1000.0 && screen_width() > 800.0 {
+                        50.0
+                    } else {
+                        30.0
+                    },
                 start_x,
-                140.0,
+                title_y,
             );
             
             handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened, &mut error_positions, practice_mode);

@@ -172,7 +172,7 @@ pub fn handle_settings_buttons(
     error_positions: &mut Vec<bool>,
 ) -> bool {
     let inactive_color = Color::from_rgba(255, 255, 255, 80);
-    let btn_y = 200.0;
+    let btn_y = screen_height() / 5.0;
     let btn_padding = font_size as f32 * 0.5;
     let divider = true;
     let mut total_width = 0.0;

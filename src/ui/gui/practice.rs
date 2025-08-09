@@ -37,8 +37,14 @@ pub fn display_practice_menu(
 
     let total_height = TYPING_LEVELS.len() as f32 * 60.0;
     let visible_height = screen_height() - 100.0;
-    let max_scroll = (total_height - visible_height).max(0.0) + 120.0;
-    let font_size = 20;
+    let font_size = if screen_width() > 3000.0 {
+        20
+    } else if screen_width() > 1900.0 {
+        18
+    } else {
+        15
+    };
+    let max_scroll = (TYPING_LEVELS.len() + 5) as f32 * (20.0 + font_size as f32) - screen_height();
     
     *scroll_offset = scroll_offset.clamp(0.0, max_scroll);
 
@@ -50,7 +56,13 @@ pub fn display_practice_menu(
             100.0,
             TextParams {
                 font: font.as_ref(),
-                font_size: 40,
+                font_size: if screen_height() > 2000.0 && screen_width() > 1900.0 {
+                        40
+                    } else if screen_height() > 1000.0 && screen_width() > 800.0{
+                        30
+                    } else {
+                        25
+                    },
                 color: Color::from_rgba(255, 150, 0, 255),
                 ..Default::default()
             },
@@ -61,24 +73,26 @@ pub fn display_practice_menu(
     let end_index = TYPING_LEVELS.len();
 
     let mut any_hovered = false;
+    let mut y = 150.0;
     for i in start_index..end_index {
-        let y = 100.0 + i as f32 * 60.0 - *scroll_offset;
-        let text = if i + 1 < 10 {
-            format!("{}.  {}", i + 1, TYPING_LEVELS[i].0)
-        } else {
-            format!("{}. {}", i + 1, TYPING_LEVELS[i].0)
-        };
-        let text_size = measure_text(&text, font.as_ref(), 36, 1.0);
+        let (level_name, _) = &TYPING_LEVELS[i];
+        let mut text = format!("{}. {}", i + 1, level_name);
+        if i + 1 < 10 {
+            text = format!("{}.  {}", i + 1, level_name);
+        }
+        let text_size = measure_text(&text, font.as_ref(), font_size, 1.0);
         let button_rect = Rect::new(
             100.0,
             y - *scroll_offset,
-            text_size.width + 3.0 * font_size as f32,
+            text_size.width + 2.0 * font_size as f32,
             font_size as f32 + 20.0,
         );
+        //draw_rectangle(button_rect.x, button_rect.y, button_rect.w, button_rect.h, Color::from_rgba(50, 50, 50, 150));
         if button_rect.contains(vec2(mouse_pos.0, mouse_pos.1)) {
             any_hovered = true;
             break;
         }
+        y += 20.0 + font_size as f32;
     }
     let mut y = 150.0;
 
@@ -91,7 +105,8 @@ pub fn display_practice_menu(
 
         let text_size = measure_text(&text, font.as_ref(), font_size, 1.0);
 
-        if y < 100.0 - 60.0 || y > screen_height() + 60.0 {
+        if y - *scroll_offset > screen_height() + 60.0 || y - *scroll_offset < 0.0 {
+            y += 20.0 + font_size as f32;
             continue;
         }
 
@@ -102,7 +117,7 @@ pub fn display_practice_menu(
             20.0 + font_size as f32,
         );
 
-        draw_rectangle(button_rect.x, button_rect.y, button_rect.w, button_rect.h, Color::from_rgba(50, 50, 50, 150));
+        //draw_rectangle(button_rect.x, button_rect.y, button_rect.w, button_rect.h, Color::from_rgba(50, 50, 50, 150));
 
         let results_path = format!("practice_results/level_{}.txt", i + 1);
         let show_tick = check_if_completed(results_path.as_str());
@@ -121,7 +136,7 @@ pub fn display_practice_menu(
             CursorIcon::Default
         });
 
-        let is_clicked = is_hovered && is_mouse_button_pressed(MouseButton::Left);
+        let is_clicked = is_hovered && any_hovered && is_mouse_button_pressed(MouseButton::Left);
 
         if is_clicked {
             *selected_level = Some(i);
@@ -164,25 +179,105 @@ pub fn display_practice_menu(
         );
         y += 20.0 + font_size as f32;
     }
-    
-    if is_key_down(KeyCode::Down) {
-        *scroll_offset = (*scroll_offset + 20.0 + font_size as f32).min(max_scroll);
-        *selected_level = if let Some(level) = *selected_level {
-            Some((level + 1).min(TYPING_LEVELS.len() - 1))
-        } else {
-            Some(0)
-        };
-        std::thread::sleep(std::time::Duration::from_millis(200));
+
+    thread_local! {
+        static DOWN_KEY_HELD_START: std::cell::RefCell<Option<Instant>> = std::cell::RefCell::new(None);
+        static LAST_DOWN_SCROLL: std::cell::RefCell<Option<Instant>> = std::cell::RefCell::new(None);
+        static UP_KEY_HELD_START: std::cell::RefCell<Option<Instant>> = std::cell::RefCell::new(None);
+        static LAST_UP_SCROLL: std::cell::RefCell<Option<Instant>> = std::cell::RefCell::new(None);
     }
-    if is_key_down(KeyCode::Up) {
-        *scroll_offset = (*scroll_offset - 20.0 - font_size as f32).max(0.0);
-        *selected_level = if let Some(level) = *selected_level {
-            Some((level as isize - 1).max(0) as usize)
-        } else {
-            Some(TYPING_LEVELS.len() - 1)
-        };
-        std::thread::sleep(std::time::Duration::from_millis(200));
-    }
+
+    let down_pressed = is_key_down(KeyCode::Down);
+    let up_pressed = is_key_down(KeyCode::Up);
+
+    DOWN_KEY_HELD_START.with(|down_start| {
+        LAST_DOWN_SCROLL.with(|last_down| {
+            UP_KEY_HELD_START.with(|up_start| {
+                LAST_UP_SCROLL.with(|last_up| {
+                    let mut down_key_held_start = *down_start.borrow();
+                    let mut last_down_scroll = *last_down.borrow();
+                    let mut up_key_held_start = *up_start.borrow();
+                    let mut last_up_scroll = *last_up.borrow();
+
+                    if down_pressed {
+                        let now = Instant::now();
+                        if down_key_held_start.is_none() {
+                            down_key_held_start = Some(now);
+                            last_down_scroll = Some(now);
+                            *scroll_offset = (*scroll_offset + 20.0 + font_size as f32).min(max_scroll);
+                            *selected_level = if let Some(level) = *selected_level {
+                                Some((level + 1).min(TYPING_LEVELS.len() - 1))
+                            } else {
+                                Some(0)
+                            };
+                        } else if let (Some(start), Some(last)) = (down_key_held_start, last_down_scroll) {
+                            let held_duration = now.duration_since(start).as_millis();
+                            let interval = if held_duration < 500 {
+                                200
+                            } else if held_duration < 1500 {
+                                80
+                            } else {
+                                30
+                            };
+                            if now.duration_since(last).as_millis() >= interval {
+                                *scroll_offset = (*scroll_offset + 20.0 + font_size as f32).min(max_scroll);
+                                *selected_level = if let Some(level) = *selected_level {
+                                    Some((level + 1).min(TYPING_LEVELS.len() - 1))
+                                } else {
+                                    Some(0)
+                                };
+                                last_down_scroll = Some(now);
+                            }
+                        }
+                    } else {
+                        down_key_held_start = None;
+                        last_down_scroll = None;
+                    }
+
+                    if up_pressed {
+                        let now = Instant::now();
+                        if up_key_held_start.is_none() {
+                            up_key_held_start = Some(now);
+                            last_up_scroll = Some(now);
+                            *scroll_offset = (*scroll_offset - 20.0 - font_size as f32).max(0.0);
+                            *selected_level = if let Some(level) = *selected_level {
+                                Some((level as isize - 1).max(0) as usize)
+                            } else {
+                                Some(TYPING_LEVELS.len() - 1)
+                            };
+                        } else if let (Some(start), Some(last)) = (up_key_held_start, last_up_scroll) {
+                            let held_duration = now.duration_since(start).as_millis();
+                            let interval = if held_duration < 500 {
+                                200
+                            } else if held_duration < 1500 {
+                                80
+                            } else {
+                                30
+                            };
+                            if now.duration_since(last).as_millis() >= interval {
+                                *scroll_offset = (*scroll_offset - 20.0 - font_size as f32).max(0.0);
+                                *selected_level = if let Some(level) = *selected_level {
+                                    Some((level as isize - 1).max(0) as usize)
+                                } else {
+                                    Some(TYPING_LEVELS.len() - 1)
+                                };
+                                last_up_scroll = Some(now);
+                            }
+                        }
+                    } else {
+                        up_key_held_start = None;
+                        last_up_scroll = None;
+                    }
+
+                    *down_start.borrow_mut() = down_key_held_start;
+                    *last_down.borrow_mut() = last_down_scroll;
+                    *up_start.borrow_mut() = up_key_held_start;
+                    *last_up.borrow_mut() = last_up_scroll;
+                });
+            });
+        });
+    });
+
     if is_key_pressed(KeyCode::Enter) && !is_key_down(KeyCode::Tab) {
         if let Some(level) = *selected_level {
             return Some(level);
