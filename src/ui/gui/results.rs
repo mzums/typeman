@@ -136,18 +136,24 @@ pub fn write_results(
     egui_macroquad::draw();
     
     if practice_level.is_some() {
+        let passed_text_font = if screen_width > 1900.0 {
+            30
+        } else {
+            22
+        };
+        
         let practice_text = if wpm >= practice::WPM_MIN as f32 {
             "Congratulations! You passed this level.".to_string()
         } else {
             format!("You need at least {} WPM to pass this level.", practice::WPM_MIN)
         };
-        let text_size = measure_text(&practice_text, font, 30, 1.0);
+        let text_size = measure_text(&practice_text, font, passed_text_font, 1.0);
 
-        draw_text_ex(practice_text.as_str(), (screen_width - text_size.width) / 2.0, chart_y + chart_height + 200.0, TextParams { font: font, font_size: 30, font_scale: 1.0, color: Color::from_rgba(255, 255, 255, 100), ..Default::default() });
+        draw_text_ex(practice_text.as_str(), (screen_width - text_size.width) / 2.0, chart_y + chart_height + 200.0, TextParams { font: font, font_size: passed_text_font, font_scale: 1.0, color: Color::from_rgba(255, 255, 255, 100), ..Default::default() });
         if practice::get_prev_best_wpm(practice_level.unwrap() + 1) < wpm as f64 {
             let new_highscore_text = "New highscore for this level!";
             let text_size = measure_text(new_highscore_text, font, 30, 1.0);
-            draw_text_ex(new_highscore_text, (screen_width - text_size.width) / 2.0, chart_y + chart_height + 250.0, TextParams { font: font, font_size: 30, font_scale: 1.0, color: Color::from_rgba(255, 255, 255, 100), ..Default::default() });
+            draw_text_ex(new_highscore_text, (screen_width - text_size.width) / 2.0, chart_y + chart_height + 250.0, TextParams { font: font, font_size: passed_text_font, font_scale: 1.0, color: Color::from_rgba(255, 255, 255, 100), ..Default::default() });
         }
         if !*saved_results {
             *saved_results = true;

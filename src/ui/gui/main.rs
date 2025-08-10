@@ -47,10 +47,12 @@ fn draw_shortcut_info(
     game_over: bool,
     practice_mode: bool,
 ) {
-    let mut x = x;
+    let mut x = if practice_menu { 200.0 } else { x };
     let mut next_y = y;
     let lines = if practice_menu {
-        x = screen_width() - measure_text("↑ or ↓ to navigate, ↵ to select (or click)", font, font_size as u16, 1.0).width - 70.0;
+        let text_w = measure_text("↑ or ↓ to navigate, ↵ to select (or click)", font, font_size as u16, 1.0).width;
+        x = if screen_width() > 1900.0 { screen_width() - text_w - 70.0 } else { screen_width() - text_w - 70.0 };
+
         vec![
             "↑ or ↓ to navigate, ↵ to select (or click)",
             "q - quit menu",
@@ -633,7 +635,7 @@ pub async fn gui_main_async() {
                     &mut saved_results,
                     &mut error_positions,
                 );
-                reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 50);
+                reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 5);
                 is_correct = VecDeque::from(vec![0; reference.len()]);
                 practice_mode = true;
                 practice_menu = false;
@@ -661,7 +663,7 @@ pub async fn gui_main_async() {
                 &mut error_positions,
             );
             if practice_mode {
-                reference = practice::create_words(TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1, 50);
+                reference = practice::create_words(TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1, 5);
             } else if quote {
                 reference = utils::get_random_quote();
             } else {
@@ -671,7 +673,7 @@ pub async fn gui_main_async() {
             thread::sleep(time::Duration::from_millis(80));
         }
 
-        if pos1 >= reference.chars().count() {
+        if pos1 >= reference.chars().count() && !practice_mode {
             words_done += 1;
             reference = utils::get_reference(punctuation, numbers, &utils::read_first_n_words(500), batch_size);
             is_correct = VecDeque::from(vec![0; reference.len()]);

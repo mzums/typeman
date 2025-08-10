@@ -30,13 +30,6 @@ pub fn display_practice_menu(
     saved_results: &mut bool,
     error_positions: &mut Vec<bool>,
 ) -> Option<usize> {
-    let mouse_pos = mouse_position();
-
-    let (_, y_scroll) = mouse_wheel();
-    *scroll_offset -= y_scroll * 60.0;
-
-    let total_height = TYPING_LEVELS.len() as f32 * 60.0;
-    let visible_height = screen_height() - 100.0;
     let font_size = if screen_width() > 3000.0 {
         20
     } else if screen_width() > 1900.0 {
@@ -44,6 +37,18 @@ pub fn display_practice_menu(
     } else {
         15
     };
+    let tick_offset = if screen_width() > 1900.0 { 
+        (screen_width() - measure_text(TYPING_LEVELS[20].0, font.as_ref(), font_size, 1.0).width) / 2.0 - 50.0
+    } else { 
+        60.0 
+    };
+    let mouse_pos = mouse_position();
+
+    let (_, y_scroll) = mouse_wheel();
+    *scroll_offset -= y_scroll * 60.0;
+
+    let total_height = TYPING_LEVELS.len() as f32 * 60.0;
+    let visible_height = screen_height() - 100.0;
     let max_scroll = (TYPING_LEVELS.len() + 5) as f32 * (20.0 + font_size as f32) - screen_height();
     
     *scroll_offset = scroll_offset.clamp(0.0, max_scroll);
@@ -52,7 +57,7 @@ pub fn display_practice_menu(
     if *scroll_offset < 20.0 {
         draw_text_ex(
             "Select Typing Level",
-            50.0,
+            tick_offset + 20.0,
             100.0,
             TextParams {
                 font: font.as_ref(),
@@ -82,7 +87,7 @@ pub fn display_practice_menu(
         }
         let text_size = measure_text(&text, font.as_ref(), font_size, 1.0);
         let button_rect = Rect::new(
-            100.0,
+            tick_offset + 40.0,
             y - *scroll_offset,
             text_size.width + 2.0 * font_size as f32,
             font_size as f32 + 20.0,
@@ -111,7 +116,7 @@ pub fn display_practice_menu(
         }
 
         let button_rect = Rect::new(
-            100.0,
+            tick_offset + 40.0,
             y - *scroll_offset,
             text_size.width + 2.0 * font_size as f32,
             20.0 + font_size as f32,
@@ -151,11 +156,10 @@ pub fn display_practice_menu(
             Color::from_rgba(200, 200, 200, 230)
         };
 
-        let tick_offset = 40.0;
         if show_tick {
             draw_text_ex(
                 "✓",
-                tick_offset + 20.0,
+                tick_offset,
                 y + 1.8 * font_size as f32 - *scroll_offset,
                 TextParams {
                     font: Some(&emoji_font),
@@ -168,7 +172,7 @@ pub fn display_practice_menu(
         
         draw_text_ex(
             &text,
-            80.0 + tick_offset,
+            60.0 + tick_offset,
             y + 1.2 * font_size as f32 - *scroll_offset,
             TextParams {
                 font: font.as_ref(),
