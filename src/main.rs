@@ -80,7 +80,7 @@ struct Cli {
     word_number: Option<Option<usize>>,
 
     #[arg(short = 'l', long = "level", conflicts_with_all = &["custom_file", "random_quote", "time_limit", "top_words"], conflicts_with_all = &["gui", "tui"])]
-    level: Option<usize>,
+    level: Option<Option<usize>>,
 
     #[arg(long = "gui", conflicts_with_all = &["custom_file", "random_quote", "time_limit", "top_words", "word_number", "level", "tui", "cli"])]
     gui: bool,

@@ -635,7 +635,7 @@ pub async fn gui_main_async() {
                     &mut saved_results,
                     &mut error_positions,
                 );
-                reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 5);
+                reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 50);
                 is_correct = VecDeque::from(vec![0; reference.len()]);
                 practice_mode = true;
                 practice_menu = false;
@@ -663,7 +663,7 @@ pub async fn gui_main_async() {
                 &mut error_positions,
             );
             if practice_mode {
-                reference = practice::create_words(TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1, 5);
+                reference = practice::create_words(TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1, 50);
             } else if quote {
                 reference = utils::get_random_quote();
             } else {

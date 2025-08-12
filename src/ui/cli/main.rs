@@ -150,7 +150,6 @@ fn update_timer(
     position: usize,
     time_limit: Option<u64>,
 ) {
-    // Update only if at least 100ms have passed since the last update
     if last_update.elapsed().as_millis() > 100 {
         let elapsed_secs = start_time.elapsed().as_secs();
         let remaining = if let Some(limit) = time_limit {
@@ -160,7 +159,7 @@ fn update_timer(
                 limit - elapsed_secs
             }
         } else {
-            elapsed_secs // Just show elapsed time if no limit
+            elapsed_secs
         };
 
         let display_mins = remaining / 60;

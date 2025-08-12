@@ -62,7 +62,11 @@ pub fn write_results(
     };
 
     let chart_x = (screen_width - chart_width + text_size.width + 20.0) / 2.0;
-    let chart_y = (screen_height - chart_height) / 4.0;
+    let chart_y = if practice_level.is_some() {
+        (screen_height - chart_height) / 4.0
+    } else {
+        (screen_height - chart_height) / 3.0
+    };
     
     let text2_width = measure_text("consistency", font, 25, 1.0).width;
     let padding = (chart_width - 4.0 * text2_width) / 4.0;
@@ -527,7 +531,7 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                                             15.0
                                         };
                                         
-                                        let cross_y = size;
+                                        let cross_y = size / 2.0;
                                         
                                         let cross = egui_plot::Points::new(
                                             "Error",

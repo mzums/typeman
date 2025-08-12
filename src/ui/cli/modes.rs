@@ -137,15 +137,23 @@ pub fn quotes() {
 
 pub fn practice(args: &Cli) {
     let level = args.level.unwrap();
-    if level < 1 || level > practice::TYPING_LEVELS.len() {
-        eprintln!("Invalid typing level. Please choose a level between 1 and {}.", practice::TYPING_LEVELS.len());
+    if level.is_none() || level.unwrap() < 1 || level.unwrap() > practice::TYPING_LEVELS.len() {
+        eprintln!("Please choose a level between 1 and {}.", practice::TYPING_LEVELS.len());
+        for i in 0..practice::TYPING_LEVELS.len() {
+            let results_path = format!("practice_results/level_{}.txt", i + 1);
+            if practice::check_if_completed(results_path.as_str()) {
+                println!("✔ Level {}: {}", i + 1, practice::TYPING_LEVELS[i].0);
+            } else {
+                println!("  Level {}: {}", i + 1, practice::TYPING_LEVELS[i].0);
+            }
+        }
         return;
     }
     
-    let curr_level= level - 1;
+    let curr_level= level.unwrap() - 1;
     let chars = practice::TYPING_LEVELS[curr_level as usize].1;
     
-    let reference = practice::create_words(&chars, args.word_number.unwrap_or(Some(5)).unwrap_or(5));
+    let reference = practice::create_words(&chars, args.word_number.unwrap_or(Some(50)).unwrap_or(50));
     let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
     let start_time = Instant::now();
     let res = cli::main::type_loop(&reference, None, start_time, Some(curr_level), &mut is_correct);
