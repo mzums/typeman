@@ -390,15 +390,17 @@ pub async fn gui_main_async() {
     };
     
     loop {
-        clear_background(macroquad::color::Color::from_rgba(20, 17, 15, 255));
+        clear_background(macroquad::color::Color::from_rgba(15, 12, 10, 255));
         let mut max_width = f32::min(if screen_height() > screen_width() {screen_width() * 0.9} else {screen_width() * 0.7}, 1700.0);
-        if screen_width() < 1000.0 && screen_height() < 600.0 {
+        if screen_width() < 1000.0 || screen_height() < 600.0 {
             max_width = 0.85 * screen_width();
         }
         let font_size = if screen_height() > 2000.0 || screen_width() > 3800.0 {
             40.0
-        } else {
+        } else if screen_width() > 800.0 {
             (40.0 - (3840.0 / screen_width()) * 5.0).round()
+        } else {
+            20.0
         };
         let line_h = measure_text("Gy", font.as_ref(), font_size as u16, 1.0).height * 1.6;
         let char_w = measure_text("G", font.as_ref(), font_size as u16, 1.0).width.floor();
@@ -635,7 +637,7 @@ pub async fn gui_main_async() {
                     &mut saved_results,
                     &mut error_positions,
                 );
-                reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 50);
+                reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 5);
                 is_correct = VecDeque::from(vec![0; reference.len()]);
                 practice_mode = true;
                 practice_menu = false;
@@ -663,7 +665,7 @@ pub async fn gui_main_async() {
                 &mut error_positions,
             );
             if practice_mode {
-                reference = practice::create_words(TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1, 50);
+                reference = practice::create_words(TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1, 5);
             } else if quote {
                 reference = utils::get_random_quote();
             } else {

@@ -60,10 +60,7 @@ fn draw_toggle_button(
     };
     
     let corner_radius: f32 = font_size as f32 / 3.0;
-    let mut btn_x = x;
-    if screen_width() < 800.0 {
-        btn_x += 4.0;
-    }
+    let btn_x = x;
     draw_rounded_rect(btn_x, y, btn_width, btn_height, corner_radius, bg_color);
     draw_text_ex(
         &label,
@@ -173,7 +170,11 @@ pub fn handle_settings_buttons(
 ) -> bool {
     let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = screen_height() / 5.0;
-    let btn_padding = font_size as f32 * 0.5;
+    let btn_padding = if screen_width() > 800.0 {
+        font_size as f32 * 0.5
+    } else {
+        font_size as f32 * 0.25
+    };
     let divider = true;
     let mut total_width = 0.0;
 
@@ -272,15 +273,10 @@ pub fn handle_settings_buttons(
     for (label, state_val, visible) in button_states.iter_mut() {
         let x = start_x + total_width;
         let is_active = *state_val;
-        let mut y = btn_y;
-        if *label == "! punctuation" || *label == "quote" || *label == "practice" {
-            y -= (measure_text("p", font.as_ref(), font_size, 1.0).height - 
-                   measure_text("n", font.as_ref(), font_size, 1.0).height) / 2.0;
-        }
-
+        
         let (clicked, hovered, btni_width) = draw_toggle_button(
             x, 
-            y,
+            btn_y,
             btn_padding,
             label,
             font, 
