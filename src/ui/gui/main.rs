@@ -479,7 +479,7 @@ pub async fn gui_main_async() {
                 game_started = true;
             }
             
-            if game_started && !game_over {
+            if (game_started || words_done == batch_size) && !game_over {
                 timer = start_time.elapsed();
                 if (timer.as_secs_f32() >= test_time - 0.2 && time_mode) || pos1 >= reference.chars().count() {
                     game_over = true;
@@ -675,7 +675,7 @@ pub async fn gui_main_async() {
             thread::sleep(time::Duration::from_millis(80));
         }
 
-        if pos1 >= reference.chars().count() && !practice_mode {
+        if pos1 >= reference.chars().count() && time_mode && !game_over{
             words_done += 1;
             reference = utils::get_reference(punctuation, numbers, &utils::read_first_n_words(500), batch_size);
             is_correct = VecDeque::from(vec![0; reference.len()]);

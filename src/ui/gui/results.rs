@@ -141,7 +141,7 @@ pub fn write_results(
         .map(|(i, &cpm)| [i as f64, cpm])
         .collect();
 
-    draw_chart(&chart_points, chart_width, chart_height, chart_x, chart_y, errors_per_second);
+    draw_chart(&chart_points, chart_width, chart_height, chart_x, chart_y, errors_per_second, fontsize_1);
     egui_macroquad::draw();
     
     if practice_level.is_some() {
@@ -458,7 +458,7 @@ fn smooth(values: &[f64], window: usize, average_word_length: f64) -> Vec<f64> {
     smoothed
 }
 
-fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x: f32, chart_y: f32, errors_per_second: &Vec<f64>) {
+fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x: f32, chart_y: f32, errors_per_second: &Vec<f64>, fontsize_1: u16) {
     let mut errors: Vec<f64> = Vec::new();
     errors.push(0.0);
     errors.extend(errors_per_second.iter().cloned());
@@ -529,20 +529,32 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
 
                                     if should_draw {
                                         let size = if val <= 1.0 {
-                                            5.0
+                                            fontsize_1 as f32 / 15.0
                                         } else if val <= 2.0 {
-                                            8.0
+                                            fontsize_1 as f32 / 10.0
                                         } else if val <= 3.0 {
-                                            11.0
+                                            fontsize_1 as f32 / 4.0
                                         } else {
-                                            15.0
+                                            fontsize_1 as f32 / 4.0
                                         };
                                         
+<<<<<<< HEAD
                                         let cross_y = size / 2.0;
+=======
+                                        let cross_y = if screen_width() > 3000.0 {
+                                            fontsize_1 as f64 / 3.0
+                                        } else if screen_width() > 1500.0 {
+                                            fontsize_1 as f64 / 3.0
+                                        } else if screen_width() > 700.0{
+                                            fontsize_1 as f64 / 1.5
+                                        } else {
+                                            fontsize_1 as f64 * 1.5
+                                        };
+>>>>>>> 08c2536 (small fixes)
                                         
                                         let cross = egui_plot::Points::new(
                                             "Error",
-                                            vec![[x, cross_y]]
+                                            vec![[x, cross_y as f64]]
                                         )
                                         .color(Color32::from_rgb(255, 50, 50))
                                         .radius(size as f32)
