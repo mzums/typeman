@@ -49,8 +49,8 @@ pub fn display_practice_menu(
 
     let total_height = TYPING_LEVELS.len() as f32 * 60.0;
     let visible_height = screen_height() - 100.0;
-    let max_scroll = (TYPING_LEVELS.len() + 5) as f32 * (20.0 + font_size as f32) - screen_height();
-    
+    let max_scroll = f32::max((TYPING_LEVELS.len() + 5) as f32 * (20.0 + font_size as f32) - screen_height(), 0.0);
+
     *scroll_offset = scroll_offset.clamp(0.0, max_scroll);
 
 
@@ -58,7 +58,7 @@ pub fn display_practice_menu(
         draw_text_ex(
             "Select Typing Level",
             tick_offset + 20.0,
-            100.0,
+            screen_height() / 10.0,
             TextParams {
                 font: font.as_ref(),
                 font_size: if screen_height() > 2000.0 && screen_width() > 1900.0 {
@@ -78,7 +78,7 @@ pub fn display_practice_menu(
     let end_index = TYPING_LEVELS.len();
 
     let mut any_hovered = false;
-    let mut y = 150.0;
+    let mut y: f32 = screen_height() / 10.0 + 2.0 * font_size as f32;
     for i in start_index..end_index {
         let (level_name, _) = &TYPING_LEVELS[i];
         let mut text = format!("{}. {}", i + 1, level_name);
@@ -92,14 +92,14 @@ pub fn display_practice_menu(
             text_size.width + 2.0 * font_size as f32,
             font_size as f32 + 20.0,
         );
-        //draw_rectangle(button_rect.x, button_rect.y, button_rect.w, button_rect.h, Color::from_rgba(50, 50, 50, 150));
+
         if button_rect.contains(vec2(mouse_pos.0, mouse_pos.1)) {
             any_hovered = true;
             break;
         }
         y += 20.0 + font_size as f32;
     }
-    let mut y = 150.0;
+    let mut y: f32 = screen_height() / 10.0 + 2.0 * font_size as f32;
 
     for i in start_index..end_index {
         let (level_name, _) = &TYPING_LEVELS[i];
@@ -121,8 +121,6 @@ pub fn display_practice_menu(
             text_size.width + 2.0 * font_size as f32,
             20.0 + font_size as f32,
         );
-
-        //draw_rectangle(button_rect.x, button_rect.y, button_rect.w, button_rect.h, Color::from_rgba(50, 50, 50, 150));
 
         let results_path = format!("practice_results/level_{}.txt", i + 1);
         let show_tick = check_if_completed(results_path.as_str());

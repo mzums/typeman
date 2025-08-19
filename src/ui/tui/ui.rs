@@ -18,12 +18,17 @@ const BG_COLOR: Color = Color::Rgb(10, 10, 10);
 const MAIN_COLOR: Color = Color::Rgb(255, 155, 0);
 const DIMMER_MAIN: Color = Color::Rgb(180, 100, 0);
 
-fn render_instructions(frame: &mut Frame, area: Rect, show: bool) {
+fn render_instructions(frame: &mut Frame, area: Rect, show: bool, practice_menu: bool) {
     let mut lines = Vec::new();
     if show {
-        lines.push(Line::from("  \u{2191} - enter config, \u{2190}/\u{2192} - toggle config, Enter - apply config"));
+        lines.push(Line::from("  \u{2191} - enter config, \u{2190}/\u{2192} - toggle config, ↵ - apply config"));
+    } else if practice_menu {
+        lines.push(Line::from("  ↑ or ↓ to navigate, ↵ to select"));
+        lines.push(Line::from("  q - quit menu"));
     }
-    lines.push(Line::from("  Tab + Enter - restart"));
+    if !practice_menu {
+        lines.push(Line::from("  Tab + Enter - restart"));
+    }
     lines.push(Line::from("  Esc - exit"));
 
     let text = Paragraph::new(lines)
@@ -54,7 +59,7 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
     else {
         render_reference_frame(frame, chunks[0], &app, timer);
     }
-    render_instructions(frame, chunks[1], app.game_state != GameState::Results);
+    render_instructions(frame, chunks[1], app.game_state != GameState::Results && !app.practice_menu, app.practice_menu);
 }
 
 fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App) {

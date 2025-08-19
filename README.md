@@ -1,5 +1,5 @@
 # TypeMan
-Cli tool for typing learning and tests
+Tool for fast typing learning and tests
 
 ![alt text](image.png)
 ![alt text](image-1.png)

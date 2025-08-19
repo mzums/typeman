@@ -537,20 +537,8 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                                         } else {
                                             fontsize_1 as f32 / 4.0
                                         };
-                                        
-<<<<<<< HEAD
-                                        let cross_y = size / 2.0;
-=======
-                                        let cross_y = if screen_width() > 3000.0 {
-                                            fontsize_1 as f64 / 3.0
-                                        } else if screen_width() > 1500.0 {
-                                            fontsize_1 as f64 / 3.0
-                                        } else if screen_width() > 700.0{
-                                            fontsize_1 as f64 / 1.5
-                                        } else {
-                                            fontsize_1 as f64 * 1.5
-                                        };
->>>>>>> 08c2536 (small fixes)
+
+                                        let cross_y = max_y / 7.0;
                                         
                                         let cross = egui_plot::Points::new(
                                             "Error",

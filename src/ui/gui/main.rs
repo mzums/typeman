@@ -391,7 +391,7 @@ pub async fn gui_main_async() {
     
     loop {
         clear_background(macroquad::color::Color::from_rgba(15, 12, 10, 255));
-        let mut max_width = f32::min(if screen_height() > screen_width() {screen_width() * 0.9} else {screen_width() * 0.7}, 1700.0);
+        let mut max_width = f32::min(if screen_height() > screen_width() {screen_width() * 0.9} else {screen_width() * 0.7}, 1600.0);
         if screen_width() < 1000.0 || screen_height() < 600.0 {
             max_width = 0.85 * screen_width();
         }
@@ -682,7 +682,7 @@ pub async fn gui_main_async() {
             pos1 = 0;
         }
 
-        draw_shortcut_info(font.as_ref(), f32::max(font_size / 1.7, 15.0), screen_width() / 2.0 - max_width / 2.0, screen_height() - 100.0, emoji_font.clone().unwrap(), practice_menu, game_over, practice_mode);
+        draw_shortcut_info(font.as_ref(), f32::max(font_size / 1.7, 11.0), screen_width() / 2.0 - max_width / 2.0, screen_height() - screen_height() / 7.5, emoji_font.clone().unwrap(), practice_menu, game_over, practice_mode);
 
         next_frame().await;
     }
