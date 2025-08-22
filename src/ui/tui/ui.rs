@@ -10,6 +10,9 @@ use ratatui::widgets::canvas::Canvas;
 use crate::ui::tui::app::{App, GameState};
 use crate::practice::TYPING_LEVELS;
 use crate::practice;
+use crate::utils;
+use std::fs::OpenOptions;
+use std::io::Write;
 
 
 const BORDER_COLOR: Color = Color::Rgb(100, 60, 0);
@@ -183,12 +186,10 @@ fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
     };
     let acc_str = format!("{}%", accuracy.round());
 
-    let error_rate = if app.pressed_vec.len() > 0 {
-        (app.error_count as f32 / app.pressed_vec.len() as f32) * 100.0
-    } else {
-        0.0
-    };
-    let error_str = format!("{}%", error_rate.round());
+    let (_, _, all_words) = utils::count_correct_words(&app.reference, &app.is_correct.iter().cloned().collect());
+    let raw = all_words as f32 / (app.test_time / 60.0);
+
+    let raw_str = format!("{}%", raw.round());
 
     let standard_deviation = calc_standard_deviation(&app.speed_per_second, 6.0);
     let consistency = if wpm > 0.0 {
@@ -226,7 +227,7 @@ fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
     let values = [
         format!("{:<3}", wpm_str),
         format!("{:<4}", acc_str),
-        format!("{:<4}", error_str),
+        format!("{:<4}", raw_str),
         format!("{:<4}", consistency_str),
         format!("{:<4}", time_str),
         format!("{:<8}", mode_str),
@@ -601,6 +602,9 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize) -> Vec<Line<'a>> {
     }
 
     let split = split_lines(&app.reference, max_ref_width);
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("lposition.log") {
+        let _ = writeln!(file, "{:?}|", split[0]);
+    }
 
     let mut char_index = 0;
     split.into_iter()
@@ -677,13 +681,10 @@ fn split_lines(text: &str, width: usize) -> Vec<String> {
                     lines.push(current_line.to_string());
                     current_line.clear();
                 }
-                if !current_line.is_empty() {
-                    current_line.push(' ');
-                }
-                current_line.push_str(word);
+                current_line.push_str(&format!("{} ", word));
             }
             if !current_line.is_empty() {
-                lines.push(current_line.trim().to_string());
+                lines.push(current_line.to_string());
             }
             lines
         })

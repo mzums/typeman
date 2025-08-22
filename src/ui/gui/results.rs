@@ -32,12 +32,13 @@ pub fn write_results(
     saved_results: &mut bool,
 ) {
     let (no_corrected_words, correct_words, all_words) = utils::count_correct_words(&reference, &is_correct);
-    let error_count1 = is_correct.iter().filter(|&&v| v == 1 || v == -1).count();
-    let error_count2 = is_correct.iter().filter(|&&v| v == -1).count();
-    let accuracy = if practice_level.is_some() {
-        (100.0 - (error_count1 as f64 / (all_words as f64 * 6.0)) * 100.0).round()
+
+    let correct_count = is_correct.iter().filter(|&&v| v == 1 || v == 2).count();
+    let all_pressed_count = is_correct.iter().filter(|&&v| v != 0).count();
+    let accuracy = if correct_count > 0 {
+        (correct_count as f64 / all_pressed_count as f64) * 100.0
     } else {
-        (100.0 - (error_count2 as f64 / (all_words as f64 * 6.0)) * 100.0).round()
+        0.0
     };
 
     let wpm = if practice_level.is_some() {

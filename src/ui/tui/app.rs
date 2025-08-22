@@ -416,7 +416,7 @@ impl App {
                         }
                         
                         self.pressed_vec.push(ch);
-                        if reference_chars.get(self.pos1) == Some(&' ') {
+                        if (reference_chars.get(self.pos1) == Some(&' ') && !self.practice_mode) || (reference_chars.get(self.pos1) == Some(&' ') && self.is_correct[self.pos1] != -1) {
                             self.words_done += 1;
                         }
                     }

@@ -348,9 +348,7 @@ pub async fn gui_main_async() {
     let top_words = 500;
     let word_list = utils::read_first_n_words(top_words as usize);
     let mut batch_size = 50;
-    if screen_height() > screen_width() {
-        batch_size = 50;
-    }
+
     let mut reference = utils::get_reference(punctuation, false, &word_list, batch_size);
 
     let mut pressed_vec: Vec<char> = vec![];
@@ -637,7 +635,7 @@ pub async fn gui_main_async() {
                     &mut saved_results,
                     &mut error_positions,
                 );
-                reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 5);
+                reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 50);
                 is_correct = VecDeque::from(vec![0; reference.len()]);
                 practice_mode = true;
                 practice_menu = false;
@@ -665,7 +663,7 @@ pub async fn gui_main_async() {
                 &mut error_positions,
             );
             if practice_mode {
-                reference = practice::create_words(TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1, 5);
+                reference = practice::create_words(TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1, 50);
             } else if quote {
                 reference = utils::get_random_quote();
             } else {
