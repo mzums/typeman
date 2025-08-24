@@ -31,8 +31,6 @@ pub fn word_mode(args: &Cli) {
 
     let punctuation = args.punctuation;
     let digits = args.digits;
-
-    println!("Starting common words test with specified word number");
     
     let top_words = args.top_words.unwrap_or(500);
     if top_words < 1 || top_words > 1000 {
@@ -44,6 +42,10 @@ pub fn word_mode(args: &Cli) {
         Some(None) => 50,
         None => 50,
     };
+    if word_number < 1 || word_number > 1000 {
+        eprintln!("Word number must be between 1 and 1000.");
+        return;
+    }
 
     let word_list = utils::read_first_n_words(top_words as usize);
 

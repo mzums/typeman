@@ -95,6 +95,7 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
             &mut error_positions,
             &mut stdout,
             is_correct,
+            practice.is_some()
         );
 
         stdout.flush().unwrap();
@@ -223,6 +224,7 @@ fn handle_typing(
     error_positions: &mut Vec<bool>,
     stdout: &mut std::io::Stdout,
     is_correct: &mut VecDeque<i32>,
+    practice_mode: bool
 ) {
     match byte {
         // backspace
@@ -250,10 +252,20 @@ fn handle_typing(
                 if error_positions[*position] {
                     is_correct[*position] = 1;
                     // Corrected an error: yellow
+                    let color = if !practice_mode {
+                        Color::Yellow
+                    } else {
+                        Color::Red
+                    };
+                    let char_display = if practice_mode && c == ' ' {
+                        '_'
+                    } else {
+                        c
+                    };
                     queue!(
                         stdout,
-                        SetForegroundColor(Color::Yellow),
-                        Print(c),
+                        SetForegroundColor(color),
+                        Print(char_display),
                         SetForegroundColor(Color::Reset)
                     )
                     .unwrap();
@@ -273,6 +285,9 @@ fn handle_typing(
             } else {
                 is_correct[*position] = -1;
                 error_positions[*position] = true;
+                if practice_mode {
+                    return;
+                }
                 if ref_char == ' ' {
                     queue!(
                         stdout,

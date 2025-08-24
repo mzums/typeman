@@ -143,38 +143,59 @@ fn draw_shortcut_info(
     );
 }
 
-pub fn create_lines(reference: &str, font: Option<Font>, font_size: f32, max_width: f32, quote: bool, word_mode: bool) -> Vec<String> {
+pub fn create_lines(reference: &mut String, font: Option<Font>, font_size: f32, max_width: f32, quote: bool, word_mode: bool) -> Vec<String> {
     let mut lines = Vec::new();
     let mut current_line = String::new();
-    for word in reference.split_whitespace() {
+    let mut no_words = 0;
+    let words: Vec<&str> = reference.split_whitespace().collect();
+    for word in words.iter() {
         let test_line = if current_line.is_empty() {
             word.to_string()
         } else {
             format!("{} {}", current_line, word)
-        };    
+        };
         let dims = measure_text(&test_line, font.as_ref(), font_size as u16, 1.0);
         if dims.width > max_width && !current_line.is_empty() {
             current_line += " ";
             lines.push(current_line.clone());
-            if lines.len() >= 4 && !quote && !word_mode {
+            if lines.len() >= 5 && !quote && !word_mode {
+                if no_words < words.len() {
+                    let mut char_indices = reference.char_indices();
+                    let mut end_idx = 0;
+                    let mut word_count = 0;
+                    while let Some((idx, c)) = char_indices.next() {
+                        if c.is_whitespace() {
+                            word_count += 1;
+                            if word_count == no_words {
+                                end_idx = idx;
+                                break;
+                            }
+                        }
+                    }
+                    if end_idx == 0 {
+                        end_idx = reference.len();
+                    }
+                    reference.truncate(end_idx);
+                }
                 return lines;
             }
             current_line = word.to_string();
         } else {
             current_line = test_line;
-        }    
-        if lines.len() >= 4 && !quote && !word_mode  {
+        }
+        no_words += 1;
+        if lines.len() >= 5 && !quote && !word_mode  {
             break;
         }
-    }    
+    }
     if !current_line.is_empty() {
         lines.push(current_line);
-    }    
+    }
     if let Some(last) = lines.last_mut() {
         *last = last.trim_end().to_string();
     }
     lines
-}    
+}
     
 async fn load_font_async(path: &str) -> Option<Font> {
     match load_ttf_font(path).await {
@@ -402,7 +423,7 @@ pub async fn gui_main_async() {
         };
         let line_h = measure_text("Gy", font.as_ref(), font_size as u16, 1.0).height * 1.6;
         let char_w = measure_text("G", font.as_ref(), font_size as u16, 1.0).width.floor();
-        lines = create_lines(&reference, font.clone(), font_size, max_width, quote, word_mode);
+        lines = create_lines(&mut reference, font.clone(), font_size, max_width, quote, word_mode);
 
         let mut chars_in_line: Vec<i32> = vec![];
         for line in &lines {

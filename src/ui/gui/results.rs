@@ -50,6 +50,7 @@ pub fn write_results(
     
     let chart_width = f32::min(f32::max(0.8 * f32::min(screen_width, screen_height), 0.6 * screen_width), 1800.0);
     let chart_height: f32 = f32::min(chart_width / 5.0, 360.0);
+    //println!("Chart size: {}x{}", chart_width, chart_height);
     
     let fontsize_1 = (chart_height / 3.0) as u16;
     let fontsize_2 = (chart_height / 7.0) as u16;
@@ -62,13 +63,16 @@ pub fn write_results(
         if a.width > b.width { a } else { b }
     };
 
-    let chart_x = (screen_width - chart_width + text_size.width + 20.0) / 2.0;
+    let chart_x = (screen_width - chart_width) / 2.0 + fontsize_1 as f32;
     let chart_y = if practice_level.is_some() {
         (screen_height - chart_height) / 4.0
     } else {
         (screen_height - chart_height) / 3.0
     };
-    
+    /*println!("Chart position: {}x{}", chart_x, chart_y);
+    println!("screen size: {}x{}", screen_width, screen_height);
+    println!("{}", text_size.width);*/
+
     let text2_width = measure_text("consistency", font, 25, 1.0).width;
     let padding = (chart_width - 4.0 * text2_width) / 4.0;
     let wpm_y = if practice_level.is_some() {
@@ -80,7 +84,7 @@ pub fn write_results(
 
     let avg_wpm = write_wpm(
         font,
-        (screen_width - chart_width - text_size.width) / 2.0,
+        chart_x - 1.5 * fontsize_1 as f32,
         wpm_y,
         wpm,
         fontsize_1,
@@ -89,7 +93,7 @@ pub fn write_results(
     write_acc(
         accuracy,
         font,
-        (screen_width - chart_width - text_size.width) / 2.0,
+        chart_x - 1.5 * fontsize_1 as f32,
         wpm_y + text_size.height * 2.0,
         fontsize_1,
         fontsize_2,
@@ -97,7 +101,7 @@ pub fn write_results(
     write_raw_wpm(
         raw,
         font,
-        (screen_width - chart_width + 2.0 * text_size.width) / 2.0,
+        chart_x + padding,
         chart_y + chart_height + fontsize_4 as f32 * 1.5,
         fontsize_3,
         fontsize_4,
@@ -106,7 +110,7 @@ pub fn write_results(
         speed_per_second,
         average_word_length,
         font,
-        (screen_width - chart_width + 2.0 * text_size.width) / 2.0 + text2_width + padding,
+        chart_x + padding + text2_width + padding,
         chart_y + chart_height + fontsize_4 as f32 * 1.5,
         avg_wpm,
         fontsize_3,
@@ -115,14 +119,14 @@ pub fn write_results(
     write_time(
         test_time,
         font,
-        (screen_width - chart_width + 2.0 * text_size.width) / 2.0 + (text2_width + padding) * 2.0,
+        chart_x + padding + (text2_width + padding) * 2.0,
         chart_y + chart_height + fontsize_4 as f32 * 1.5,
         fontsize_3,
         fontsize_4,
     );
     write_mode(
         font,
-        (screen_width - chart_width + 2.0 * text_size.width) / 2.0 + (text2_width + padding) * 3.0,
+        chart_x + padding + (text2_width + padding) * 3.0,
         chart_y + chart_height + fontsize_4 as f32 * 1.5,
         mode,
         punctuation,
