@@ -658,6 +658,7 @@ pub async fn gui_main_async() {
                 );
                 reference = practice::create_words(TYPING_LEVELS[level.unwrap()].1, 50);
                 is_correct = VecDeque::from(vec![0; reference.len()]);
+                error_positions = vec![false; is_correct.len()];
                 practice_mode = true;
                 practice_menu = false;
                 config_opened = false;
@@ -691,6 +692,7 @@ pub async fn gui_main_async() {
                 reference = utils::get_reference(punctuation, false, &word_list, batch_size);
             }
             is_correct = VecDeque::from(vec![0; reference.len()]);
+            error_positions = vec![false; is_correct.len()];
             thread::sleep(time::Duration::from_millis(80));
         }
 
@@ -698,6 +700,7 @@ pub async fn gui_main_async() {
             words_done += 1;
             reference = utils::get_reference(punctuation, numbers, &utils::read_first_n_words(500), batch_size);
             is_correct = VecDeque::from(vec![0; reference.len()]);
+            error_positions = vec![false; is_correct.len()];
             pos1 = 0;
         }
 

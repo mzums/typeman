@@ -252,11 +252,6 @@ fn handle_typing(
                 if error_positions[*position] {
                     is_correct[*position] = 1;
                     // Corrected an error: yellow
-                    let color = if !practice_mode {
-                        Color::Yellow
-                    } else {
-                        Color::Red
-                    };
                     let char_display = if practice_mode && c == ' ' {
                         '_'
                     } else {
@@ -264,7 +259,7 @@ fn handle_typing(
                     };
                     queue!(
                         stdout,
-                        SetForegroundColor(color),
+                        SetForegroundColor(Color::Yellow),
                         Print(char_display),
                         SetForegroundColor(Color::Reset)
                     )

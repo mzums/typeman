@@ -214,13 +214,13 @@ pub fn handle_settings_buttons(
 
             while j != i {
                 if button_states[j].2 && button_states[j].0 != "|" {
-                *selected_config = button_states[j].0.to_string();
-                break;
+                    *selected_config = button_states[j].0.to_string();
+                    break;
                 }
                 j = if j == 0 {
-                button_states.len() - 1
+                    button_states.len() - 1
                 } else {
-                j - 1
+                    j - 1
                 };
             }
             break;
@@ -299,6 +299,7 @@ pub fn handle_settings_buttons(
             if *quote {
                 *reference = utils::get_random_quote();
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
+                *error_positions = vec![false; is_correct.len()];
                 *punctuation = false;
                 *numbers = false;
                 reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, saved_results, error_positions);
@@ -307,6 +308,7 @@ pub fn handle_settings_buttons(
             } else {
                 *reference = utils::get_reference(*punctuation, *numbers, word_list, *batch_size);
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
+                *error_positions = vec![false; is_correct.len()];
                 reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, saved_results, error_positions);
             }
         }
