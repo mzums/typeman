@@ -132,6 +132,9 @@ pub fn display_practice_menu(
         } else {
             false
         };
+        if is_hovered {
+            *selected_level = Some(i);
+        }
 
         set_mouse_cursor(if any_hovered {
             CursorIcon::Pointer
@@ -201,7 +204,7 @@ pub fn display_practice_menu(
                     let mut up_key_held_start = *up_start.borrow();
                     let mut last_up_scroll = *last_up.borrow();
 
-                    if down_pressed {
+                    if down_pressed && !any_hovered {
                         let now = Instant::now();
                         if down_key_held_start.is_none() {
                             down_key_held_start = Some(now);
@@ -236,7 +239,7 @@ pub fn display_practice_menu(
                         last_down_scroll = None;
                     }
 
-                    if up_pressed {
+                    if up_pressed && !any_hovered {
                         let now = Instant::now();
                         if up_key_held_start.is_none() {
                             up_key_held_start = Some(now);

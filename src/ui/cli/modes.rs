@@ -53,7 +53,7 @@ pub fn word_mode(args: &Cli) {
     let start_time = Instant::now();
     let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
 
-    cli::main::type_loop(&reference, None, start_time, None, &mut is_correct);
+    cli::main::type_loop(&reference, None, start_time, None, &mut is_correct, "word");
 }
 
 pub fn time_mode(args: &Cli) {
@@ -93,7 +93,7 @@ pub fn time_mode(args: &Cli) {
             break;
         }
 
-        let res = cli::main::type_loop(&reference, Some(time_limit), start_time, None, &mut is_correct);
+        let res = cli::main::type_loop(&reference, Some(time_limit), start_time, None, &mut is_correct, "time");
         if res != 0 {
             println!("Test interrupted by user.");
             break;
@@ -120,7 +120,7 @@ pub fn custom_text(path: &PathBuf) {
     };
     let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
     let start_time = Instant::now();
-    cli::main::type_loop(reference.as_str(), None, start_time, None, &mut is_correct);
+    cli::main::type_loop(reference.as_str(), None, start_time, None, &mut is_correct, "custom");
 }
 
 pub fn quotes() {
@@ -134,7 +134,7 @@ pub fn quotes() {
     let start_time = Instant::now();
     let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
 
-    cli::main::type_loop(&reference, None, start_time, None, &mut is_correct);
+    cli::main::type_loop(&reference, None, start_time, None, &mut is_correct, "quote");
 }
 
 pub fn practice(args: &Cli) {
@@ -158,7 +158,7 @@ pub fn practice(args: &Cli) {
     let reference = practice::create_words(&chars, args.word_number.unwrap_or(Some(50)).unwrap_or(50));
     let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
     let start_time = Instant::now();
-    let res = cli::main::type_loop(&reference, None, start_time, Some(curr_level), &mut is_correct);
+    let res = cli::main::type_loop(&reference, None, start_time, Some(curr_level), &mut is_correct, "practice");
     if res == 1 {
         println!("Exiting practice mode.");
         return;

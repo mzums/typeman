@@ -48,7 +48,7 @@ pub fn write_results(
     };
     let raw = all_words as f32 / (test_time / 60.0);
     
-    let chart_width = f32::min(f32::max(0.8 * f32::min(screen_width, screen_height), 0.6 * screen_width), 1800.0);
+    let chart_width = f32::min(f32::max(0.75 * f32::min(screen_width, screen_height), 0.6 * screen_width), 1800.0);
     let chart_height: f32 = f32::min(chart_width / 5.0, 360.0);
     //println!("Chart size: {}x{}", chart_width, chart_height);
     
@@ -58,8 +58,8 @@ pub fn write_results(
     let fontsize_4 = (chart_height / 12.0) as u16;
     
     let text_size = {
-        let a = measure_text(&format!("{:0}%", accuracy), font, fontsize_1, 1.0);
-        let b = measure_text(&format!("{:0}", wpm), font, fontsize_1 , 1.0);
+        let a = measure_text(&format!("{:0}%", accuracy.floor()), font, fontsize_1, 1.0);
+        let b = measure_text(&format!("{:0}", wpm.floor()), font, fontsize_1 , 1.0);
         if a.width > b.width { a } else { b }
     };
 
@@ -74,7 +74,7 @@ pub fn write_results(
     println!("{}", text_size.width);*/
 
     let text2_width = measure_text("consistency", font, 25, 1.0).width;
-    let padding = (chart_width - 4.0 * text2_width) / 4.0;
+    let padding = (chart_width - 4.0 * text2_width) / 5.0;
     let wpm_y = if practice_level.is_some() {
         (screen_height - chart_height) / 3.8
     } else {
@@ -84,7 +84,7 @@ pub fn write_results(
 
     let avg_wpm = write_wpm(
         font,
-        chart_x - 1.5 * fontsize_1 as f32,
+        chart_x - 1.2 * text_size.width,
         wpm_y,
         wpm,
         fontsize_1,
@@ -93,7 +93,7 @@ pub fn write_results(
     write_acc(
         accuracy,
         font,
-        chart_x - 1.5 * fontsize_1 as f32,
+        chart_x - 1.2 * text_size.width,
         wpm_y + text_size.height * 2.0,
         fontsize_1,
         fontsize_2,
@@ -102,7 +102,7 @@ pub fn write_results(
         raw,
         font,
         chart_x + padding,
-        chart_y + chart_height + fontsize_4 as f32 * 1.5,
+        chart_y + chart_height + fontsize_4 as f32 * 2.0,
         fontsize_3,
         fontsize_4,
     );
@@ -111,7 +111,7 @@ pub fn write_results(
         average_word_length,
         font,
         chart_x + padding + text2_width + padding,
-        chart_y + chart_height + fontsize_4 as f32 * 1.5,
+        chart_y + chart_height + fontsize_4 as f32 * 2.0,
         avg_wpm,
         fontsize_3,
         fontsize_4,
@@ -120,14 +120,14 @@ pub fn write_results(
         test_time,
         font,
         chart_x + padding + (text2_width + padding) * 2.0,
-        chart_y + chart_height + fontsize_4 as f32 * 1.5,
+        chart_y + chart_height + fontsize_4 as f32 * 2.0,
         fontsize_3,
         fontsize_4,
     );
     write_mode(
         font,
         chart_x + padding + (text2_width + padding) * 3.0,
-        chart_y + chart_height + fontsize_4 as f32 * 1.5,
+        chart_y + chart_height + fontsize_4 as f32 * 2.0,
         mode,
         punctuation,
         numbers,
@@ -512,7 +512,7 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                     .y_axis_label("Speed (WPM)")
                     .y_grid_spacer(grid_spacer)
                     .default_x_bounds(0.8, max_x)
-                    .default_y_bounds(0.0, max_y)
+                    .default_y_bounds(0.0, 1.2 * max_y)
                     .show(&mut child_ui, |plot_ui| {
                         let line = Line::new("Performance", points.to_vec())
                             .color(Color32::from_rgb(255, 155, 0))

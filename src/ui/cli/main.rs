@@ -52,7 +52,7 @@ fn initial_display(reference: &str, timer_pos: (u16, u16)) {
     stdout.flush().unwrap();
 }
 
-pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, practice: Option<usize>, is_correct: &mut VecDeque<i32>) -> i32 {
+pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, practice: Option<usize>, is_correct: &mut VecDeque<i32>, mode: &str) -> i32 {
     let ref_chars: Vec<char> = reference.chars().collect();
     let mut stdout = stdout();
     let _raw_guard = RawModeGuard::new();
@@ -67,8 +67,15 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
     let mut error_positions = vec![false; ref_chars.len()];
     let mut last_update = Instant::now();
 
+    let all_words = reference.split_whitespace().count();
+    let mut words_done = 0;
+
     loop {
-        update_timer(&mut stdout, timer_pos, start_time, &mut last_update, width, position, time_limit);
+        if mode == "time" {
+            update_timer(&mut stdout, timer_pos, start_time, &mut last_update, width, position, time_limit);
+        } else {
+            update_word_count(&mut stdout, timer_pos, words_done, width, position, all_words);
+        }
 
         let byte_opt = poll_input();
         if byte_opt.is_none() {
@@ -95,7 +102,8 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
             &mut error_positions,
             &mut stdout,
             is_correct,
-            practice.is_some()
+            practice.is_some(),
+            &mut words_done,
         );
 
         stdout.flush().unwrap();
@@ -137,7 +145,7 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
             println!("\nNew highscore for this level!");
         }
     }
-    show_final_results(reference, &error_positions, start_time, is_correct);
+    show_final_results(reference, start_time, is_correct);
 
     0
 }
@@ -178,6 +186,26 @@ fn update_timer(
         stdout.flush().unwrap();
         *last_update = Instant::now();
     }
+}
+
+fn update_word_count(
+    stdout: &mut std::io::Stdout,
+    pos: (u16, u16),
+    words_done: usize,
+    width: u16,
+    position: usize,
+    all_words: usize,
+) {
+    queue!(
+        stdout,
+        cursor::MoveTo(pos.0, pos.1),
+        Clear(ClearType::UntilNewLine),
+        Print(format!("{}\\{}", words_done, all_words)),
+        cursor::MoveTo(position as u16 % width, position as u16 / width + 2)
+    )
+    .unwrap();
+
+    stdout.flush().unwrap();
 }
 
 fn poll_input() -> Option<u8> {
@@ -224,7 +252,8 @@ fn handle_typing(
     error_positions: &mut Vec<bool>,
     stdout: &mut std::io::Stdout,
     is_correct: &mut VecDeque<i32>,
-    practice_mode: bool
+    practice_mode: bool,
+    words_done: &mut usize,
 ) {
     match byte {
         // backspace
@@ -232,6 +261,9 @@ fn handle_typing(
             is_correct[*position] = 0;
             *position -= 1;
             user_input.pop();
+            if ref_chars.len() > *position + 1 && ref_chars[*position + 1] == ' ' {
+                *words_done -= 1;
+            }
 
             queue!(
                 stdout,
@@ -247,7 +279,10 @@ fn handle_typing(
         _ if *position < ref_chars.len() => {
             let c = byte as char;
             let ref_char = ref_chars[*position];
-
+            
+            if ref_chars.len() > *position + 1 && ref_chars[*position + 1] == ' ' {
+                *words_done += 1;
+            }
             if c == ref_char {
                 if error_positions[*position] {
                     is_correct[*position] = 1;
@@ -310,14 +345,11 @@ fn handle_typing(
 
 fn show_final_results(
     reference: &str,
-    error_positions: &[bool],
     start_time: Instant,
     is_correct: &VecDeque<i32>,
 ) {
     let (_corrected_words, correct_words, all_words) = utils::count_correct_words(&reference, &is_correct);
     let elapsed = start_time.elapsed().as_secs_f64();
-    let error_count = error_positions.iter().filter(|&&e| e).count();
-    let accuracy = 100.0 - (error_count as f64 / reference.len() as f64 * 100.0);
     let wpm = correct_words as f64 / (elapsed / 60.0);
     let raw = all_words as f64 / (elapsed / 60.0);
 
@@ -332,6 +364,13 @@ fn show_final_results(
     .unwrap();
     stdout.flush().unwrap();
     
+    let correct_count = is_correct.iter().filter(|&&v| v == 1 || v == 2).count();
+    let all_pressed_count = is_correct.iter().filter(|&&v| v != 0).count();
+    let accuracy = if correct_count > 0 {
+        (correct_count as f64 / all_pressed_count as f64) * 100.0
+    } else {
+        0.0
+    };
     display_results(elapsed, accuracy, wpm, raw);
     
     queue!(
