@@ -91,9 +91,10 @@ pub fn update_game_state(
     time_mode: bool,
     words_done: &mut usize,
     errors_this_second: &mut f64,
-    practice_mode: &mut bool
+    practice_mode: &mut bool,
+    practice_menu: bool,
 ) {
-    if !*game_started && main::handle_input(reference, pressed_vec, is_correct, pos1, words_done, errors_this_second, &mut false, &mut vec![false; reference.chars().count()], *practice_mode) {
+    if !*game_started && main::handle_input(reference, pressed_vec, is_correct, pos1, words_done, errors_this_second, &mut false, &mut vec![false; reference.chars().count()], *practice_mode, practice_menu) {
         *game_started = true;
         *start_time = Instant::now();
     }

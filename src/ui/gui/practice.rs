@@ -307,8 +307,10 @@ pub fn display_practice_menu(
                 saved_results,
                 error_positions,
             );
+            thread::sleep(Duration::from_millis(200));
+            pressed_vec.clear();
+            return None
         }
-        thread::sleep(Duration::from_millis(200));
     } else {
         let _pressed = get_char_pressed();
     }

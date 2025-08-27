@@ -214,6 +214,7 @@ pub fn handle_input(
     config_opened: &mut bool,
     error_positions: &mut Vec<bool>,
     practice_mode: bool,
+    practice_menu: bool,
 ) -> bool {
     let pressed = get_char_pressed();
     if let Some(ch) = pressed {
@@ -230,6 +231,9 @@ pub fn handle_input(
                 *pos1 -= 1;
             }
         } else {
+            if ch == 'q' && practice_menu {
+                return false;
+            }
             let ref_char: Option<char> = reference.chars().nth(*pos1);
             if is_correct.len() > *pos1 && ref_char == Some(ch) && is_correct[*pos1] != -1 && is_correct[*pos1] != 1 {
                 is_correct[*pos1] = 2; // Correct
@@ -492,9 +496,10 @@ pub async fn gui_main_async() {
                 &mut words_done,
                 &mut errors_this_second,
                 &mut practice_mode,
+                practice_menu
             );
 
-            if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened, &mut error_positions, practice_mode) {
+            if !game_started && handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened, &mut error_positions, practice_mode, practice_menu) {
                 game_started = true;
             }
             
@@ -521,7 +526,7 @@ pub async fn gui_main_async() {
                 title_y,
             );
             
-            handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened, &mut error_positions, practice_mode);
+            handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened, &mut error_positions, practice_mode, practice_menu);
             
             if time_mode {
                 draw_timer(font.as_ref(), font_size, start_x, start_y, timer, test_time);

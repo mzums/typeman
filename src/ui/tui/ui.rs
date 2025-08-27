@@ -332,13 +332,37 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
         .collect();
 
     let test_time = app.timer.as_secs_f32().round() as u32;
-    let extra_columns = columns_for_sec
+    let mut extra_columns = columns_for_sec
         .keys()
         .filter(|&&k| k >= test_time)
         .min()
         .or_else(|| columns_for_sec.keys().max())
         .map(|k| columns_for_sec[k])
         .unwrap_or(1);
+
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("lposition.log") {
+        let _ = writeln!(file, "area.width: {}", area.width);
+    }
+    
+    if area.width < 70 {
+        if test_time >= 5 {
+            extra_columns = 1;
+        }
+    } else if area.width < 100 {
+        if test_time >= 15 {
+            extra_columns = 1;
+        } else if test_time >= 5 {
+            extra_columns = 2;
+        }
+    } else if area.width < 150 {
+        if test_time >= 30 {
+            extra_columns = 1;
+        } else if test_time >= 15 {
+            extra_columns = 2;
+        } else if test_time >= 5 {
+            extra_columns = 3;
+        }
+    }
 
     let mut errors_per_second: Vec<f32> = Vec::new();
     let mut speed_per_second: Vec<f64> = Vec::new();

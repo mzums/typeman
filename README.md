@@ -1,10 +1,15 @@
 # TypeMan
 Tool for fast typing learning and tests
 
-![alt text](image.png)
-![alt text](image-1.png)
-![alt text](image-2.png)
-![alt text](image-3.png)
+<img src="image.png" alt="Alt Text" width="700">
+<br>
+<img src="image-4.png" alt="Alt Text" width="700">
+<br>
+<img src="image-1.png" alt="Alt Text" width="700">
+<br>
+<img src="image-2.png" alt="Alt Text" width="700">
+<br>
+<img src="image-3.png" alt="Alt Text" width="700">  
 
 ## Modes:
 - **TUI** (ratatui)
@@ -35,3 +40,5 @@ Tool for fast typing learning and tests
 - https://github.com/dwyl/quotes  
 - https://github.com/JackShannon/1000-most-common-words/blob/master/1000-common-english-words.txt
 - https://fonts.google.com/specimen/Roboto+Mono?preview.text=Whereas%20recognition%20of%20the%20inherent%20dignity
+
+### Special thanks to [piter231](https://github.com/piter231/) for testing!

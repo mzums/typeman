@@ -384,6 +384,10 @@ impl App {
                     }
                 }
                 KeyCode::Char(ch) => {
+                    if self.practice_menu && ch == 'q' {
+                        self.practice_menu = false;
+                        return Ok(());
+                    }
                     if self.is_correct[0] == 0 && ch == ' ' {
                         return Ok(());
                     }
