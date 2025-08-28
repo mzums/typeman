@@ -11,6 +11,19 @@ Tool for fast typing learning and tests
 <br>
 <img src="image-3.png" alt="Alt Text" width="700">  
 
+## Installation
+
+### Crates.io:
+    cargo install typeman
+
+### From source:
+#### 1. clone repo  
+    git clone https://github.com/mzums/typing_test      
+#### 2. enter project
+    cd typeman
+#### 3. run
+    cargo run
+
 ## Modes:
 - **TUI** (ratatui)
 - **GUI** (macroquad)
