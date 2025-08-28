@@ -1,15 +1,15 @@
 # TypeMan
 Tool for fast typing learning and tests
 
-<img src="image.png" alt="Alt Text" width="700">
+<img src="screenshots/image.png" alt="Alt Text" width="700">
 <br>
-<img src="image-4.png" alt="Alt Text" width="700">
+<img src="screenshots/image-4.png" alt="Alt Text" width="700">
 <br>
-<img src="image-1.png" alt="Alt Text" width="700">
+<img src="screenshots/image-1.png" alt="Alt Text" width="700">
 <br>
-<img src="image-2.png" alt="Alt Text" width="700">
+<img src="screenshots/image-2.png" alt="Alt Text" width="700">
 <br>
-<img src="image-3.png" alt="Alt Text" width="700">  
+<img src="screenshots/image-3.png" alt="Alt Text" width="700">  
 
 ## Installation
 

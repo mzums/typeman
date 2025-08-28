@@ -340,10 +340,6 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
         .map(|k| columns_for_sec[k])
         .unwrap_or(1);
 
-    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("lposition.log") {
-        let _ = writeln!(file, "area.width: {}", area.width);
-    }
-    
     if area.width < 70 {
         if test_time >= 5 {
             extra_columns = 1;
@@ -626,9 +622,6 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize) -> Vec<Line<'a>> {
     }
 
     let split = split_lines(&app.reference, max_ref_width);
-    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("lposition.log") {
-        let _ = writeln!(file, "{:?}|", split[0]);
-    }
 
     let mut char_index = 0;
     split.into_iter()

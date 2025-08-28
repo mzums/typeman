@@ -2,6 +2,11 @@
 name = "typeman"
 version = "0.1.0"
 edition = "2024"
+readme = "README.md"
+repository = "https://github.com/mzums/typing_test"
+license = "MIT"
+keywords = ["typing", "type", "monkeytype", "typetest", "speed"]
+categories = ["typing-test", "typing-practice", "gui", "tui", "cli"]
 
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }
