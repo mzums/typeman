@@ -50,10 +50,10 @@ pub fn word_mode(args: &Cli) {
     let word_list = utils::read_first_n_words(top_words as usize);
 
     let reference = utils::get_reference(punctuation, digits, &word_list, word_number as usize);
-    let start_time = Instant::now();
+    let mut start_time: Option<Instant> = None;
     let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
 
-    cli::main::type_loop(&reference, None, start_time, None, &mut is_correct, "word");
+    cli::main::type_loop(&reference, None, &mut start_time, None, &mut is_correct, "word");
 }
 
 pub fn time_mode(args: &Cli) {
@@ -73,33 +73,35 @@ pub fn time_mode(args: &Cli) {
     println!("Starting common words test with {} second time limit", time_limit);
     let word_list = utils::read_first_n_words(top_words as usize);
     let batch_size = 20;
-    let start_time = Instant::now();
+    let mut start_time: Option<Instant> = None;
 
     let punctuation = args.punctuation;
-    let digits = args.punctuation;
-    
-    'outer: while start_time.elapsed().as_secs() < time_limit {
+    let digits = args.digits;
+
+    'outer: while start_time.is_none() || start_time.unwrap().elapsed().as_secs() < time_limit {
         let reference = utils::get_reference(punctuation, digits, &word_list, batch_size) + " ";
         let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
         
-        let elapsed = start_time.elapsed().as_secs();
-        let remaining_time = if time_limit > elapsed {
-            Some(time_limit - elapsed)
-        } else {
-            Some(0)
-        };
-
-        if remaining_time <= Some(0) {
-            break;
+        if start_time.is_some() {
+            let elapsed = start_time.unwrap().elapsed().as_secs();
+            let remaining_time = if time_limit > elapsed {
+                Some(time_limit - elapsed)
+            } else {
+                Some(0)
+            };
+    
+            if remaining_time <= Some(0) {
+                break;
+            }
         }
 
-        let res = cli::main::type_loop(&reference, Some(time_limit), start_time, None, &mut is_correct, "time");
+        let res = cli::main::type_loop(&reference, Some(time_limit), &mut start_time, None, &mut is_correct, "time");
         if res != 0 {
             println!("Test interrupted by user.");
             break;
         }
 
-        if start_time.elapsed().as_secs() >= time_limit {
+        if start_time.unwrap().elapsed().as_secs() >= time_limit {
             break 'outer;
         }
     }
@@ -119,8 +121,8 @@ pub fn custom_text(path: &PathBuf) {
         }
     };
     let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
-    let start_time = Instant::now();
-    cli::main::type_loop(reference.as_str(), None, start_time, None, &mut is_correct, "custom");
+    let mut start_time: Option<Instant> = None;
+    cli::main::type_loop(reference.as_str(), None, &mut start_time, None, &mut is_correct, "custom");
 }
 
 pub fn quotes() {
@@ -131,10 +133,10 @@ pub fn quotes() {
     let mut rng = rand::rng();
     let random_quote = quotes.choose(&mut rng).expect("No quotes available");
     let reference = format!("\"{}\" - {}", random_quote.text, random_quote.author);
-    let start_time = Instant::now();
+    let mut start_time: Option<Instant> = None;
     let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
 
-    cli::main::type_loop(&reference, None, start_time, None, &mut is_correct, "quote");
+    cli::main::type_loop(&reference, None, &mut start_time, None, &mut is_correct, "quote");
 }
 
 pub fn practice(args: &Cli) {
@@ -157,8 +159,8 @@ pub fn practice(args: &Cli) {
     
     let reference = practice::create_words(&chars, args.word_number.unwrap_or(Some(50)).unwrap_or(50));
     let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
-    let start_time = Instant::now();
-    let res = cli::main::type_loop(&reference, None, start_time, Some(curr_level), &mut is_correct, "practice");
+    let mut start_time: Option<Instant> = None;
+    let res = cli::main::type_loop(&reference, None, &mut start_time, Some(curr_level), &mut is_correct, "practice");
     if res == 1 {
         println!("Exiting practice mode.");
         return;

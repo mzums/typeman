@@ -50,7 +50,6 @@ pub fn write_results(
     
     let chart_width = f32::min(f32::max(0.75 * f32::min(screen_width, screen_height), 0.6 * screen_width), 1800.0);
     let chart_height: f32 = f32::min(chart_width / 5.0, 360.0);
-    //println!("Chart size: {}x{}", chart_width, chart_height);
     
     let fontsize_1 = (chart_height / 3.0) as u16;
     let fontsize_2 = (chart_height / 7.0) as u16;
@@ -69,9 +68,6 @@ pub fn write_results(
     } else {
         (screen_height - chart_height) / 3.0
     };
-    /*println!("Chart position: {}x{}", chart_x, chart_y);
-    println!("screen size: {}x{}", screen_width, screen_height);
-    println!("{}", text_size.width);*/
 
     let text2_width = measure_text("consistency", font, 25, 1.0).width;
     let padding = (chart_width - 4.0 * text2_width) / 5.0;

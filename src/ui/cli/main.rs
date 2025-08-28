@@ -52,7 +52,7 @@ fn initial_display(reference: &str, timer_pos: (u16, u16)) {
     stdout.flush().unwrap();
 }
 
-pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, practice: Option<usize>, is_correct: &mut VecDeque<i32>, mode: &str) -> i32 {
+pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: &mut Option<Instant>, practice: Option<usize>, is_correct: &mut VecDeque<i32>, mode: &str) -> i32 {
     let ref_chars: Vec<char> = reference.chars().collect();
     let mut stdout = stdout();
     let _raw_guard = RawModeGuard::new();
@@ -72,7 +72,7 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
 
     loop {
         if mode == "time" {
-            update_timer(&mut stdout, timer_pos, start_time, &mut last_update, width, position, time_limit);
+            update_timer(&mut stdout, timer_pos,*start_time, &mut last_update, width, position, time_limit);
         } else {
             update_word_count(&mut stdout, timer_pos, words_done, width, position, all_words);
         }
@@ -80,7 +80,7 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
         let byte_opt = poll_input();
         if byte_opt.is_none() {
             if let Some(limit) = time_limit {
-                if start_time.elapsed().as_secs() >= limit {
+                if start_time.is_some() && start_time.unwrap().elapsed().as_secs() >= limit {
                     break;
                 }
             }
@@ -104,6 +104,7 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
             is_correct,
             practice.is_some(),
             &mut words_done,
+            start_time
         );
 
         stdout.flush().unwrap();
@@ -112,8 +113,8 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
             break;
         }
     }
-    if practice.is_some() {
-        let elapsed = start_time.elapsed().as_secs_f64();
+    if practice.is_some() && start_time.is_some() {
+        let elapsed = start_time.unwrap().elapsed().as_secs_f64();
         let error_count = error_positions.iter().filter(|&&e| e).count();
         let accuracy = 100.0 - (error_count as f64 / reference.len() as f64 * 100.0);
         let wpm = (user_input.len() as f64 / 5.0) / (elapsed / 60.0);
@@ -145,7 +146,7 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
             println!("\nNew highscore for this level!");
         }
     }
-    show_final_results(reference, start_time, is_correct);
+    show_final_results(reference, start_time.expect("No start time"), is_correct);
 
     0
 }
@@ -153,14 +154,18 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: Instant, 
 fn update_timer(
     stdout: &mut std::io::Stdout,
     timer_pos: (u16, u16),
-    start_time: Instant,
+    start_time: Option<Instant>,
     last_update: &mut Instant,
     width: u16,
     position: usize,
     time_limit: Option<u64>,
 ) {
-    if last_update.elapsed().as_millis() > 100 {
-        let elapsed_secs = start_time.elapsed().as_secs();
+    if last_update.elapsed().as_millis() > 100 || start_time.is_none(){
+        let elapsed_secs = if start_time.is_some() {
+            start_time.unwrap().elapsed().as_secs()
+        } else {
+            0
+        };
         let remaining = if let Some(limit) = time_limit {
             if elapsed_secs >= limit {
                 0
@@ -254,6 +259,7 @@ fn handle_typing(
     is_correct: &mut VecDeque<i32>,
     practice_mode: bool,
     words_done: &mut usize,
+    start_time: &mut Option<Instant>
 ) {
     match byte {
         // backspace
@@ -284,6 +290,9 @@ fn handle_typing(
                 *words_done += 1;
             }
             if c == ref_char {
+                if start_time.is_none() {
+                    *start_time = Some(Instant::now());
+                }
                 if error_positions[*position] {
                     is_correct[*position] = 1;
                     // Corrected an error: yellow
@@ -313,6 +322,9 @@ fn handle_typing(
                 user_input.push(c);
                 *position += 1;
             } else {
+                if start_time.is_none() {
+                    *start_time = Some(Instant::now());
+                }
                 is_correct[*position] = -1;
                 error_positions[*position] = true;
                 if practice_mode {

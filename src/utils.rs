@@ -145,6 +145,5 @@ pub fn count_correct_words(reference: &str, is_correct: &VecDeque<i32>) -> (usiz
         }
         all_words += 1;
     }
-    //println!("Correct words: {}, All words: {}", correct_words, all_words);
     (no_corrected_words, correct_words, all_words)
 }

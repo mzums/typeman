@@ -20,8 +20,10 @@ Tool for fast typing learning and tests
 - **word number**: number of displayed words
 - **top words**: number of top most common english words used to generae test
 - **time**: duration of the test in time mode
+- **quote**: random quote
 - **punctuation**: punctuation in word number and time modes
 - **digits**: digits  in word and time modes
+- **level** - practice level
 
 ## Commands:
 - `typeman` - TUI
