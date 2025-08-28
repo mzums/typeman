@@ -18,7 +18,7 @@ Tool for fast typing learning and tests
 
 ### From source:
 #### 1. clone repo  
-    git clone https://github.com/mzums/typing_test      
+    git clone https://github.com/mzums/typeman      
 #### 2. enter project
     cd typeman
 #### 3. run
