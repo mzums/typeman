@@ -11,8 +11,6 @@ use crate::ui::tui::app::{App, GameState};
 use crate::practice::TYPING_LEVELS;
 use crate::practice;
 use crate::utils;
-use std::fs::OpenOptions;
-use std::io::Write;
 
 
 const BORDER_COLOR: Color = Color::Rgb(100, 60, 0);
