@@ -6,7 +6,7 @@ readme = "README.md"
 repository = "https://github.com/mzums/typeman"
 license = "MIT"
 keywords = ["typing", "type", "monkeytype", "typetest", "speed"]
-categories = ["typing-test", "typing-practice", "gui", "tui", "cli"]
+categories = ["command-line-utilities", "games", "gui"]
 description = "Typing speed test with practice mode in GUI, TUI and CLI"
 
 [dependencies]
