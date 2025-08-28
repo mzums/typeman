@@ -7,7 +7,7 @@ repository = "https://github.com/mzums/typeman"
 license = "MIT"
 keywords = ["typing", "type", "monkeytype", "typetest", "speed"]
 categories = ["typing-test", "typing-practice", "gui", "tui", "cli"]
-description = ["Typing speed test with practice mode in GUI, TUI and CLI"]
+description = "Typing speed test with practice mode in GUI, TUI and CLI"
 
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }
