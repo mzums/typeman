@@ -1,5 +1,3 @@
-use std::io::{BufRead, BufReader};
-use std::fs::File;
 use std::path::PathBuf;
 use rand::Rng;
 use rand::prelude::IndexedRandom;
@@ -8,14 +6,15 @@ use std::collections::VecDeque;
 
 use crate::Quote;
 
+const COMMON_WORDS: &str = include_str!("../assets/common_eng_words.txt");
+const QUOTES: &str = include_str!("../assets/quotes.json");
+
 
 pub fn read_first_n_words(n: usize) -> Vec<String> {
-    let file = File::open("assets/common_eng_words.txt").expect("Failed to open file");
-    let reader = BufReader::new(file);
-    reader
+    COMMON_WORDS
         .lines()
         .take(n)
-        .filter_map(Result::ok)
+        .map(|s| s.to_string())
         .collect()
 }
 
@@ -78,25 +77,17 @@ pub fn get_reference(punctuation: bool, digits: bool, word_list: &[String], batc
 }
 
 pub fn get_random_quote() -> String {
-    let file = match File::open("assets/quotes.json") {
-        Ok(f) => f,
-        Err(_) => {
-            return "\"Welcome to TypeMan!\" - mzums".to_string();
-        }
-    };
-    let reader = BufReader::new(file);
-    let quotes: Vec<Quote> = match serde_json::from_reader(reader) {
-        Ok(q) => q,
-        Err(_) => {
-            return "\"Welcome to TypeMan!\" - mzums".to_string();
-        }
-    };
+    let quotes: Vec<Quote> = serde_json::from_str(QUOTES).unwrap_or_default();
+
     let mut rng = rand::rng();
+
     let fallback = Quote {
         text: "Welcome to TypeMan!".to_string(),
         author: "mzums".to_string(),
     };
+
     let random_quote = quotes.choose(&mut rng).unwrap_or(&fallback);
+
     format!("\"{}\" - {}", random_quote.text, random_quote.author)
 }
 

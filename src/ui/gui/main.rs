@@ -15,6 +15,14 @@ use crate::practice::{self, TYPING_LEVELS};
 
 pub const MAIN_COLOR: macroquad::color::Color = macroquad::color::Color::from_rgba(255, 155, 0, 255);
 
+const ROBOTO_MONO: &[u8] =
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/fonts/RobotoMono-VariableFont_wght.ttf"));
+
+const DEJAVU: &[u8] =
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/fonts/DejaVuSansCondensed.ttf"));
+
+
+
 fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32) {
     let (type_text, man_text) = ("Type", "Man");
     let type_width = measure_text(type_text, font.as_ref(), font_size as u16, 1.0).width;
@@ -197,13 +205,6 @@ pub fn create_lines(reference: &mut String, font: Option<Font>, font_size: f32, 
     lines
 }
     
-async fn load_font_async(path: &str) -> Option<Font> {
-    match load_ttf_font(path).await {
-        Ok(f) => Some(f),
-        Err(_) => None,
-    }
-}
-    
 pub fn handle_input(
     reference: &str,
     pressed_vec: &mut Vec<char>,
@@ -366,9 +367,9 @@ pub async fn gui_main_async() {
     let mut time_mode = true;
     let mut word_mode = false;
 
-    let font = load_font_async("assets/fonts/RobotoMono-VariableFont_wght.ttf").await;
-    let title_font = load_font_async("assets/fonts/RobotoMono-VariableFont_wght.ttf").await;
-    let emoji_font = load_font_async("assets/fonts/DejaVuSansCondensed.ttf").await;
+    let font = load_ttf_font_from_bytes(ROBOTO_MONO).unwrap();
+    let title_font = load_ttf_font_from_bytes(ROBOTO_MONO).unwrap();
+    let emoji_font = load_ttf_font_from_bytes(DEJAVU).unwrap();
 
     let top_words = 500;
     let word_list = utils::read_first_n_words(top_words as usize);
@@ -425,9 +426,9 @@ pub async fn gui_main_async() {
         } else {
             20.0
         };
-        let line_h = measure_text("Gy", font.as_ref(), font_size as u16, 1.0).height * 1.6;
-        let char_w = measure_text("G", font.as_ref(), font_size as u16, 1.0).width.floor();
-        lines = create_lines(&mut reference, font.clone(), font_size, max_width, quote, word_mode);
+        let line_h = measure_text("Gy", Some(&font.clone()), font_size as u16, 1.0).height * 1.6;
+        let char_w = measure_text("G", Some(&font.clone()), font_size as u16, 1.0).width.floor();
+        lines = create_lines(&mut reference, Some(font.clone()), font_size, max_width, quote, word_mode);
 
         let mut chars_in_line: Vec<i32> = vec![];
         for line in &lines {
@@ -443,7 +444,7 @@ pub async fn gui_main_async() {
         
         if !game_over && !practice_menu {
             let any_button_hovered = config::handle_settings_buttons(
-                &font.clone(),
+                &Option::Some(font.clone()),
                 &word_list,
                 &mut punctuation,
                 &mut numbers,
@@ -516,7 +517,7 @@ pub async fn gui_main_async() {
             let title_y = screen_height() / 7.5;
             
             write_title(
-                title_font.clone(),
+                Some(title_font.clone()),
                     if screen_height() > 1000.0 && screen_width() > 800.0 {
                         50.0
                     } else {
@@ -529,20 +530,20 @@ pub async fn gui_main_async() {
             handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened, &mut error_positions, practice_mode, practice_menu);
             
             if time_mode {
-                draw_timer(font.as_ref(), font_size, start_x, start_y, timer, test_time);
+                draw_timer(Some(&font.clone()), font_size, start_x, start_y, timer, test_time);
             } else if word_mode {
-                draw_word_count(font.as_ref(), font_size, start_x, start_y, &mut words_done, batch_size);
+                draw_word_count(Some(&font.clone()), font_size, start_x, start_y, &mut words_done, batch_size);
             } else if practice_mode {
-                draw_word_count(font.as_ref(), font_size, start_x, start_y, &mut words_done, 50);
+                draw_word_count(Some(&font.clone()), font_size, start_x, start_y, &mut words_done, 50);
             } else if quote {
-                draw_word_count(font.as_ref(), font_size, start_x, start_y, &mut words_done, reference.split_whitespace().count());
+                draw_word_count(Some(&font.clone()), font_size, start_x, start_y, &mut words_done, reference.split_whitespace().count());
             }
 
             draw_reference_text(
                 &lines,
                 &pressed_vec,
                 &is_correct,
-                font.as_ref(),
+                Some(&font.clone()),
                 font_size,
                 start_x,
                 start_y,
@@ -598,7 +599,7 @@ pub async fn gui_main_async() {
                 &is_correct,
                 screen_width(),
                 screen_height(),
-                title_font.as_ref(),
+                Some(&title_font.clone()),
                 timer.as_secs_f32(),
                 &speed_per_second,
                 average_word_length,
@@ -625,9 +626,9 @@ pub async fn gui_main_async() {
             }
         } else if practice_menu {
             let level = gui_practice::display_practice_menu(
-                font.clone(),
+                Some(font.clone()),
                 &mut scroll_offset,
-                emoji_font.clone().unwrap(),
+                emoji_font.clone(),
                 &mut selected_practice_level,
                 &mut practice_menu,
                 &mut time_mode,
@@ -709,7 +710,7 @@ pub async fn gui_main_async() {
             pos1 = 0;
         }
 
-        draw_shortcut_info(font.as_ref(), f32::max(font_size / 1.7, 11.0), screen_width() / 2.0 - max_width / 2.0, screen_height() - screen_height() / 7.5, emoji_font.clone().unwrap(), practice_menu, game_over, practice_mode);
+        draw_shortcut_info(Some(&font.clone()), f32::max(font_size / 1.7, 11.0), screen_width() / 2.0 - max_width / 2.0, screen_height() - screen_height() / 7.5, emoji_font.clone(), practice_menu, game_over, practice_mode);
 
         next_frame().await;
     }
