@@ -1,6 +1,12 @@
 # TypeMan
-Tool for fast typing learning and tests
+Typing speed test with practice mode in GUI, TUI and CLI
 
+![Rust](https://img.shields.io/badge/Powered%20by-Rust-red)
+[![Crates.io](https://img.shields.io/crates/v/typeman.svg)](https://crates.io/crates/typeman)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+
+<br>
 <img src="screenshots/image.png" alt="Alt Text" width="700">
 <br>
 <img src="screenshots/image-4.png" alt="Alt Text" width="700">
@@ -15,6 +21,10 @@ Tool for fast typing learning and tests
 
 ### Crates.io:
     cargo install typeman
+##### On MacOS:
+    cargo install --target x86_64-apple-darwin typeman
+
+---
 
 ### From source:
 #### 1. clone repo  
