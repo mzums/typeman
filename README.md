@@ -21,8 +21,14 @@ Typing speed test with practice mode in GUI, TUI and CLI
 
 ### Crates.io:
     cargo install typeman
+
+--- 
+### Common problems:
 ##### On MacOS:
     cargo install --target x86_64-apple-darwin typeman
+##### On Ubuntu (before installing):
+    sudo apt-get install libfontconfig1-dev
+    sudo apt install libasound2-dev
 
 ---
 
