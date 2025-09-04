@@ -278,7 +278,7 @@ fn handle_typing(
                 Print(ref_chars[*position]),
                 SetAttribute(Attribute::Reset),
                 cursor::MoveLeft(1),
-                SetForegroundColor(Color::Reset)
+                SetForegroundColor(Color::Reset),
             )
             .unwrap();
         }
@@ -286,7 +286,7 @@ fn handle_typing(
             let c = byte as char;
             let ref_char = ref_chars[*position];
             
-            if (!practice_mode || (practice_mode && c == ref_char)) && ref_chars[*position + 1] == ' ' && ref_chars.len() > *position + 1 {
+            if (!practice_mode || (practice_mode && c == ref_char)) && ref_chars.len() > *position + 1 && ref_chars[*position + 1] == ' ' {
                 *words_done += 1;
             }
             if c == ref_char {

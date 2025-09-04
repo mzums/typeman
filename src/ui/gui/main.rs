@@ -224,13 +224,17 @@ pub fn handle_input(
             return false;
         }
         if ch == '\u{8}' {
+            // Backspace
             if !pressed_vec.is_empty() && reference.chars().nth(*pos1) == Some(' ') {
-                *words_done -= 1;
+            *words_done -= 1;
             }
             pressed_vec.pop();
             if *pos1 > 0 {
-                *pos1 -= 1;
+            *pos1 -= 1;
             }
+        } else if ch == '\u{7f}' {
+            // Delete
+            return false;
         } else {
             if ch == 'q' && practice_menu {
                 return false;

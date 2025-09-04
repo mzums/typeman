@@ -109,9 +109,17 @@ impl App {
 
             if self.test_time - (self.timer.as_secs_f32()) < 0.0 && self.game_state == GameState::Started && self.time_mode {
                 self.errors_per_second.push(self.errors_this_second);
+                let total_typed = self.pressed_vec.len();
+                let chars_in_this_second = total_typed.saturating_sub(self.char_number);
+                let cpm = chars_in_this_second as f64 * 60.0;
+                self.speed_per_second.push(cpm);
                 self.game_state = GameState::Results;
             } else if self.words_done >= self.batch_size && (self.word_mode || self.practice_mode || self.quote) {
                 self.errors_per_second.push(self.errors_this_second);
+                let total_typed = self.pressed_vec.len();
+                let chars_in_this_second = total_typed.saturating_sub(self.char_number);
+                let cpm = chars_in_this_second as f64 * 60.0;
+                self.speed_per_second.push(cpm);
                 self.game_state = GameState::Results;
             }
             let now = Instant::now();
