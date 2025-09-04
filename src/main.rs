@@ -24,6 +24,10 @@ mod ui {
 mod practice;
 mod utils;
 
+use crate::ui::tui::r#mod as tui_mod;
+use crate::ui::gui::main as gui;
+
+
 #[derive(Parser)]
 #[command(
     name = "typeman",
@@ -97,11 +101,23 @@ pub struct Quote {
     text: String,
 }
 
+
+pub fn gui_main() {
+    macroquad::Window::new("Hello World", async { gui::gui_main_async().await });
+}
+
+pub fn tui_main() {
+    if let Err(e) = tui_mod::main() {
+        eprintln!("TUI error: {}", e);
+        std::process::exit(1);
+    }
+}
+
 fn main() {
     let args = Cli::parse();
 
     if args.gui {
-        modes::gui_main();
+        gui_main();
         return;
     }
     if args.cli {
@@ -118,5 +134,5 @@ fn main() {
         }
         return;
     }
-    modes::tui_main();    
+    tui_main();    
 }
