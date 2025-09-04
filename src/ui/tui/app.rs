@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 use crate::ui::tui::ui::render_app;
 use crate::{practice, utils};
 use crate::practice::TYPING_LEVELS;
+use crate::language::Language;
 
 
 #[derive(PartialEq, Eq)]
@@ -44,6 +45,7 @@ pub struct App {
     pub practice_mode: bool,
     pub selected_level: usize,
     pub timer: Duration,
+    pub language: Language,
 }
 
 impl App {
@@ -77,11 +79,12 @@ impl App {
             practice_mode: false,
             selected_level: 0,
             timer: Duration::from_secs(0),
+            language: Language::default(),
         }
     }
 
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
-        let word_list = utils::read_first_n_words(500);
+        let word_list = utils::read_first_n_words(500, self.language);
         self.reference = utils::get_reference(false, false, &word_list, self.batch_size);
         self.is_correct = vec![0; self.reference.chars().count()];
         let mut last_recorded_time = Instant::now();
@@ -146,6 +149,9 @@ impl App {
             ("! punctuation", self.punctuation, !self.quote && !self.practice_mode),
             ("# numbers", self.numbers, !self.quote && !self.practice_mode),
             ("|", true, true),
+            ("english", self.language == Language::English, !self.quote && !self.practice_mode),
+            ("indonesian", self.language == Language::Indonesian, !self.quote && !self.practice_mode),
+            ("|", true, true),
             ("time", self.time_mode, true),
             ("words", self.word_mode, true),
             ("quote", self.quote, true),
@@ -204,7 +210,7 @@ impl App {
                 KeyCode::Enter => {
                     if self.tab_pressed.elapsed() < Duration::from_secs(1) {
                         if self.word_mode || self.time_mode {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500), self.batch_size);
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
                         } else if self.quote {
                             self.reference = utils::get_random_quote();
                             self.batch_size = self.reference.split_whitespace().count();
@@ -281,6 +287,12 @@ impl App {
                             "# numbers" => {
                                 self.numbers = !self.numbers;
                             }
+                            "english" => {
+                                self.language = Language::English;
+                            }
+                            "indonesian" => {
+                                self.language = Language::Indonesian;
+                            }
                             "15" => {
                                 self.test_time = 15.0;
                             }
@@ -309,7 +321,7 @@ impl App {
                             self.batch_size = self.reference.split_whitespace().count();
                         }
                         else {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500), self.batch_size);
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
                         }
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pressed_vec.clear();
@@ -428,7 +440,7 @@ impl App {
 
                     if self.pos1 >= self.reference.chars().count() {
                         self.words_done += 1;
-                        self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500), self.batch_size);
+                        self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pos1 = 0;
                     }

@@ -13,6 +13,14 @@ use crate::Quote;
 use crate::utils;
 use crate::ui::tui::r#mod as tui_mod;
 use crate ::practice;
+use crate::language::Language;
+
+fn get_language_from_args(args: &Cli) -> Language {
+    args.language
+        .as_ref()
+        .and_then(|lang_str| Language::from_str(lang_str))
+        .unwrap_or_default()
+}
 
 
 pub fn gui_main() {
@@ -47,7 +55,8 @@ pub fn word_mode(args: &Cli) {
         return;
     }
 
-    let word_list = utils::read_first_n_words(top_words as usize);
+    let language = get_language_from_args(args);
+    let word_list = utils::read_first_n_words(top_words as usize, language);
 
     let reference = utils::get_reference(punctuation, digits, &word_list, word_number as usize);
     let mut start_time: Option<Instant> = None;
@@ -71,7 +80,8 @@ pub fn time_mode(args: &Cli) {
 
     let top_words = args.top_words.unwrap_or(500);
     println!("Starting common words test with {} second time limit", time_limit);
-    let word_list = utils::read_first_n_words(top_words as usize);
+    let language = get_language_from_args(args);
+    let word_list = utils::read_first_n_words(top_words as usize, language);
     let batch_size = 20;
     let mut start_time: Option<Instant> = None;
 

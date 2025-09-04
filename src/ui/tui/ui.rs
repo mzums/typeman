@@ -11,6 +11,7 @@ use crate::ui::tui::app::{App, GameState};
 use crate::practice::TYPING_LEVELS;
 use crate::practice;
 use crate::utils;
+use crate::language::Language;
 
 
 const BORDER_COLOR: Color = Color::Rgb(100, 60, 0);
@@ -549,6 +550,9 @@ fn create_config_line( app: &App) -> Line<'static> {
     let mut button_states = vec![
         ("! punctuation", app.punctuation, !app.quote && !app.practice_mode),
         ("# numbers", app.numbers, !app.quote && !app.practice_mode),
+        ("|", divider, true),
+        ("english", app.language == Language::English, !app.quote && !app.practice_mode),
+        ("indonesian", app.language == Language::Indonesian, !app.quote && !app.practice_mode),
         ("|", divider, app.word_mode || app.time_mode),
         ("time", app.time_mode, true),
         ("words", app.word_mode, true),
