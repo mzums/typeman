@@ -55,10 +55,10 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
     if app.game_state == GameState::Results {
         render_results(frame, chunks[0], app);
     } else if app.practice_menu {
-        render_practice_menu(frame, chunks[0], &app);
+        render_practice_menu(frame, chunks[0], app);
     }
     else {
-        render_reference_frame(frame, chunks[0], &app, timer);
+        render_reference_frame(frame, chunks[0], app, timer);
     }
     render_instructions(frame, chunks[1], app.game_state != GameState::Results && !app.practice_menu, app.practice_menu);
 }
@@ -130,7 +130,7 @@ fn smooth(
 
     if len < 2 {
         for _ in 0..(len * extra_columns) {
-            smoothed.push(values.get(0).copied().unwrap_or(0.0) / average_word_length);
+            smoothed.push(values.first().copied().unwrap_or(0.0) / average_word_length);
         }
         return smoothed;
     }
@@ -187,7 +187,7 @@ fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
     let (_, _, all_words) = utils::count_correct_words(&app.reference, &app.is_correct.iter().cloned().collect());
     let raw = all_words as f32 / (app.test_time / 60.0);
 
-    let raw_str = format!("{}%", raw.round());
+    let raw_str = format!("{}", raw.round());
 
     let standard_deviation = calc_standard_deviation(&app.speed_per_second, 6.0);
     let consistency = if wpm > 0.0 {
@@ -221,7 +221,7 @@ fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
 
     let col_widths = [3, 4, 4, 4, 4, 8];
 
-    let labels = ["wpm", "acc", "err", "cons", "time", "mode"];
+    let labels = ["wpm", "acc", "raw", "cons", "time", "mode"];
     let values = [
         format!("{:<3}", wpm_str),
         format!("{:<4}", acc_str),
@@ -313,7 +313,7 @@ fn get_chart(smoothed_speeds: &[f64], app: &App) -> Chart<'static> {
                     Span::from(format!("{:.0}", max_speed)).style(Style::default().fg(REF_COLOR)),
                 ]),
         );
-    return chart;
+    chart
 }
 
 fn render_results(frame: &mut Frame, area: Rect, app: &App) {
@@ -639,7 +639,7 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize) -> Vec<Line<'a>> {
 }
 
 fn calculate_vertical_padding(area: Rect, content_lines: usize) -> usize {
-    let empty_space = (area.height as u16).saturating_sub(3) as usize / 2;
+    let empty_space = area.height.saturating_sub(3) as usize / 2;
     empty_space.saturating_sub(content_lines / 2) - 3
 }
 
@@ -686,12 +686,12 @@ fn create_reference_block(ref_padding: u16) -> Block<'static> {
 fn split_lines(text: &str, width: usize) -> Vec<String> {
     text.lines()
         .flat_map(|line| {
-            let mut words = line.split_whitespace();
+            let words = line.split_whitespace();
             
             let mut current_line = String::new();
             let mut lines = Vec::new();
             
-            while let Some(word) = words.next() {
+            for word in words {
                 if current_line.len() + word.len() + 1 > width {
                     lines.push(current_line.to_string());
                     current_line.clear();

@@ -33,7 +33,7 @@ pub fn word_mode(args: &Cli) {
     let digits = args.digits;
     
     let top_words = args.top_words.unwrap_or(500);
-    if top_words < 1 || top_words > 1000 {
+    if !(1..=1000).contains(&top_words) {
         eprintln!("Top words must be between 1 and 1000.");
         return;
     }
@@ -42,14 +42,14 @@ pub fn word_mode(args: &Cli) {
         Some(None) => 50,
         None => 50,
     };
-    if word_number < 1 || word_number > 1000 {
+    if !(1..=1000).contains(&word_number) {
         eprintln!("Word number must be between 1 and 1000.");
         return;
     }
 
-    let word_list = utils::read_first_n_words(top_words as usize);
+    let word_list = utils::read_first_n_words(top_words);
 
-    let reference = utils::get_reference(punctuation, digits, &word_list, word_number as usize);
+    let reference = utils::get_reference(punctuation, digits, &word_list, word_number);
     let mut start_time: Option<Instant> = None;
     let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
 
@@ -71,7 +71,7 @@ pub fn time_mode(args: &Cli) {
 
     let top_words = args.top_words.unwrap_or(500);
     println!("Starting common words test with {} second time limit", time_limit);
-    let word_list = utils::read_first_n_words(top_words as usize);
+    let word_list = utils::read_first_n_words(top_words);
     let batch_size = 20;
     let mut start_time: Option<Instant> = None;
 
@@ -155,14 +155,13 @@ pub fn practice(args: &Cli) {
     }
     
     let curr_level= level.unwrap() - 1;
-    let chars = practice::TYPING_LEVELS[curr_level as usize].1;
+    let chars = practice::TYPING_LEVELS[curr_level].1;
     
-    let reference = practice::create_words(&chars, args.word_number.unwrap_or(Some(50)).unwrap_or(50));
+    let reference = practice::create_words(chars, args.word_number.unwrap_or(Some(50)).unwrap_or(50));
     let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
     let mut start_time: Option<Instant> = None;
     let res = cli::main::type_loop(&reference, None, &mut start_time, Some(curr_level), &mut is_correct, "practice");
     if res == 1 {
         println!("Exiting practice mode.");
-        return;
     }
 }

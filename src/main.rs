@@ -56,7 +56,6 @@ Default behavior for cli is to test typing on random words for 30 seconds with 5
 Default mode is tui.
     "
 )]
-
 struct Cli {
     #[arg(short = 'c', long = "custom", value_name = "FILE", value_hint = ValueHint::FilePath, conflicts_with_all = &["random_quote", "time_limit", "top_words", "word_number", "gui", "tui"])]
     custom_file: Option<PathBuf>,
@@ -112,7 +111,7 @@ fn main() {
             modes::quotes();
         } else if args.level.is_some() {
             modes::practice(&args);
-        } else if args.word_number.is_some() && !args.time_limit.is_some() {
+        } else if args.word_number.is_some() && args.time_limit.is_none() {
             modes::word_mode(&args);
         } else {
             modes::time_mode(&args);

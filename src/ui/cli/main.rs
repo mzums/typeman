@@ -120,7 +120,7 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: &mut Opti
         let wpm = (user_input.len() as f64 / 5.0) / (elapsed / 60.0);
 
         let term_width = crossterm::terminal::size().map(|(w, _)| w as usize).unwrap_or(80);
-        let lines = (reference.len() + term_width - 1) / term_width;
+        let lines = reference.len().div_ceil(term_width);
 
         practice::save_results(
             elapsed,
@@ -142,7 +142,7 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: &mut Opti
 
         let prev_best_wpm = practice::get_prev_best_wpm(practice.unwrap());
 
-        if prev_best_wpm < wpm as f64 {
+        if prev_best_wpm < wpm {
             println!("\nNew highscore for this level!");
         }
     }
@@ -161,17 +161,13 @@ fn update_timer(
     time_limit: Option<u64>,
 ) {
     if last_update.elapsed().as_millis() > 100 || start_time.is_none(){
-        let elapsed_secs = if start_time.is_some() {
-            start_time.unwrap().elapsed().as_secs()
+        let elapsed_secs = if let Some(start_time) = start_time {
+            start_time.elapsed().as_secs()
         } else {
             0
         };
         let remaining = if let Some(limit) = time_limit {
-            if elapsed_secs >= limit {
-                0
-            } else {
-                limit - elapsed_secs
-            }
+            limit.saturating_sub(elapsed_secs)
         } else {
             elapsed_secs
         };
@@ -286,7 +282,7 @@ fn handle_typing(
             let c = byte as char;
             let ref_char = ref_chars[*position];
             
-            if (!practice_mode || (practice_mode && c == ref_char)) && ref_chars.len() > *position + 1 && ref_chars[*position + 1] == ' ' {
+            if !(ref_chars.len() <= *position + 1 || ref_chars[*position + 1] != ' ' || practice_mode && c != ref_char) {
                 *words_done += 1;
             }
             if c == ref_char {
@@ -360,13 +356,13 @@ fn show_final_results(
     start_time: Instant,
     is_correct: &VecDeque<i32>,
 ) {
-    let (_corrected_words, correct_words, all_words) = utils::count_correct_words(&reference, &is_correct);
+    let (_corrected_words, correct_words, all_words) = utils::count_correct_words(reference, is_correct);
     let elapsed = start_time.elapsed().as_secs_f64();
     let wpm = correct_words as f64 / (elapsed / 60.0);
     let raw = all_words as f64 / (elapsed / 60.0);
 
     let term_width = crossterm::terminal::size().map(|(w, _)| w as usize).unwrap_or(80);
-    let lines = (reference.len() + term_width - 1) / term_width;
+    let lines = reference.len().div_ceil(term_width);
 
     let mut stdout = stdout();
     queue!(

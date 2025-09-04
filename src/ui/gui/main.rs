@@ -22,7 +22,6 @@ const DEJAVU: &[u8] =
     include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/fonts/DejaVuSansCondensed.ttf"));
 
 
-
 fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32) {
     let (type_text, man_text) = ("Type", "Man");
     let type_width = measure_text(type_text, font.as_ref(), font_size as u16, 1.0).width;
@@ -59,7 +58,7 @@ fn draw_shortcut_info(
     let mut next_y = y;
     let lines = if practice_menu {
         let text_w = measure_text("↑ or ↓ to navigate, ↵ to select (or click)", font, font_size as u16, 1.0).width;
-        x = if screen_width() > 1900.0 { screen_width() - text_w - 70.0 } else { screen_width() - text_w - 70.0 };
+        x = screen_width() - text_w - 70.0;
 
         vec![
             "↑ or ↓ to navigate, ↵ to select (or click)",
@@ -71,7 +70,7 @@ fn draw_shortcut_info(
             "Tab + Enter - reset",
         ]
     } else if game_over {
-        x = x / 2.0;
+        x /= 2.0;
         vec!["Tab + Enter - reset"]
     } else {
         vec![
@@ -168,10 +167,10 @@ pub fn create_lines(reference: &mut String, font: Option<Font>, font_size: f32, 
             lines.push(current_line.clone());
             if lines.len() >= 5 && !quote && !word_mode {
                 if no_words < words.len() {
-                    let mut char_indices = reference.char_indices();
+                    let char_indices = reference.char_indices();
                     let mut end_idx = 0;
                     let mut word_count = 0;
-                    while let Some((idx, c)) = char_indices.next() {
+                    for (idx, c) in char_indices {
                         if c.is_whitespace() {
                             word_count += 1;
                             if word_count == no_words {
@@ -358,7 +357,7 @@ fn calc_pos(chars_in_line: &[i32], pos1: usize) -> (usize, usize) {
         }
         total += count as usize;
     }
-    if let Some((i, &count)) = chars_in_line.iter().enumerate().last() {
+    if let Some((i, &count)) = chars_in_line.iter().enumerate().next_back() {
         return (count as usize, i);
     }
     (0, 0)
