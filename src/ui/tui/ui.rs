@@ -10,9 +10,6 @@ use ratatui::widgets::canvas::Canvas;
 use crate::ui::tui::app::{App, GameState};
 use crate::practice::TYPING_LEVELS;
 use crate::practice;
-use std::fs::OpenOptions;
-use std::io::Write;
-
 
 const BORDER_COLOR: Color = Color::Rgb(100, 60, 0);
 const REF_COLOR: Color = Color::Rgb(100, 100, 100);
@@ -143,11 +140,9 @@ fn smooth(
     };
 
     for i in 0..len - 1 {
-        if columns_to_delete == 1 && i % 2 == 0 {
-            continue;
-        } else if columns_to_delete == 2 && (i % 3 == 0 || i % 3 == 1) {
-            continue;
-        } else if columns_to_delete == 3 && (i % 4 == 0 || i % 4 == 1 || i % 4 == 2) {
+        if (columns_to_delete == 1 && i % 2 == 0) ||
+            (columns_to_delete == 2 && (i % 3 == 0 || i % 3 == 1)) ||
+            (columns_to_delete == 3 && (i % 4 == 0 || i % 4 == 1 || i % 4 == 2)) {
             continue;
         }
         let p0 = get(i as isize - 1);
@@ -183,9 +178,6 @@ fn calc_standard_deviation(values: &[f64], average_word_length: f64) -> f64 {
 }
 
 fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
-    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("x.log") {
-        let _ = writeln!(file, "words_done: {}, test_time: {}", app.words_done, app.test_time);
-    }
     let wpm = (app.words_done as f32 / app.timer.as_secs_f32()) * 60.0;
     let wpm_str = format!("{}", wpm as i32);
 
