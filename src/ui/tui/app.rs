@@ -111,8 +111,9 @@ impl App {
                 && self.game_state == GameState::Started 
                 && self.time_mode) 
                 || (self.words_done >= self.batch_size 
-                    && (self.word_mode || self.practice_mode || self.quote) 
-                    && self.game_state != GameState::Results) 
+                    && (self.word_mode || self.quote) 
+                    && self.game_state != GameState::Results)
+                || (self.words_done >= 5 && self.practice_mode && self.game_state != GameState::Results)
             {
                 self.errors_per_second.push(self.errors_this_second);
                 let total_typed = self.pressed_vec.len();
@@ -214,7 +215,7 @@ impl App {
                             self.reference = utils::get_random_quote();
                             self.batch_size = self.reference.split_whitespace().count();
                         } else if self.practice_mode {
-                            self.reference = practice::create_words(TYPING_LEVELS[self.selected_level].1, self.batch_size);
+                            self.reference = practice::create_words(TYPING_LEVELS[self.selected_level].1, 5);
                         }
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pressed_vec.clear();
@@ -250,7 +251,7 @@ impl App {
                         self.correct_count = 0;
                         self.error_count = 0;
                         self.config = false;
-                        self.reference = practice::create_words(TYPING_LEVELS[self.selected_level].1, self.batch_size);
+                        self.reference = practice::create_words(TYPING_LEVELS[self.selected_level].1, 5);
                         self.is_correct = vec![0; self.reference.chars().count()];
                     }
                     if self.config {
@@ -260,6 +261,7 @@ impl App {
                                 self.word_mode = false;
                                 self.quote = false;
                                 self.batch_size = 50;
+                                self.practice_mode = false;
                             }
                             "words" => {
                                 if !self.word_mode {
@@ -411,7 +413,7 @@ impl App {
                                 self.is_correct[self.pos1] = 2; // Correct
                                 self.correct_count += 1;
                                 self.pos1 += 1;
-                            } else if ref_char == ch && self.is_correct[self.pos1] == -1 {
+                            } else if ref_char == ch && (self.is_correct[self.pos1] == -1 || self.is_correct[self.pos1] == 1) {
                                 self.is_correct[self.pos1] = 1; // Corrected
                                 self.pos1 += 1;
                             } else {
