@@ -23,7 +23,10 @@ Typing speed test with practice mode in GUI, TUI and CLI
     cargo install typeman
 
 --- 
-### Common problems:
+### Tweaks on installs:
+
+Additional action needed for succesfull install
+
 ##### On MacOS:
     cargo install --target x86_64-apple-darwin typeman
 ##### On Ubuntu (before installing):
