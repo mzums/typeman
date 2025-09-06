@@ -211,7 +211,11 @@ fn update_word_count(
 
 fn poll_input() -> Option<u8> {
     if event::poll(std::time::Duration::from_millis(10)).unwrap() {
-        if let Event::Key(KeyEvent { code, modifiers, .. }) = event::read().unwrap() {
+        if let Event::Key(KeyEvent { code, modifiers, kind: _kind, .. }) = event::read().unwrap() {
+            #[cfg(windows)]
+            if _kind != event::KeyEventKind::Press {
+                return None;
+            }
             match (code, modifiers) {
                 (KeyCode::Char('c'), event::KeyModifiers::CONTROL) => Some(0x03), // Ctrl+C
                 (KeyCode::Char('d'), event::KeyModifiers::CONTROL) => Some(0x04), // Ctrl+D
