@@ -79,8 +79,7 @@ pub fn display_practice_menu(
 
     let mut any_hovered = false;
     let mut y: f32 = screen_height() / 10.0 + 2.0 * font_size as f32;
-    for i in start_index..end_index {
-        let (level_name, _) = &TYPING_LEVELS[i];
+    for (i, (level_name, _)) in TYPING_LEVELS.iter().enumerate().take(end_index).skip(start_index) {
         let mut text = format!("{}. {}", i + 1, level_name);
         if i + 1 < 10 {
             text = format!("{}.  {}", i + 1, level_name);
@@ -101,7 +100,7 @@ pub fn display_practice_menu(
     }
     let mut y: f32 = screen_height() / 10.0 + 2.0 * font_size as f32;
 
-    for i in start_index..end_index {
+    for (i, _) in TYPING_LEVELS.iter().enumerate().take(end_index).skip(start_index) {
         let (level_name, _) = &TYPING_LEVELS[i];
         let mut text = format!("{}. {}", i + 1, level_name);
         if i + 1 < 10 {
@@ -177,7 +176,7 @@ pub fn display_practice_menu(
             y + 1.2 * font_size as f32 - *scroll_offset,
             TextParams {
                 font: font.as_ref(),
-                font_size: font_size,
+                font_size,
                 color: text_color,
                 ..Default::default()
             },
@@ -186,10 +185,10 @@ pub fn display_practice_menu(
     }
 
     thread_local! {
-        static DOWN_KEY_HELD_START: std::cell::RefCell<Option<Instant>> = std::cell::RefCell::new(None);
-        static LAST_DOWN_SCROLL: std::cell::RefCell<Option<Instant>> = std::cell::RefCell::new(None);
-        static UP_KEY_HELD_START: std::cell::RefCell<Option<Instant>> = std::cell::RefCell::new(None);
-        static LAST_UP_SCROLL: std::cell::RefCell<Option<Instant>> = std::cell::RefCell::new(None);
+        static DOWN_KEY_HELD_START: std::cell::RefCell<Option<Instant>> = const { std::cell::RefCell::new(None) };
+        static LAST_DOWN_SCROLL: std::cell::RefCell<Option<Instant>> = const { std::cell::RefCell::new(None) };
+        static UP_KEY_HELD_START: std::cell::RefCell<Option<Instant>> = const { std::cell::RefCell::new(None) };
+        static LAST_UP_SCROLL: std::cell::RefCell<Option<Instant>> = const { std::cell::RefCell::new(None) };
     }
 
     let down_pressed = is_key_down(KeyCode::Down);

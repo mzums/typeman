@@ -56,10 +56,10 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
     if app.game_state == GameState::Results {
         render_results(frame, chunks[0], app);
     } else if app.practice_menu {
-        render_practice_menu(frame, chunks[0], &app);
+        render_practice_menu(frame, chunks[0], app);
     }
     else {
-        render_reference_frame(frame, chunks[0], &app, timer);
+        render_reference_frame(frame, chunks[0], app, timer);
     }
     render_instructions(frame, chunks[1], app.game_state != GameState::Results && !app.practice_menu, app.practice_menu);
 }
@@ -125,13 +125,14 @@ fn smooth(
     values: &[f64],
     average_word_length: f64,
     extra_columns: usize,
+    columns_to_delete: usize,
 ) -> Vec<f64> {
     let len = values.len();
     let mut smoothed = Vec::with_capacity((extra_columns + 1) * len);
 
     if len < 2 {
         for _ in 0..(len * extra_columns) {
-            smoothed.push(values.get(0).copied().unwrap_or(0.0) / average_word_length);
+            smoothed.push(values.first().copied().unwrap_or(0.0) / average_word_length);
         }
         return smoothed;
     }
@@ -142,6 +143,11 @@ fn smooth(
     };
 
     for i in 0..len - 1 {
+        if (columns_to_delete == 1 && i % 2 == 0) ||
+            (columns_to_delete == 2 && (i % 3 == 0 || i % 3 == 1)) ||
+            (columns_to_delete == 3 && (i % 4 == 0 || i % 4 == 1 || i % 4 == 2)) {
+            continue;
+        }
         let p0 = get(i as isize - 1);
         let p1 = get(i as isize);
         let p2 = get(i as isize + 1);
@@ -175,7 +181,7 @@ fn calc_standard_deviation(values: &[f64], average_word_length: f64) -> f64 {
 }
 
 fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
-    let wpm = (app.words_done as f32 / app.test_time) * 60.0;
+    let wpm = (app.words_done as f32 / app.timer.as_secs_f32()) * 60.0;
     let wpm_str = format!("{}", wpm as i32);
 
     let accuracy = if app.words_done > 0 {
@@ -185,10 +191,9 @@ fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
     };
     let acc_str = format!("{}%", accuracy.round());
 
-    let (_, _, all_words) = utils::count_correct_words(&app.reference, &app.is_correct.iter().cloned().collect());
-    let raw = all_words as f32 / (app.test_time / 60.0);
+    let raw = app.words_done as f32 / (app.timer.as_secs_f32() / 60.0);
 
-    let raw_str = format!("{}%", raw.round());
+    let raw_str = format!("{}", raw.round());
 
     let standard_deviation = calc_standard_deviation(&app.speed_per_second, 6.0);
     let consistency = if wpm > 0.0 {
@@ -222,7 +227,7 @@ fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
 
     let col_widths = [3, 4, 4, 4, 4, 8];
 
-    let labels = ["wpm", "acc", "err", "cons", "time", "mode"];
+    let labels = ["wpm", "acc", "raw", "cons", "time", "mode"];
     let values = [
         format!("{:<3}", wpm_str),
         format!("{:<4}", acc_str),
@@ -269,7 +274,7 @@ fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
     )
 }
 
-fn get_chart(smoothed_speeds: &[f64], app: &App) -> Chart<'static> {
+fn get_chart(smoothed_speeds: &[f64], app: &App, step: usize) -> Chart<'static> {
     let data: Vec<(f64, f64)> = smoothed_speeds
         .iter()
         .enumerate()
@@ -277,6 +282,7 @@ fn get_chart(smoothed_speeds: &[f64], app: &App) -> Chart<'static> {
         .collect();
 
     let data: &'static [(f64, f64)] = Box::leak(data.into_boxed_slice());
+
 
     let max_speed: f64 = f64::max(70.0, app.speed_per_second.iter().fold(0.0_f64, |a, &b| a.max(b)).max(1.0) / 6.0 + 30.0);
     let max_time = app.timer.as_secs_f32().ceil() as f64;
@@ -297,7 +303,7 @@ fn get_chart(smoothed_speeds: &[f64], app: &App) -> Chart<'static> {
                 .bounds([0.0, smoothed_speeds.len() as f64])
                 .labels(
                     (0..=max_time as usize)
-                        .step_by(5)
+                        .step_by(step)
                         .map(|i| Span::styled(format!("{i}s"), Style::default().fg(REF_COLOR)))
                         .collect::<Vec<Span>>(),
                 ),
@@ -314,7 +320,7 @@ fn get_chart(smoothed_speeds: &[f64], app: &App) -> Chart<'static> {
                     Span::from(format!("{:.0}", max_speed)).style(Style::default().fg(REF_COLOR)),
                 ]),
         );
-    return chart;
+    chart
 }
 
 fn render_results(frame: &mut Frame, area: Rect, app: &App) {
@@ -339,24 +345,51 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
         .map(|k| columns_for_sec[k])
         .unwrap_or(1);
 
+    let mut step = 5;
+    let mut columns_to_delete = 0;
+
     if area.width < 70 {
-        if test_time >= 5 {
+        if test_time >= 120 {
+            extra_columns = 1;
+            step = 30;
+            columns_to_delete = 3;
+        } else if test_time >= 60 {
+            extra_columns = 1;
+            step = 15;
+            columns_to_delete = 2;
+        } else if test_time >= 15 {
+            extra_columns = 1;
+            step = 10;
+            columns_to_delete = 1;
+        } else if test_time >= 5 {
             extra_columns = 1;
         }
     } else if area.width < 100 {
-        if test_time >= 15 {
+        if test_time >= 60 {
+            extra_columns = 1;
+            step = 20;
+            columns_to_delete = 2;
+        } else if test_time >= 30 {
+            step = 10;
+            columns_to_delete = 1;
+        } else if test_time >= 15 {
             extra_columns = 1;
         } else if test_time >= 5 {
             extra_columns = 2;
         }
     } else if area.width < 150 {
-        if test_time >= 30 {
+        if test_time >= 60 {
+            step = 20;
+            columns_to_delete = 1;
+        } else if test_time >= 30 {
             extra_columns = 1;
         } else if test_time >= 15 {
             extra_columns = 2;
         } else if test_time >= 5 {
             extra_columns = 3;
         }
+    } else if test_time >= 120 {
+        step = 10;
     }
 
     let mut errors_per_second: Vec<f32> = Vec::new();
@@ -393,9 +426,10 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
         &speed_per_second,
         6.0,
         extra_columns,
+        columns_to_delete,
     );
 
-    let chart = get_chart(&smoothed_speeds, app);
+    let chart = get_chart(&smoothed_speeds, app, step);
 
     let block = create_reference_block(5);
 
@@ -643,7 +677,7 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize) -> Vec<Line<'a>> {
 }
 
 fn calculate_vertical_padding(area: Rect, content_lines: usize) -> usize {
-    let empty_space = (area.height as u16).saturating_sub(3) as usize / 2;
+    let empty_space = area.height.saturating_sub(3) as usize / 2;
     empty_space.saturating_sub(content_lines / 2) - 3
 }
 
@@ -690,12 +724,12 @@ fn create_reference_block(ref_padding: u16) -> Block<'static> {
 fn split_lines(text: &str, width: usize) -> Vec<String> {
     text.lines()
         .flat_map(|line| {
-            let mut words = line.split_whitespace();
+            let words = line.split_whitespace();
             
             let mut current_line = String::new();
             let mut lines = Vec::new();
             
-            while let Some(word) = words.next() {
+            for word in words {
                 if current_line.len() + word.len() + 1 > width {
                     lines.push(current_line.to_string());
                     current_line.clear();

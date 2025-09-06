@@ -21,7 +21,7 @@ pub fn write_results(
     screen_height: f32,
     font: Option<&Font>,
     test_time: f32,
-    speed_per_second: &Vec<f64>,
+    speed_per_second: &[f64],
     average_word_length: f64,
     mode: &str,
     punctuation: bool,
@@ -31,7 +31,7 @@ pub fn write_results(
     practice_level: Option<usize>,
     saved_results: &mut bool,
 ) {
-    let (no_corrected_words, correct_words, all_words) = utils::count_correct_words(&reference, &is_correct);
+    let (no_corrected_words, correct_words, all_words) = utils::count_correct_words(reference, is_correct);
 
     let correct_count = is_correct.iter().filter(|&&v| v == 1 || v == 2).count();
     let all_pressed_count = is_correct.iter().filter(|&&v| v != 0).count();
@@ -132,7 +132,7 @@ pub fn write_results(
         practice_level
     );
 
-    let mut speed2: Vec<f64> = speed_per_second.clone();
+    let mut speed2: Vec<f64> = speed_per_second.to_owned();
     speed2.push(*speed_per_second.last().unwrap_or(&0.0));
     let smoothed_speeds = smooth(&speed2, 2, average_word_length);
 
@@ -161,17 +161,17 @@ pub fn write_results(
         };
         let text_size = measure_text(&practice_text, font, passed_text_font, 1.0);
 
-        draw_text_ex(practice_text.as_str(), (screen_width - text_size.width) / 2.0, chart_y + chart_height + screen_height / 4.0, TextParams { font: font, font_size: passed_text_font, font_scale: 1.0, color: Color::from_rgba(255, 255, 255, 100), ..Default::default() });
+        draw_text_ex(practice_text.as_str(), (screen_width - text_size.width) / 2.0, chart_y + chart_height + screen_height / 4.0, TextParams { font, font_size: passed_text_font, font_scale: 1.0, color: Color::from_rgba(255, 255, 255, 100), ..Default::default() });
         if practice::get_prev_best_wpm(practice_level.unwrap() + 1) < wpm as f64 {
             let new_highscore_text = "New highscore for this level!";
             let text_size = measure_text(new_highscore_text, font, 30, 1.0);
-            draw_text_ex(new_highscore_text, (screen_width - text_size.width) / 2.0, chart_y + chart_height + 250.0, TextParams { font: font, font_size: passed_text_font, font_scale: 1.0, color: Color::from_rgba(255, 255, 255, 100), ..Default::default() });
+            draw_text_ex(new_highscore_text, (screen_width - text_size.width) / 2.0, chart_y + chart_height + 250.0, TextParams { font, font_size: passed_text_font, font_scale: 1.0, color: Color::from_rgba(255, 255, 255, 100), ..Default::default() });
         }
         if !*saved_results {
             *saved_results = true;
             practice::save_results(
                 test_time as f64,
-                accuracy as f64,
+                accuracy,
                 wpm as f64,
                 practice_level.unwrap() + 1,
             );
@@ -187,12 +187,12 @@ fn write_mode(
     punctuation: bool,
     numbers: bool,
     fontsize_3: u16,
-    fontsize_4: u16,
+    fontsize4: u16,
     practice_level: Option<usize>,
 ) {
     let mut fontsize_3 = fontsize_3;
-    let fontsize_4 = fontsize_4;
-    let mode_text = format!("{mode}");
+    let fontsize_4 = fontsize4;
+    let mode_text = mode.to_string();
     let mut punct_pos: f32 = y;
     let mut number_pos: f32 = y;
     let mut mode_pos: f32 = y + fontsize_3 as f32;
@@ -314,7 +314,7 @@ fn write_time(
 }
 
 fn write_consistency(
-    speed_per_second: &Vec<f64>,
+    speed_per_second: &[f64],
     average_word_length: f64,
     font: Option<&Font>,
     x: f32,
@@ -386,7 +386,7 @@ fn write_wpm(
             ..Default::default()
         },
     );
-    return wpm;
+    wpm
 }
 
 fn write_acc(accuracy: f64, font: Option<&Font>, x: f32, y: f32, fontsize_1: u16, fontsize_2: u16) {
@@ -459,7 +459,7 @@ fn smooth(values: &[f64], window: usize, average_word_length: f64) -> Vec<f64> {
     smoothed
 }
 
-fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x: f32, chart_y: f32, errors_per_second: &Vec<f64>, fontsize_1: u16) {
+fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x: f32, chart_y: f32, errors_per_second: &[f64], fontsize_1: u16) {
     let mut errors: Vec<f64> = Vec::new();
     errors.push(0.0);
     errors.extend(errors_per_second.iter().cloned());
@@ -533,8 +533,6 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                                             fontsize_1 as f32 / 15.0
                                         } else if val <= 2.0 {
                                             fontsize_1 as f32 / 10.0
-                                        } else if val <= 3.0 {
-                                            fontsize_1 as f32 / 4.0
                                         } else {
                                             fontsize_1 as f32 / 4.0
                                         };
@@ -543,10 +541,10 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                                         
                                         let cross = egui_plot::Points::new(
                                             "Error",
-                                            vec![[x, cross_y as f64]]
+                                            vec![[x, cross_y]]
                                         )
                                         .color(Color32::from_rgb(255, 50, 50))
-                                        .radius(size as f32)
+                                        .radius(size)
                                         .shape(egui_plot::MarkerShape::Cross);
                                         
                                         plot_ui.points(cross);

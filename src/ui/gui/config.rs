@@ -35,9 +35,9 @@ fn draw_toggle_button(
     }
     let padding = font_size as f32 * 0.5;
         
-    let text_dims = measure_text(&label, Some(font.as_ref().unwrap()), font_size, 1.0);
+    let text_dims = measure_text(label, Some(font.as_ref().unwrap()), font_size, 1.0);
     let btn_width = text_dims.width + btn_padding * 2.0;
-    let btn_height = measure_text("t", font.as_ref(), font_size, 1.0).height + padding as f32 * 2.0;
+    let btn_height = measure_text("t", font.as_ref(), font_size, 1.0).height + padding * 2.0;
 
     let rect = Rect::new(x, y, btn_width, btn_height);
     let (mx, my) = mouse_position();
@@ -64,9 +64,9 @@ fn draw_toggle_button(
     let btn_x = x;
     draw_rounded_rect(btn_x, y, btn_width, btn_height, corner_radius, bg_color);
     draw_text_ex(
-        &label,
+        label,
         x + btn_padding,
-        y + btn_height - padding as f32,
+        y + btn_height - padding,
         TextParams {
             font: font.as_ref(),
             font_size,
@@ -260,11 +260,12 @@ pub fn handle_settings_buttons(
         }
     } else if is_key_pressed(KeyCode::Enter) && *config_opened {
         update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language);
+
         if *quote {
             *reference = utils::get_random_quote();
         } else if *practice_mode {
             *reference = practice::create_words(
-                &practice::TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1,
+                practice::TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1,
                 *batch_size,
             );
         } else {

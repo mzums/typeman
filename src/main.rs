@@ -25,6 +25,10 @@ mod language;
 mod practice;
 mod utils;
 
+use crate::ui::tui::r#mod as tui_mod;
+use crate::ui::gui::main as gui;
+
+
 #[derive(Parser)]
 #[command(
     name = "typeman",
@@ -57,7 +61,6 @@ Default behavior for cli is to test typing on random words for 30 seconds with 5
 Default mode is tui.
     "
 )]
-
 struct Cli {
     #[arg(short = 'c', long = "custom", value_name = "FILE", value_hint = ValueHint::FilePath, conflicts_with_all = &["random_quote", "time_limit", "top_words", "word_number", "gui", "tui"])]
     custom_file: Option<PathBuf>,
@@ -106,11 +109,23 @@ pub struct Quote {
     text: String,
 }
 
+
+pub fn gui_main() {
+    macroquad::Window::new("Hello World", async { gui::gui_main_async().await });
+}
+
+pub fn tui_main() {
+    if let Err(e) = tui_mod::main() {
+        eprintln!("TUI error: {}", e);
+        std::process::exit(1);
+    }
+}
+
 fn main() {
     let args = Cli::parse();
 
     if args.gui {
-        modes::gui_main();
+        gui_main();
         return;
     }
     if args.cli {
@@ -120,7 +135,7 @@ fn main() {
             modes::quotes();
         } else if args.level.is_some() {
             modes::practice(&args);
-        } else if args.word_number.is_some() && !args.time_limit.is_some() {
+        } else if args.word_number.is_some() && args.time_limit.is_none() {
             modes::word_mode(&args);
         } else {
             modes::time_mode(&args);
