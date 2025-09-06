@@ -4,18 +4,12 @@ use rand::prelude::IndexedRandom;
 use rand::prelude::SliceRandom;
 use std::collections::VecDeque;
 
-use crate::Quote;
+use crate::{Quote, language::Language};
 
-const COMMON_WORDS: &str = include_str!("../assets/common_eng_words.txt");
 const QUOTES: &str = include_str!("../assets/quotes.json");
 
-
-pub fn read_first_n_words(n: usize) -> Vec<String> {
-    COMMON_WORDS
-        .lines()
-        .take(n)
-        .map(|s| s.to_string())
-        .collect()
+pub fn read_first_n_words(n: usize, language: Language) -> Vec<String> {
+    language.get_words(n)
 }
 
 pub fn validate_custom_file(path: &PathBuf) -> Result<(), String> {

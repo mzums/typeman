@@ -5,6 +5,7 @@ use std::time::{Instant, Duration};
 
 use crate::ui::gui::main;
 use crate::{practice, utils};
+use crate::language::Language;
 
 
 pub fn draw_rounded_rect(x: f32, y: f32, w: f32, h: f32, radius: f32, color: Color) {
@@ -139,7 +140,7 @@ pub fn reset_game_state(
 
 pub fn handle_settings_buttons(
     font: &Option<Font>,
-    word_list: &[String],
+    _word_list: &[String],
     punctuation: &mut bool,
     numbers: &mut bool,
     quote: &mut bool,
@@ -168,6 +169,7 @@ pub fn handle_settings_buttons(
     practice_mode: &mut bool,
     saved_results: &mut bool,
     error_positions: &mut Vec<bool>,
+    language: &mut Language,
 ) -> bool {
     let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = screen_height() / 5.0;
@@ -182,6 +184,9 @@ pub fn handle_settings_buttons(
     let mut button_states = vec![
         ("! punctuation", *punctuation, !*quote && !*practice_mode),
         ("# numbers", *numbers, !*quote && !*practice_mode),
+        ("|", divider, true),
+        ("english", *language == Language::English, !*quote && !*practice_mode),
+        ("indonesian", *language == Language::Indonesian, !*quote && !*practice_mode),
         ("|", divider, true),
         ("time", *time_mode, true),
         ("words", *word_mode, true),
@@ -254,7 +259,8 @@ pub fn handle_settings_buttons(
             }
         }
     } else if is_key_pressed(KeyCode::Enter) && *config_opened {
-        update_config(selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode);
+        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language);
+
         if *quote {
             *reference = utils::get_random_quote();
         } else if *practice_mode {
@@ -263,7 +269,8 @@ pub fn handle_settings_buttons(
                 *batch_size,
             );
         } else {
-            *reference = utils::get_reference(*punctuation, *numbers, word_list, *batch_size);
+            let updated_word_list = utils::read_first_n_words(500, *language);
+            *reference = utils::get_reference(*punctuation, *numbers, &updated_word_list, *batch_size);
         }
         *is_correct = VecDeque::from(vec![0; reference.len()]);
         *error_positions = vec![false; is_correct.len()];
@@ -296,7 +303,7 @@ pub fn handle_settings_buttons(
         
         if clicked && *label != "|" {
             
-            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode);
+            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language);
             if *quote {
                 *reference = utils::get_random_quote();
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
@@ -307,7 +314,8 @@ pub fn handle_settings_buttons(
             } else if *practice_menu {
                 *practice_menu = true;
             } else {
-                *reference = utils::get_reference(*punctuation, *numbers, word_list, *batch_size);
+                let updated_word_list = utils::read_first_n_words(500, *language);
+                *reference = utils::get_reference(*punctuation, *numbers, &updated_word_list, *batch_size);
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
                 *error_positions = vec![false; is_correct.len()];
                 reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, saved_results, error_positions);
@@ -318,7 +326,7 @@ pub fn handle_settings_buttons(
     any_button_hovered
 }
 
-fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize, practice_menu: &mut bool, selected_practice_level: &mut Option<usize>, practice_mode: &mut bool) {
+fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize, practice_menu: &mut bool, selected_practice_level: &mut Option<usize>, practice_mode: &mut bool, language: &mut Language) {
     match label {
         "! punctuation" => {
             *punctuation = !*punctuation;
@@ -377,6 +385,12 @@ fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_m
         },
         "100" => {
             *batch_size = 100;
+        },
+        "english" => {
+            *language = Language::English;
+        },
+        "indonesian" => {
+            *language = Language::Indonesian;
         },
         _ => {}
     }
