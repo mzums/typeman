@@ -10,8 +10,6 @@ use ratatui::widgets::canvas::Canvas;
 use crate::ui::tui::app::{App, GameState};
 use crate::practice::TYPING_LEVELS;
 use crate::practice;
-use crate::utils;
-use crate::language::Language;
 
 
 const BORDER_COLOR: Color = Color::Rgb(100, 60, 0);
