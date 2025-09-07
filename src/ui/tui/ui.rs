@@ -62,6 +62,11 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
         render_reference_frame(frame, chunks[0], app, timer);
     }
     render_instructions(frame, chunks[1], app.game_state != GameState::Results && !app.practice_menu, app.practice_menu);
+    
+    // Render language popup if open
+    if app.language_popup_open {
+        render_language_popup(frame, app, frame.area());
+    }
 }
 
 fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App) {
@@ -585,8 +590,7 @@ fn create_config_line( app: &App) -> Line<'static> {
         ("! punctuation", app.punctuation, !app.quote && !app.practice_mode),
         ("# numbers", app.numbers, !app.quote && !app.practice_mode),
         ("|", divider, true),
-        ("english", app.language == Language::English, !app.quote && !app.practice_mode),
-        ("indonesian", app.language == Language::Indonesian, !app.quote && !app.practice_mode),
+        ("language", false, !app.quote && !app.practice_mode),
         ("|", divider, app.word_mode || app.time_mode),
         ("time", app.time_mode, true),
         ("words", app.word_mode, true),
@@ -742,4 +746,58 @@ fn split_lines(text: &str, width: usize) -> Vec<String> {
             lines
         })
         .collect()
+}
+
+fn render_language_popup(frame: &mut Frame, app: &App, area: Rect) {
+    // Create popup area (center of screen)
+    let popup_area = centered_rect(30, 30, area);
+    
+    // Clear the area
+    frame.render_widget(ratatui::widgets::Clear, popup_area);
+    
+    // Create popup content
+    let languages = vec!["English", "Indonesian"];
+    let items: Vec<ListItem> = languages
+        .iter()
+        .enumerate()
+        .map(|(i, &lang)| {
+            let style = if i == app.language_popup_selected {
+                Style::default().fg(BG_COLOR).bg(MAIN_COLOR)
+            } else {
+                Style::default().fg(REF_COLOR)
+            };
+            ListItem::new(lang).style(style)
+        })
+        .collect();
+
+    let list = List::new(items)
+        .block(
+            Block::default()
+                .title("Select Language")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR))
+                .style(Style::default().bg(BG_COLOR))
+        );
+
+    frame.render_widget(list, popup_area);
+}
+
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(r);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
 }

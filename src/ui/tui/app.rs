@@ -46,6 +46,8 @@ pub struct App {
     pub selected_level: usize,
     pub timer: Duration,
     pub language: Language,
+    pub language_popup_open: bool,
+    pub language_popup_selected: usize,
 }
 
 impl App {
@@ -80,6 +82,8 @@ impl App {
             selected_level: 0,
             timer: Duration::from_secs(0),
             language: Language::default(),
+            language_popup_open: false,
+            language_popup_selected: 0,
         }
     }
 
@@ -157,8 +161,7 @@ impl App {
             ("! punctuation", self.punctuation, !self.quote && !self.practice_mode),
             ("# numbers", self.numbers, !self.quote && !self.practice_mode),
             ("|", true, true),
-            ("english", self.language == Language::English, !self.quote && !self.practice_mode),
-            ("indonesian", self.language == Language::Indonesian, !self.quote && !self.practice_mode),
+            ("language", false, !self.quote && !self.practice_mode),
             ("|", true, true),
             ("time", self.time_mode, true),
             ("words", self.word_mode, true),
@@ -177,6 +180,46 @@ impl App {
         let reference_chars: Vec<char> = reference.chars().collect();
 
         if key_event.kind == crossterm::event::KeyEventKind::Press {
+            // Handle language popup first if it's open
+            if self.language_popup_open {
+                match key_event.code {
+                    KeyCode::Esc => {
+                        self.language_popup_open = false;
+                        return Ok(());
+                    }
+                    KeyCode::Up => {
+                        if self.language_popup_selected > 0 {
+                            self.language_popup_selected -= 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Down => {
+                        if self.language_popup_selected < 1 { // 0=English, 1=Indonesian
+                            self.language_popup_selected += 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Enter => {
+                        self.language = match self.language_popup_selected {
+                            0 => Language::English,
+                            1 => Language::Indonesian,
+                            _ => Language::English,
+                        };
+                        self.language_popup_open = false;
+                        // Update reference text with new language
+                        if self.word_mode || self.time_mode {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                            self.is_correct = vec![0; self.reference.chars().count()];
+                            self.pressed_vec.clear();
+                            self.pos1 = 0;
+                            self.words_done = 0;
+                        }
+                        return Ok(());
+                    }
+                    _ => return Ok(()),
+                }
+            }
+
             match key_event.code {
                 KeyCode::Esc => self.exit = true,
                 KeyCode::Backspace => {
@@ -294,11 +337,12 @@ impl App {
                             "# numbers" => {
                                 self.numbers = !self.numbers;
                             }
-                            "english" => {
-                                self.language = Language::English;
-                            }
-                            "indonesian" => {
-                                self.language = Language::Indonesian;
+                            "language" => {
+                                self.language_popup_open = true;
+                                self.language_popup_selected = match self.language {
+                                    Language::English => 0,
+                                    Language::Indonesian => 1,
+                                };
                             }
                             "15" => {
                                 self.test_time = 15.0;

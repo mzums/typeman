@@ -142,5 +142,5 @@ fn main() {
         }
         return;
     }
-    modes::tui_main();
+    ui::tui::r#mod::main().unwrap();
 }
