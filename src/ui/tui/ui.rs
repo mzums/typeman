@@ -781,21 +781,36 @@ fn render_language_popup(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    // Ensure percentages don't exceed 100 and terminal is large enough
+    let safe_percent_x = percent_x.min(95);
+    let safe_percent_y = percent_y.min(95);
+    
+    // Check minimum terminal size requirements
+    if r.width < 10 || r.height < 6 {
+        // Return a minimal area if terminal is too small
+        return Rect::new(
+            r.x + 1,
+            r.y + 1,
+            (r.width.saturating_sub(2)).max(1),
+            (r.height.saturating_sub(2)).max(1)
+        );
+    }
+    
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage((100 - safe_percent_y) / 2),
+            Constraint::Percentage(safe_percent_y),
+            Constraint::Percentage((100 - safe_percent_y) / 2),
         ])
         .split(r);
 
     Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage((100 - safe_percent_x) / 2),
+            Constraint::Percentage(safe_percent_x),
+            Constraint::Percentage((100 - safe_percent_x) / 2),
         ])
         .split(popup_layout[1])[1]
 }
