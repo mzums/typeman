@@ -194,7 +194,7 @@ impl App {
                         return Ok(());
                     }
                     KeyCode::Down => {
-                        if self.language_popup_selected < Language::count() { 
+                        if self.language_popup_selected < Language::count() - 1 { 
                             self.language_popup_selected += 1;
                         }
                         return Ok(());
