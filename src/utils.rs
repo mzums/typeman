@@ -1,8 +1,10 @@
 #[cfg(feature = "cli")]
 use std::path::PathBuf;
+
 use rand::Rng;
 use rand::prelude::IndexedRandom;
 use rand::prelude::SliceRandom;
+
 #[cfg(any(feature = "cli", feature = "gui"))]
 use std::collections::VecDeque;
 

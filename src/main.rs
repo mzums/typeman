@@ -142,32 +142,82 @@ fn main() {
     #[cfg(any(feature = "cli", feature = "gui"))]
     let args = Cli::parse();
 
+    #[cfg(not(feature = "tui"))]
+    {
+        #[cfg(any(feature = "cli", feature = "gui"))]
+        if args.tui {
+            eprintln!("TUI mode is not available in this build.");
+            std::process::exit(1);
+        }
+    }
+
+    #[cfg(not(feature = "gui"))]
+    {
+        #[cfg(any(feature = "cli", feature = "gui"))]
+        if args.gui {
+            eprintln!("GUI mode is not available in this build.");
+            std::process::exit(1);
+        }
+    }
+
+    #[cfg(not(feature = "cli"))]
+    {
+        #[cfg(any(feature = "cli", feature = "gui"))]
+        if args.cli {
+            eprintln!("CLI mode is not available in this build.");
+            std::process::exit(1);
+        }
+    }
+
     #[cfg(feature = "gui")]
     if args.gui {
         gui_main();
         return;
     }
+
     #[cfg(feature = "cli")]
     if args.cli {
-        if let Some(path) = args.custom_file {
-            modes::custom_text(&path)
-        } else if args.random_quote {
-            modes::quotes();
-        } else if args.level.is_some() {
-            modes::practice(&args);
-        } else if args.word_number.is_some() && args.time_limit.is_none() {
-            modes::word_mode(&args);
-        } else {
-            modes::time_mode(&args);
-        }
+        run_cli(&args);
         return;
     }
+
     #[cfg(feature = "tui")]
-    ui::tui::r#mod::main().unwrap();
+    {
+        ui::tui::r#mod::main().unwrap();
+        return;
+    }
 
-    #[cfg(feature = "gui")]
-    gui_main();
+    #[cfg(all(feature = "gui", not(feature = "tui")))]
+    {
+        gui_main();
+        return;
+    }
 
-    #[cfg(all(feature = "cli", not(any(feature = "gui", feature = "tui"))))]
-    cli_main();
+    #[cfg(all(feature = "cli", not(any(feature = "tui", feature = "gui"))))]
+    {
+        run_cli(&args);
+        return;
+    }
+
+    #[cfg(not(any(feature = "cli", feature = "gui", feature = "tui")))]
+    {
+        eprintln!("No mode is available. Enable at least one feature: cli, gui, or tui.");
+        std::process::exit(1);
+    }
+}
+
+
+#[cfg(feature = "cli")]
+fn run_cli(args: &Cli) {
+    if let Some(path) = args.custom_file.as_ref() {
+        modes::custom_text(path)
+    } else if args.random_quote {
+        modes::quotes();
+    } else if args.level.is_some() {
+        modes::practice(args);
+    } else if args.word_number.is_some() && args.time_limit.is_none() {
+        modes::word_mode(args);
+    } else {
+        modes::time_mode(args);
+    }
 }

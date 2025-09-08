@@ -1,11 +1,11 @@
 use rand::prelude::IndexedRandom;
 
 #[cfg(any(feature = "cli", feature = "gui"))]
-use std::io::Write;
-#[cfg(any(feature = "cli", feature = "gui"))]
-use std::path::Path;
-#[cfg(any(feature = "cli", feature = "gui"))]
-use std::fs;
+use {
+    std::io::Write,
+    std::path::Path,
+    std::fs,
+};
 
 #[cfg(any(feature = "cli", feature = "gui"))]
 pub const WPM_MIN: f64 = 35.0;
