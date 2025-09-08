@@ -20,8 +20,17 @@ Typing speed test with practice mode in GUI, TUI and CLI
 ## Installation
 
 ### Crates.io:
+#### Install the default version (all modes: CLI, GUI, TUI):
     cargo install typeman
-
+#### You can also install only the modes you want by using `--no-default-features` and specifying features::
+- **only TUI**:   
+    ```
+    cargo install typeman --no-default-features --features tui
+    ```
+- **only TUI and CLI**:  
+    ```
+    cargo install typeman --no-default-features --features "tui cli"
+    ```
 --- 
 ### Tweaks on installs:
 
@@ -32,6 +41,8 @@ Additional action needed for succesfull install
 ##### On Ubuntu (before installing):
     sudo apt-get install libfontconfig1-dev
     sudo apt install libasound2-dev
+##### On Fedora (before installing):
+    sudo dnf install alsa-lib-devel
 
 ---
 

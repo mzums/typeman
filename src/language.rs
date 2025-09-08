@@ -17,6 +17,7 @@ impl Display for Language {
 }
 
 impl Language {
+    #[cfg(feature = "cli")]
     pub fn from_str(s: &str) -> Option<Language> {
         match s.to_lowercase().as_str() {
             "english" | "en" => Some(Language::English),

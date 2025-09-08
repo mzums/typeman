@@ -1,16 +1,12 @@
 use std::{path::PathBuf};
 use std::fs;
 use std::time::Instant;
-use std::fs::File;
-use std::io::BufReader;
-use rand::prelude::IndexedRandom;
 use std::collections::VecDeque;
 
 use crate::ui::cli;
 use crate::Cli;
-use crate::Quote;
 use crate::utils;
-use crate ::practice;
+use crate::practice;
 use crate::language::Language;
 
 fn get_language_from_args(args: &Cli) -> Language {
@@ -126,12 +122,7 @@ pub fn custom_text(path: &PathBuf) {
 
 pub fn quotes() {
     println!("Starting random quote test");
-    let file = File::open("assets/quotes.json").expect("Failed to open quotes file");
-    let reader = BufReader::new(file);
-    let quotes: Vec<Quote> = serde_json::from_reader(reader).expect("Failed to parse quotes");
-    let mut rng = rand::rng();
-    let random_quote = quotes.choose(&mut rng).expect("No quotes available");
-    let reference = format!("\"{}\" - {}", random_quote.text, random_quote.author);
+    let reference = utils::get_random_quote();
     let mut start_time: Option<Instant> = None;
     let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
 

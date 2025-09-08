@@ -1,7 +1,9 @@
+#[cfg(feature = "cli")]
 use std::path::PathBuf;
 use rand::Rng;
 use rand::prelude::IndexedRandom;
 use rand::prelude::SliceRandom;
+#[cfg(any(feature = "cli", feature = "gui"))]
 use std::collections::VecDeque;
 
 use crate::{Quote, language::Language};
@@ -12,6 +14,7 @@ pub fn read_first_n_words(n: usize, language: Language) -> Vec<String> {
     language.get_words(n)
 }
 
+#[cfg(feature = "cli")]
 pub fn validate_custom_file(path: &PathBuf) -> Result<(), String> {
     if path.exists() && path.is_file() {
         Ok(())
@@ -85,6 +88,7 @@ pub fn get_random_quote() -> String {
     format!("\"{}\" - {}", random_quote.text, random_quote.author)
 }
 
+#[cfg(any(feature = "cli", feature = "gui"))]
 pub fn count_correct_words(reference: &str, is_correct: &VecDeque<i32>) -> (usize, usize, usize) {
     let mut correct_words = 0;
     let mut no_corrected_words = 0;

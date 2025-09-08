@@ -1,32 +1,46 @@
+#[cfg(not(any(feature = "cli", feature = "tui", feature = "gui")))]
+compile_error!("At least one of 'cli', 'tui', or 'gui' must be enabled");
+
 use clap::{Parser, ValueHint};
 use serde::Deserialize;
 use std::path::PathBuf;
 
-use crate::ui::cli::modes;
-
 mod ui {
+    #[cfg(feature = "cli")]
     pub mod cli {
         pub mod main;
         pub mod modes;
     }
+
+    #[cfg(feature = "gui")]
     pub mod gui {
         pub mod config;
         pub mod main;
         pub mod practice;
         pub mod results;
     }
+
+    #[cfg(feature = "tui")]
     pub mod tui {
         pub mod app;
         pub mod r#mod;
         pub mod ui;
     }
 }
+
+#[cfg(feature = "tui")]
 mod color_scheme;
 mod language;
 mod practice;
 mod utils;
 
+#[cfg(feature = "cli")]
+use crate::ui::cli::modes;
+
+#[cfg(feature = "tui")]
 use crate::ui::tui::r#mod as tui_mod;
+
+#[cfg(feature = "gui")]
 use crate::ui::gui::main as gui;
 
 
@@ -110,11 +124,12 @@ pub struct Quote {
     text: String,
 }
 
-
+#[cfg(feature = "gui")]
 pub fn gui_main() {
-    macroquad::Window::new("Hello World", async { gui::gui_main_async().await });
+    macroquad::Window::new("TypeMan", async { gui::gui_main_async().await });
 }
 
+#[cfg(feature = "tui")]
 pub fn tui_main() {
     if let Err(e) = tui_mod::main() {
         eprintln!("TUI error: {}", e);
@@ -122,13 +137,17 @@ pub fn tui_main() {
     }
 }
 
+
 fn main() {
+    #[cfg(any(feature = "cli", feature = "gui"))]
     let args = Cli::parse();
 
+    #[cfg(feature = "gui")]
     if args.gui {
         gui_main();
         return;
     }
+    #[cfg(feature = "cli")]
     if args.cli {
         if let Some(path) = args.custom_file {
             modes::custom_text(&path)
@@ -143,5 +162,12 @@ fn main() {
         }
         return;
     }
+    #[cfg(feature = "tui")]
     ui::tui::r#mod::main().unwrap();
+
+    #[cfg(feature = "gui")]
+    gui_main();
+
+    #[cfg(all(feature = "cli", not(any(feature = "gui", feature = "tui"))))]
+    cli_main();
 }
