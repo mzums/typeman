@@ -6,6 +6,8 @@ use std::time::{Duration, Instant};
 use crate::ui::tui::ui::render_app;
 use crate::{practice, utils};
 use crate::practice::TYPING_LEVELS;
+use crate::language::Language;
+use crate::color_scheme::ColorScheme;
 
 
 #[derive(PartialEq, Eq)]
@@ -44,6 +46,12 @@ pub struct App {
     pub practice_mode: bool,
     pub selected_level: usize,
     pub timer: Duration,
+    pub language: Language,
+    pub language_popup_open: bool,
+    pub language_popup_selected: usize,
+    pub color_scheme: ColorScheme,
+    pub theme_popup_open: bool,
+    pub theme_popup_selected: usize,
 }
 
 impl App {
@@ -77,11 +85,17 @@ impl App {
             practice_mode: false,
             selected_level: 0,
             timer: Duration::from_secs(0),
+            language: Language::default(),
+            language_popup_open: false,
+            language_popup_selected: 0,
+            color_scheme: ColorScheme::default(),
+            theme_popup_open: false,
+            theme_popup_selected: 0,
         }
     }
 
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
-        let word_list = utils::read_first_n_words(500);
+        let word_list = utils::read_first_n_words(500, self.language);
         self.reference = utils::get_reference(false, false, &word_list, self.batch_size);
         self.is_correct = vec![0; self.reference.chars().count()];
         let mut last_recorded_time = Instant::now();
@@ -154,6 +168,9 @@ impl App {
             ("! punctuation", self.punctuation, !self.quote && !self.practice_mode),
             ("# numbers", self.numbers, !self.quote && !self.practice_mode),
             ("|", true, true),
+            ("language", false, !self.quote && !self.practice_mode),
+            ("theme", false, true),
+            ("|", true, true),
             ("time", self.time_mode, true),
             ("words", self.word_mode, true),
             ("quote", self.quote, true),
@@ -171,6 +188,78 @@ impl App {
         let reference_chars: Vec<char> = reference.chars().collect();
 
         if key_event.kind == crossterm::event::KeyEventKind::Press {
+            // Handle theme popup first if it's open
+            if self.theme_popup_open {
+                match key_event.code {
+                    KeyCode::Esc => {
+                        self.theme_popup_open = false;
+                        return Ok(());
+                    }
+                    KeyCode::Up => {
+                        if self.theme_popup_selected > 0 {
+                            self.theme_popup_selected -= 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Down => {
+                        let schemes = ColorScheme::all();
+                        if self.theme_popup_selected < schemes.len() - 1 {
+                            self.theme_popup_selected += 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Enter => {
+                        let schemes = ColorScheme::all();
+                        if self.theme_popup_selected < schemes.len() {
+                            self.color_scheme = schemes[self.theme_popup_selected];
+                        }
+                        self.theme_popup_open = false;
+                        return Ok(());
+                    }
+                    _ => return Ok(()),
+                }
+            }
+
+            // Handle language popup if it's open
+            if self.language_popup_open {
+                match key_event.code {
+                    KeyCode::Esc => {
+                        self.language_popup_open = false;
+                        return Ok(());
+                    }
+                    KeyCode::Up => {
+                        if self.language_popup_selected > 0 {
+                            self.language_popup_selected -= 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Down => {
+                        if self.language_popup_selected < 1 { // 0=English, 1=Indonesian
+                            self.language_popup_selected += 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Enter => {
+                        self.language = match self.language_popup_selected {
+                            0 => Language::English,
+                            1 => Language::Indonesian,
+                            _ => Language::English,
+                        };
+                        self.language_popup_open = false;
+                        // Update reference text with new language
+                        if self.word_mode || self.time_mode {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                            self.is_correct = vec![0; self.reference.chars().count()];
+                            self.pressed_vec.clear();
+                            self.pos1 = 0;
+                            self.words_done = 0;
+                        }
+                        return Ok(());
+                    }
+                    _ => return Ok(()),
+                }
+            }
+
             match key_event.code {
                 KeyCode::Esc => self.exit = true,
                 KeyCode::Backspace => {
@@ -210,7 +299,7 @@ impl App {
                 KeyCode::Enter => {
                     if self.tab_pressed.elapsed() < Duration::from_secs(1) {
                         if self.word_mode || self.time_mode {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500), self.batch_size);
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
                         } else if self.quote {
                             self.reference = utils::get_random_quote();
                             self.batch_size = self.reference.split_whitespace().count();
@@ -288,6 +377,18 @@ impl App {
                             "# numbers" => {
                                 self.numbers = !self.numbers;
                             }
+                            "language" => {
+                                self.language_popup_open = true;
+                                self.language_popup_selected = match self.language {
+                                    Language::English => 0,
+                                    Language::Indonesian => 1,
+                                };
+                            }
+                            "theme" => {
+                                self.theme_popup_open = true;
+                                let schemes = ColorScheme::all();
+                                self.theme_popup_selected = schemes.iter().position(|&s| s == self.color_scheme).unwrap_or(0);
+                            }
                             "15" => {
                                 self.test_time = 15.0;
                             }
@@ -316,7 +417,7 @@ impl App {
                             self.batch_size = self.reference.split_whitespace().count();
                         }
                         else {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500), self.batch_size);
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
                         }
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pressed_vec.clear();
@@ -435,7 +536,7 @@ impl App {
 
                     if self.pos1 >= self.reference.chars().count() {
                         self.words_done += 1;
-                        self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500), self.batch_size);
+                        self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pos1 = 0;
                     }

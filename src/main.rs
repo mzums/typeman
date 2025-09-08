@@ -1,8 +1,8 @@
 use clap::{Parser, ValueHint};
-use std::{path::PathBuf};
 use serde::Deserialize;
+use std::path::PathBuf;
 
-use crate ::ui::cli::modes;
+use crate::ui::cli::modes;
 
 mod ui {
     pub mod cli {
@@ -10,17 +10,19 @@ mod ui {
         pub mod modes;
     }
     pub mod gui {
-        pub mod main;
-        pub mod results;
         pub mod config;
+        pub mod main;
         pub mod practice;
+        pub mod results;
     }
     pub mod tui {
         pub mod app;
-        pub mod ui;
         pub mod r#mod;
+        pub mod ui;
     }
 }
+mod color_scheme;
+mod language;
 mod practice;
 mod utils;
 
@@ -93,6 +95,13 @@ struct Cli {
 
     #[arg(long = "cli", conflicts_with_all = &["tui", "gui"])]
     cli: bool,
+
+    #[arg(
+        long = "lang",
+        value_name = "LANGUAGE",
+        help = "Language for word lists (english, indonesian)"
+    )]
+    language: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -134,5 +143,5 @@ fn main() {
         }
         return;
     }
-    tui_main();    
+    ui::tui::r#mod::main().unwrap();
 }

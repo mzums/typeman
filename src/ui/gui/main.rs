@@ -9,6 +9,7 @@ use std::thread;
 use crate::utils;
 use crate::ui::gui::results;
 use crate::ui::gui::config::{self, reset_game_state};
+use crate::language::Language;
 use crate::ui::gui::practice as gui_practice;
 use crate::practice::{self, TYPING_LEVELS};
 
@@ -28,13 +29,14 @@ pub async fn gui_main_async() {
     let mut quote = false;
     let mut time_mode = true;
     let mut word_mode = false;
+    let mut language = Language::default();
 
     let font = load_ttf_font_from_bytes(ROBOTO_MONO).unwrap();
     let title_font = load_ttf_font_from_bytes(ROBOTO_MONO).unwrap();
     let emoji_font = load_ttf_font_from_bytes(DEJAVU).unwrap();
 
     let top_words = 500;
-    let word_list = utils::read_first_n_words(top_words as usize);
+    let word_list = utils::read_first_n_words(top_words as usize, language);
     let mut batch_size = 50;
 
     let mut reference = utils::get_reference(punctuation, false, &word_list, batch_size);
@@ -136,6 +138,7 @@ pub async fn gui_main_async() {
                 &mut practice_mode,
                 &mut saved_results,
                 &mut error_positions,
+                &mut language,
             );
 
             
@@ -357,7 +360,8 @@ pub async fn gui_main_async() {
             } else if quote {
                 reference = utils::get_random_quote();
             } else {
-                reference = utils::get_reference(punctuation, false, &word_list, batch_size);
+                let updated_word_list = utils::read_first_n_words(500, language);
+                reference = utils::get_reference(punctuation, false, &updated_word_list, batch_size);
             }
             is_correct = VecDeque::from(vec![0; reference.len()]);
             error_positions = vec![false; is_correct.len()];
@@ -366,7 +370,7 @@ pub async fn gui_main_async() {
 
         if pos1 >= reference.chars().count() && time_mode && !game_over{
             words_done += 1;
-            reference = utils::get_reference(punctuation, numbers, &utils::read_first_n_words(500), batch_size);
+            reference = utils::get_reference(punctuation, numbers, &utils::read_first_n_words(500, language), batch_size);
             is_correct = VecDeque::from(vec![0; reference.len()]);
             error_positions = vec![false; is_correct.len()];
             pos1 = 0;
