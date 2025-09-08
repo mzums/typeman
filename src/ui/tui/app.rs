@@ -7,6 +7,7 @@ use crate::ui::tui::ui::render_app;
 use crate::{practice, utils};
 use crate::practice::TYPING_LEVELS;
 use crate::language::Language;
+use crate::color_scheme::ColorScheme;
 
 
 #[derive(PartialEq, Eq)]
@@ -48,6 +49,9 @@ pub struct App {
     pub language: Language,
     pub language_popup_open: bool,
     pub language_popup_selected: usize,
+    pub color_scheme: ColorScheme,
+    pub theme_popup_open: bool,
+    pub theme_popup_selected: usize,
 }
 
 impl App {
@@ -84,6 +88,9 @@ impl App {
             language: Language::default(),
             language_popup_open: false,
             language_popup_selected: 0,
+            color_scheme: ColorScheme::default(),
+            theme_popup_open: false,
+            theme_popup_selected: 0,
         }
     }
 
@@ -162,6 +169,7 @@ impl App {
             ("# numbers", self.numbers, !self.quote && !self.practice_mode),
             ("|", true, true),
             ("language", false, !self.quote && !self.practice_mode),
+            ("theme", false, true),
             ("|", true, true),
             ("time", self.time_mode, true),
             ("words", self.word_mode, true),
@@ -180,7 +188,39 @@ impl App {
         let reference_chars: Vec<char> = reference.chars().collect();
 
         if key_event.kind == crossterm::event::KeyEventKind::Press {
-            // Handle language popup first if it's open
+            // Handle theme popup first if it's open
+            if self.theme_popup_open {
+                match key_event.code {
+                    KeyCode::Esc => {
+                        self.theme_popup_open = false;
+                        return Ok(());
+                    }
+                    KeyCode::Up => {
+                        if self.theme_popup_selected > 0 {
+                            self.theme_popup_selected -= 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Down => {
+                        let schemes = ColorScheme::all();
+                        if self.theme_popup_selected < schemes.len() - 1 {
+                            self.theme_popup_selected += 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Enter => {
+                        let schemes = ColorScheme::all();
+                        if self.theme_popup_selected < schemes.len() {
+                            self.color_scheme = schemes[self.theme_popup_selected];
+                        }
+                        self.theme_popup_open = false;
+                        return Ok(());
+                    }
+                    _ => return Ok(()),
+                }
+            }
+
+            // Handle language popup if it's open
             if self.language_popup_open {
                 match key_event.code {
                     KeyCode::Esc => {
@@ -343,6 +383,11 @@ impl App {
                                     Language::English => 0,
                                     Language::Indonesian => 1,
                                 };
+                            }
+                            "theme" => {
+                                self.theme_popup_open = true;
+                                let schemes = ColorScheme::all();
+                                self.theme_popup_selected = schemes.iter().position(|&s| s == self.color_scheme).unwrap_or(0);
                             }
                             "15" => {
                                 self.test_time = 15.0;

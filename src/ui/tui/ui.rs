@@ -10,15 +10,9 @@ use ratatui::widgets::canvas::Canvas;
 use crate::ui::tui::app::{App, GameState};
 use crate::practice::TYPING_LEVELS;
 use crate::practice;
+use crate::color_scheme::ColorScheme;
 
-
-const BORDER_COLOR: Color = Color::Rgb(100, 60, 0);
-const REF_COLOR: Color = Color::Rgb(100, 100, 100);
-const BG_COLOR: Color = Color::Rgb(10, 10, 10);
-const MAIN_COLOR: Color = Color::Rgb(255, 155, 0);
-const DIMMER_MAIN: Color = Color::Rgb(180, 100, 0);
-
-fn render_instructions(frame: &mut Frame, area: Rect, show: bool, practice_menu: bool) {
+fn render_instructions(frame: &mut Frame, area: Rect, show: bool, practice_menu: bool, color_scheme: ColorScheme) {
     let mut lines = Vec::new();
     if show {
         lines.push(Line::from("  \u{2191} - enter config, \u{2190}/\u{2192} - toggle config, ↵ - apply config"));
@@ -32,7 +26,7 @@ fn render_instructions(frame: &mut Frame, area: Rect, show: bool, practice_menu:
     lines.push(Line::from("  Esc - exit"));
 
     let text = Paragraph::new(lines)
-        .style(Style::default().fg(BORDER_COLOR).bg(BG_COLOR))
+        .style(Style::default().fg(color_scheme.border_color()).bg(color_scheme.bg_color()))
         .alignment(Alignment::Left);
     frame.render_widget(text, area);
 }
@@ -52,25 +46,35 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
         .split(frame.area());
     
     if app.game_state == GameState::Results {
-        render_results(frame, chunks[0], app);
+        render_results(frame, chunks[0], app, app.color_scheme);
     } else if app.practice_menu {
-        render_practice_menu(frame, chunks[0], app);
+        render_practice_menu(frame, chunks[0], app, app.color_scheme);
     }
     else {
-        render_reference_frame(frame, chunks[0], app, timer);
+        render_reference_frame(frame, chunks[0], app, timer, app.color_scheme);
     }
-    render_instructions(frame, chunks[1], app.game_state != GameState::Results && !app.practice_menu, app.practice_menu);
+    render_instructions(frame, chunks[1], app.game_state != GameState::Results && !app.practice_menu, app.practice_menu, app.color_scheme);
     
     // Render language popup if open
     if app.language_popup_open {
-        render_language_popup(frame, app, frame.area());
+        render_language_popup(frame, app, frame.area(), app.color_scheme);
+    }
+    
+    // Render theme popup if open
+    if app.theme_popup_open {
+        render_theme_popup(frame, app, frame.area(), app.color_scheme);
     }
 }
 
-fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App) {
+fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorScheme) {
+    let _bg_color = color_scheme.bg_color();
+    let _main_color = color_scheme.main_color();
+    let _ref_color = color_scheme.ref_color();
+    let _border_color = color_scheme.border_color();
+    
     let mut lines: Vec<Line> = Vec::new();
 
-    let block = create_reference_block(3);
+    let block = create_reference_block(3, color_scheme);
     let inner_area = block.inner(area);
     let chunks = Layout::vertical([
         Constraint::Length(2),
@@ -83,15 +87,15 @@ fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App) {
         0
     };
     for level in TYPING_LEVELS.iter().enumerate().skip(to_skip as usize) {
-        let mut fg_color = REF_COLOR;
-        let mut bg_color = BG_COLOR;
+        let mut fg_color = color_scheme.ref_color();
+        let mut bg_color = color_scheme.bg_color();
         if app.selected_level == level.0 {
-            fg_color = BG_COLOR;
-            bg_color = Color::Rgb(150, 90, 0);
+            fg_color = color_scheme.bg_color();
+            bg_color = color_scheme.dimmer_main();
         }
         let line = if practice::check_if_completed(&format!("practice_results/level_{}.txt", level.0 + 1)) {
             Line::from(vec![
-                Span::styled("✔ ", Style::default().fg(Color::Rgb(0, 255, 0)).bg(BG_COLOR)),
+                Span::styled("✔ ", Style::default().fg(Color::Rgb(0, 255, 0)).bg(bg_color)),
                 if level.0 < 9 {
                     Span::styled(format!("  {}. {} ", level.0 + 1, level.1.0), Style::default().fg(fg_color).bg(bg_color))
                 } else {
@@ -100,7 +104,7 @@ fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App) {
             ])
         } else {
             Line::from(vec![
-                Span::styled("  ", Style::default().fg(Color::Rgb(0, 255, 0)).bg(BG_COLOR)),
+                Span::styled("  ", Style::default().fg(Color::Rgb(0, 255, 0)).bg(bg_color)),
                 if level.0 < 9 {
                     Span::styled(format!("  {}. {} ", level.0 + 1, level.1.0), Style::default().fg(fg_color).bg(bg_color))
                 } else {
@@ -116,7 +120,7 @@ fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App) {
         .alignment(Alignment::Left);
 
     let title = Line::from("Select practice level")
-        .style(Style::default().fg(MAIN_COLOR).bg(BG_COLOR))
+        .style(Style::default().fg(color_scheme.main_color()).bg(color_scheme.bg_color()))
         .alignment(Alignment::Center);
 
     frame.render_widget(block, area);
@@ -183,7 +187,10 @@ fn calc_standard_deviation(values: &[f64], average_word_length: f64) -> f64 {
     variance.sqrt()
 }
 
-fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
+fn get_stats(app: &App, color_scheme: ColorScheme) -> (Line<'static>, Line<'static>) {
+    let bg_color = color_scheme.bg_color();
+    let main_color = color_scheme.main_color();
+    let ref_color = color_scheme.ref_color();
     let wpm = (app.words_done as f32 / app.timer.as_secs_f32()) * 60.0;
     let wpm_str = format!("{}", wpm as i32);
 
@@ -224,9 +231,9 @@ fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
         mode_str += " #";
     }
 
-    let label_style = Style::default().fg(REF_COLOR).bg(BG_COLOR);
-    let value_style = Style::default().fg(MAIN_COLOR).bg(BG_COLOR);
-    let space_style = Style::default().bg(BG_COLOR);
+    let label_style = Style::default().fg(ref_color).bg(bg_color);
+    let value_style = Style::default().fg(main_color).bg(bg_color);
+    let space_style = Style::default().bg(bg_color);
 
     let col_widths = [3, 4, 4, 4, 4, 8];
 
@@ -277,7 +284,10 @@ fn get_stats(app: &App) -> (Line<'static>, Line<'static>) {
     )
 }
 
-fn get_chart(smoothed_speeds: &[f64], app: &App, step: usize) -> Chart<'static> {
+fn get_chart(smoothed_speeds: &[f64], app: &App, step: usize, color_scheme: ColorScheme) -> Chart<'static> {
+    let bg_color = color_scheme.bg_color();
+    let _main_color = color_scheme.main_color();
+    let ref_color = color_scheme.ref_color();
     let data: Vec<(f64, f64)> = smoothed_speeds
         .iter()
         .enumerate()
@@ -292,22 +302,22 @@ fn get_chart(smoothed_speeds: &[f64], app: &App, step: usize) -> Chart<'static> 
 
     let bar_dataset = Dataset::default()
         .graph_type(GraphType::Bar)
-        .style(Style::default().fg(Color::Rgb(150, 80, 0)).bg(BG_COLOR))
+        .style(Style::default().fg(Color::Rgb(150, 80, 0)).bg(bg_color))
         .marker(symbols::Marker::HalfBlock)
         .data(data);
     
     let chart = Chart::new(vec![bar_dataset])
-    .block(Block::default().style(Style::default().bg(BG_COLOR)))
-        .bg(BG_COLOR)
-        .style(Style::default().bg(BG_COLOR))
+    .block(Block::default().style(Style::default().bg(bg_color)))
+        .bg(bg_color)
+        .style(Style::default().bg(bg_color))
         .x_axis(
             Axis::default()
-                .style(Style::default().fg(REF_COLOR))
+                .style(Style::default().fg(ref_color))
                 .bounds([0.0, smoothed_speeds.len() as f64])
                 .labels(
                     (0..=max_time as usize)
                         .step_by(step)
-                        .map(|i| Span::styled(format!("{i}s"), Style::default().fg(REF_COLOR)))
+                        .map(|i| Span::styled(format!("{i}s"), Style::default().fg(ref_color)))
                         .collect::<Vec<Span>>(),
                 ),
         )
@@ -315,24 +325,28 @@ fn get_chart(smoothed_speeds: &[f64], app: &App, step: usize) -> Chart<'static> 
             Axis::default()
                 .title("wpm")
                 .labels_alignment(ratatui::layout::Alignment::Left)
-                .style(Style::default().fg(REF_COLOR))
+                .style(Style::default().fg(ref_color))
                 .bounds([0.0, max_speed * 1.1])
                 .labels(vec![
-                    Span::from("0").style(Style::default().fg(REF_COLOR)),
-                    Span::from(format!("{:.0}", max_speed / 2.0)).style(Style::default().fg(REF_COLOR)),
-                    Span::from(format!("{:.0}", max_speed)).style(Style::default().fg(REF_COLOR)),
+                    Span::from("0").style(Style::default().fg(ref_color)),
+                    Span::from(format!("{:.0}", max_speed / 2.0)).style(Style::default().fg(ref_color)),
+                    Span::from(format!("{:.0}", max_speed)).style(Style::default().fg(ref_color)),
                 ]),
         );
     chart
 }
 
-fn render_results(frame: &mut Frame, area: Rect, app: &App) {
+fn render_results(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorScheme) {
+    let bg_color = color_scheme.bg_color();
+    let _main_color = color_scheme.main_color();
+    let _ref_color = color_scheme.ref_color();
+    let _border_color = color_scheme.border_color();
     frame.render_widget(
-        Block::default().style(Style::default().bg(BG_COLOR)),
+        Block::default().style(Style::default().bg(color_scheme.bg_color())),
         area,
     );
 
-    let (wpm_line, acc_line) = get_stats(app);
+    let (wpm_line, acc_line) = get_stats(app, color_scheme);
 
     let columns_for_sec: HashMap<u32, usize> = [(5, 4), (15, 3), (30, 2), (60, 1)]
         .iter()
@@ -432,9 +446,9 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
         columns_to_delete,
     );
 
-    let chart = get_chart(&smoothed_speeds, app, step);
+    let chart = get_chart(&smoothed_speeds, app, step, color_scheme);
 
-    let block = create_reference_block(5);
+    let block = create_reference_block(5, color_scheme);
 
     let inner_area = block.inner(area);
 
@@ -469,14 +483,14 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
     };
 
     let stats = Paragraph::new(vec![wpm_line, acc_line])
-        .style(Style::default().bg(BG_COLOR))
+        .style(Style::default().bg(bg_color))
         .alignment(Alignment::Center);
 
     let empty_line = Line::from("");
 
     frame.render_widget(block, area);
     frame.render_widget(
-        Block::default().style(Style::default().bg(BG_COLOR)),
+        Block::default().style(Style::default().bg(bg_color)),
         chart_area,
     );
     frame.render_widget(chart, chart_area);
@@ -491,10 +505,10 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
     );
 
     let canvas = Canvas::default()
-        .block(Block::default().style(Style::default().bg(BG_COLOR)))
+        .block(Block::default().style(Style::default().bg(bg_color)))
         .x_bounds([0.0, smoothed_speeds.len() as f64])
         .y_bounds([0.0, max_speed * 1.1])
-        .background_color(BG_COLOR)
+        .background_color(bg_color)
         .paint(|ctx| {
             for (i, err) in errors_per_second.iter().enumerate() {
                 let cross: &str;
@@ -511,7 +525,7 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
                     ctx.print(
                         (i as f64 + 0.8) * (smoothed_speeds.len() as f64 / test_time as f64),
                         1.0,
-                        Span::styled(cross, Style::default().fg(Color::Red).bg(BG_COLOR)),
+                        Span::styled(cross, Style::default().fg(Color::Red).bg(bg_color)),
                     );
                 }
             }
@@ -523,18 +537,23 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(stats, chunks[2]);
 }
 
-fn render_reference_frame(frame: &mut Frame, area: Rect, app: &App, timer: Duration) {
+fn render_reference_frame(frame: &mut Frame, area: Rect, app: &App, timer: Duration, color_scheme: ColorScheme) {
+    let bg_color = color_scheme.bg_color();
+    let _main_color = color_scheme.main_color();
+    let _ref_color = color_scheme.ref_color();
+    let _border_color = color_scheme.border_color();
+    let _dimmer_main = color_scheme.dimmer_main();
     let max_ref_width = calculate_max_ref_width(area);
     let ref_padding = calculate_ref_padding(area, max_ref_width);
 
-    let instruction_line = create_config_line(app);
-    let horizontal_line = create_horizontal_line(area);
+    let instruction_line = create_config_line(app, color_scheme);
+    let horizontal_line = create_horizontal_line(area, color_scheme);
     let time_words = if app.time_mode {
-        create_timer(timer, app.test_time)
+        create_timer(timer, app.test_time, color_scheme)
     } else {
-        create_words_count(app.batch_size, app.words_done)
+        create_words_count(app.batch_size, app.words_done, color_scheme)
     };
-    let colored_lines = create_colored_lines(app, max_ref_width);
+    let colored_lines = create_colored_lines(app, max_ref_width, color_scheme);
     let empty_space = calculate_vertical_padding(area, colored_lines.len());
 
     let content = assemble_content(
@@ -546,10 +565,10 @@ fn render_reference_frame(frame: &mut Frame, area: Rect, app: &App, timer: Durat
         
     );
 
-    let block = create_reference_block(ref_padding);
+    let block = create_reference_block(ref_padding, color_scheme);
     let paragraph = Paragraph::new(content)
         .block(block)
-        .style(Style::default().bg(BG_COLOR));
+        .style(Style::default().bg(bg_color));
 
     frame.render_widget(paragraph, area);
 }
@@ -566,29 +585,39 @@ fn calculate_ref_padding(area: Rect, max_ref_width: usize) -> u16 {
     }
 }
 
-fn create_timer(timer: Duration, test_time: f32) -> Line<'static> {
+fn create_timer(timer: Duration, test_time: f32, color_scheme: ColorScheme) -> Line<'static> {
+    let bg_color = color_scheme.bg_color();
+    let main_color = color_scheme.main_color();
     let seconds = test_time - timer.as_secs() as f32;
     let formatted_time = format!("{:?}", seconds as i32);
     
     Line::from(formatted_time)
-        .style(Style::default().fg(MAIN_COLOR).bg(BG_COLOR))
+        .style(Style::default().fg(main_color).bg(bg_color))
         .alignment(Alignment::Left)
 }
 
-fn create_words_count(all_words: usize, typed_words: usize) -> Line<'static> {
+fn create_words_count(all_words: usize, typed_words: usize, color_scheme: ColorScheme) -> Line<'static> {
+    let bg_color = color_scheme.bg_color();
+    let main_color = color_scheme.main_color();
     let words_text = format!("{}/{}", typed_words, all_words);
     Line::from(words_text)
-        .style(Style::default().fg(MAIN_COLOR).bg(BG_COLOR))
+        .style(Style::default().fg(main_color).bg(bg_color))
         .alignment(Alignment::Left)
 }
 
-fn create_config_line( app: &App) -> Line<'static> {
+fn create_config_line( app: &App, color_scheme: ColorScheme) -> Line<'static> {
+    let bg_color = color_scheme.bg_color();
+    let main_color = color_scheme.main_color();
+    let ref_color = color_scheme.ref_color();
+    let border_color = color_scheme.border_color();
+    let dimmer_main = color_scheme.dimmer_main();
     let divider = true;
     let mut button_states = vec![
         ("! punctuation", app.punctuation, !app.quote && !app.practice_mode),
         ("# numbers", app.numbers, !app.quote && !app.practice_mode),
         ("|", divider, true),
         ("language", false, !app.quote && !app.practice_mode),
+        ("theme", false, true),
         ("|", divider, app.word_mode || app.time_mode),
         ("time", app.time_mode, true),
         ("words", app.word_mode, true),
@@ -606,22 +635,22 @@ fn create_config_line( app: &App) -> Line<'static> {
 
     let mut spans: Vec<Span<'static>> = vec![];
 
-    let mut fg_colors = vec![REF_COLOR; button_states.len()];
-    let mut bg_colors = vec![BG_COLOR; button_states.len()];
+    let mut fg_colors = vec![ref_color; button_states.len()];
+    let mut bg_colors = vec![bg_color; button_states.len()];
     for (i, (label, state_val, visible)) in button_states.iter_mut().enumerate() {
         if !*visible {
             continue;
         }
         if *state_val && app.selected_config == *label && app.config && *label != "|" {
-            bg_colors[i] = DIMMER_MAIN;
-            fg_colors[i] = BG_COLOR;
+            bg_colors[i] = dimmer_main;
+            fg_colors[i] = bg_color;
         } else if app.selected_config == *label && app.config && *label != "|" {
-            bg_colors[i] = BORDER_COLOR;
-            fg_colors[i] = BG_COLOR;
+            bg_colors[i] = border_color;
+            fg_colors[i] = bg_color;
         } else if *state_val {
-            fg_colors[i] = MAIN_COLOR;
+            fg_colors[i] = main_color;
         } else {
-            fg_colors[i] = REF_COLOR;
+            fg_colors[i] = ref_color;
         }
         spans.push(Span::styled(
             format!(" {} ", label),
@@ -632,30 +661,35 @@ fn create_config_line( app: &App) -> Line<'static> {
     Line::from(spans).alignment(Alignment::Center)
 }
 
-fn create_horizontal_line(area: Rect) -> Line<'static> {
+fn create_horizontal_line(area: Rect, color_scheme: ColorScheme) -> Line<'static> {
+    let bg_color = color_scheme.bg_color();
+    let border_color = color_scheme.border_color();
     Line::from("─".repeat(area.width.saturating_sub(15) as usize)
-        .fg(BORDER_COLOR)
-        .bg(BG_COLOR))
+        .fg(border_color)
+        .bg(bg_color))
 }
 
-fn create_colored_lines<'a>(app: &App, max_ref_width: usize) -> Vec<Line<'a>> {
-    let mut fg_colors: Vec<Color> = vec![REF_COLOR; app.reference.chars().count()];
-    let mut bg_colors: Vec<Color> = vec![BG_COLOR; app.reference.chars().count()];
+fn create_colored_lines<'a>(app: &App, max_ref_width: usize, color_scheme: ColorScheme) -> Vec<Line<'a>> {
+    let bg_color = color_scheme.bg_color();
+    let main_color = color_scheme.main_color();
+    let ref_color = color_scheme.ref_color();
+    let mut fg_colors: Vec<Color> = vec![ref_color; app.reference.chars().count()];
+    let mut bg_colors: Vec<Color> = vec![bg_color; app.reference.chars().count()];
 
     for i in 0..app.is_correct.len() {
         if app.pos1 == i {
-            fg_colors[i] = BG_COLOR;
-            bg_colors[i] = MAIN_COLOR
+            fg_colors[i] = bg_color;
+            bg_colors[i] = main_color
         } else if app.is_correct[i] == 0 || i >= app.pos1{
-            fg_colors[i] = REF_COLOR;
+            fg_colors[i] = ref_color;
         } else if app.is_correct[i] == 2 {
             fg_colors[i] = Color::White;
         } else if app.is_correct[i] == 1 {
-            fg_colors[i] = MAIN_COLOR;
+            fg_colors[i] = main_color;
         } else if app.is_correct[i] == -1 {
             fg_colors[i] = Color::Rgb(255, 0, 0);
         } else {
-            fg_colors[i] = REF_COLOR;
+            fg_colors[i] = ref_color;
         }
     }
 
@@ -667,8 +701,8 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize) -> Vec<Line<'a>> {
             let spans: Vec<Span<'a>> = line
                 .chars()
                 .map(|c| {
-                    let fg_color = fg_colors.get(char_index).cloned().unwrap_or(REF_COLOR);
-                    let bg_color = bg_colors.get(char_index).cloned().unwrap_or(BG_COLOR);
+                    let fg_color = fg_colors.get(char_index).cloned().unwrap_or(ref_color);
+                    let bg_color = bg_colors.get(char_index).cloned().unwrap_or(bg_color);
                     char_index += 1;
                     Span::styled(c.to_string(), Style::default().fg(fg_color).bg(bg_color))
                 })
@@ -680,7 +714,7 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize) -> Vec<Line<'a>> {
 
 fn calculate_vertical_padding(area: Rect, content_lines: usize) -> usize {
     let empty_space = area.height.saturating_sub(3) as usize / 2;
-    empty_space.saturating_sub(content_lines / 2) - 3
+    empty_space.saturating_sub(content_lines / 2).saturating_sub(3)
 }
 
 fn assemble_content<'a>(
@@ -705,14 +739,17 @@ fn assemble_content<'a>(
     content
 }
 
-fn create_reference_block(ref_padding: u16) -> Block<'static> {
+fn create_reference_block(ref_padding: u16, color_scheme: ColorScheme) -> Block<'static> {
+    let bg_color = color_scheme.bg_color();
+    let main_color = color_scheme.main_color();
+    let border_color = color_scheme.border_color();
     Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(BORDER_COLOR).bg(BG_COLOR))
-        .style(Style::default().bg(BG_COLOR))
+        .border_style(Style::default().fg(border_color).bg(bg_color))
+        .style(Style::default().bg(bg_color))
         .title(Line::from(vec![
-            " Type".fg(MAIN_COLOR).bg(BG_COLOR),
-            "Man ".fg(Color::White).bg(BG_COLOR),
+            " Type".fg(main_color).bg(bg_color),
+            "Man ".fg(Color::White).bg(bg_color),
         ]))
         .padding(Padding {
             left: ref_padding,
@@ -746,7 +783,11 @@ fn split_lines(text: &str, width: usize) -> Vec<String> {
         .collect()
 }
 
-fn render_language_popup(frame: &mut Frame, app: &App, area: Rect) {
+fn render_language_popup(frame: &mut Frame, app: &App, area: Rect, color_scheme: ColorScheme) {
+    let bg_color = color_scheme.bg_color();
+    let main_color = color_scheme.main_color();
+    let ref_color = color_scheme.ref_color();
+    let border_color = color_scheme.border_color();
     // Create popup area (center of screen)
     let popup_area = centered_rect(30, 30, area);
     
@@ -760,9 +801,9 @@ fn render_language_popup(frame: &mut Frame, app: &App, area: Rect) {
         .enumerate()
         .map(|(i, &lang)| {
             let style = if i == app.language_popup_selected {
-                Style::default().fg(BG_COLOR).bg(MAIN_COLOR)
+                Style::default().fg(bg_color).bg(main_color)
             } else {
-                Style::default().fg(REF_COLOR)
+                Style::default().fg(ref_color)
             };
             ListItem::new(lang).style(style)
         })
@@ -773,8 +814,41 @@ fn render_language_popup(frame: &mut Frame, app: &App, area: Rect) {
             Block::default()
                 .title("Select Language")
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR))
-                .style(Style::default().bg(BG_COLOR))
+                .border_style(Style::default().fg(border_color))
+                .style(Style::default().bg(bg_color))
+        );
+
+    frame.render_widget(list, popup_area);
+}
+
+fn render_theme_popup(frame: &mut Frame, app: &App, area: Rect, color_scheme: ColorScheme) {
+    // Create popup area (center of screen)
+    let popup_area = centered_rect(40, 50, area);
+    
+    // Clear the area
+    frame.render_widget(ratatui::widgets::Clear, popup_area);
+    
+    // Create popup content
+    let themes = ColorScheme::all();
+    let items: Vec<ListItem> = themes
+        .iter()
+        .enumerate()
+        .map(|(i, theme)| {
+            let style = if i == app.theme_popup_selected {
+                Style::default().bg(color_scheme.main_color()).fg(color_scheme.bg_color())
+            } else {
+                Style::default().fg(color_scheme.text_color())
+            };
+            ListItem::new(theme.name()).style(style)
+        })
+        .collect();
+
+    let list = List::new(items)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Select Theme")
+                .style(Style::default().bg(color_scheme.bg_color()).fg(color_scheme.border_color()))
         );
 
     frame.render_widget(list, popup_area);

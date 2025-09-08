@@ -21,6 +21,7 @@ mod ui {
         pub mod ui;
     }
 }
+mod color_scheme;
 mod language;
 mod practice;
 mod utils;
