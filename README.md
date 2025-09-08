@@ -73,6 +73,7 @@ Additional action needed for succesfull install
 ### Credits:
 - https://github.com/dwyl/quotes  
 - https://github.com/JackShannon/1000-most-common-words/blob/master/1000-common-english-words.txt
+- Indonesian common words compiled from various online dictionaries and frequency lists
 - https://fonts.google.com/specimen/Roboto+Mono?preview.text=Whereas%20recognition%20of%20the%20inherent%20dignity
 
 ### Special thanks to [piter231](https://github.com/piter231/) for testing!
