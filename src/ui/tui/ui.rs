@@ -546,7 +546,7 @@ fn render_reference_frame(frame: &mut Frame, area: Rect, app: &App, timer: Durat
     let max_ref_width = calculate_max_ref_width(area);
     let ref_padding = calculate_ref_padding(area, max_ref_width);
 
-    let instruction_line = create_config_line(app, color_scheme);
+    let instruction_line = create_config_line(app, color_scheme, area);
     let horizontal_line = create_horizontal_line(area, color_scheme);
     let time_words = if app.time_mode {
         create_timer(timer, app.test_time, color_scheme)
@@ -605,7 +605,7 @@ fn create_words_count(all_words: usize, typed_words: usize, color_scheme: ColorS
         .alignment(Alignment::Left)
 }
 
-fn create_config_line( app: &App, color_scheme: ColorScheme) -> Line<'static> {
+fn create_config_line(app: &App, color_scheme: ColorScheme, area: Rect) -> Line<'static> {
     let bg_color = color_scheme.bg_color();
     let main_color = color_scheme.main_color();
     let ref_color = color_scheme.ref_color();
@@ -613,35 +613,35 @@ fn create_config_line( app: &App, color_scheme: ColorScheme) -> Line<'static> {
     let dimmer_main = color_scheme.dimmer_main();
     let divider = true;
     let mut button_states = vec![
-        ("! punctuation", app.punctuation, !app.quote && !app.practice_mode),
-        ("# numbers", app.numbers, !app.quote && !app.practice_mode),
-        ("|", divider, true),
-        ("language", false, !app.quote && !app.practice_mode),
-        ("theme", false, true),
-        ("|", divider, app.word_mode || app.time_mode),
-        ("time", app.time_mode, true),
-        ("words", app.word_mode, true),
-        ("quote", app.quote, true),
-        ("practice", app.practice_mode, true),
-        ("|", divider, app.word_mode || app.time_mode),
-        ("15", app.test_time == 15.0, app.time_mode),
-        ("30", app.test_time == 30.0, app.time_mode),
-        ("60", app.test_time == 60.0, app.time_mode),
-        ("120", app.test_time == 120.0, app.time_mode),
-        ("25", app.batch_size == 25, app.word_mode),
-        ("50", app.batch_size == 50, app.word_mode),
-        ("100", app.batch_size == 100, app.word_mode),
+        ("punctuation", if area.width > 110 { "! punctuation" } else { "! punct" }, app.punctuation, !app.quote && !app.practice_mode),
+        ("numbers", if area.width > 110 { "# numbers" } else { "# num" }, app.numbers, !app.quote && !app.practice_mode),
+        ("divider", "|", divider, true),
+        ("language", if area.width > 110 { "language" } else { "lang" }, false, !app.quote && !app.practice_mode),
+        ("theme", "theme", false, true),
+        ("|", "|", divider, app.word_mode || app.time_mode),
+        ("time", "time", app.time_mode, true),
+        ("words", "words", app.word_mode, true),
+        ("quote", "quote", app.quote, true),
+        ("practice", "practice", app.practice_mode, true),
+        ("|", "|", divider, app.word_mode || app.time_mode),
+        ("15", "15", app.test_time == 15.0, app.time_mode),
+        ("30", "30", app.test_time == 30.0, app.time_mode),
+        ("60", "60", app.test_time == 60.0, app.time_mode),
+        ("120", "120", app.test_time == 120.0, app.time_mode),
+        ("25", "25", app.batch_size == 25, app.word_mode),
+        ("50", "50", app.batch_size == 50, app.word_mode),
+        ("100", "100", app.batch_size == 100, app.word_mode),
     ];
 
     let mut spans: Vec<Span<'static>> = vec![];
 
     let mut fg_colors = vec![ref_color; button_states.len()];
     let mut bg_colors = vec![bg_color; button_states.len()];
-    for (i, (label, state_val, visible)) in button_states.iter_mut().enumerate() {
+    for (i, (label, display_name, state_val, visible)) in button_states.iter_mut().enumerate() {
         if !*visible {
             continue;
         }
-        if *state_val && app.selected_config == *label && app.config && *label != "|" {
+        if *state_val && *label != "|" && app.selected_config == *label && app.config {
             bg_colors[i] = dimmer_main;
             fg_colors[i] = bg_color;
         } else if app.selected_config == *label && app.config && *label != "|" {
@@ -653,7 +653,7 @@ fn create_config_line( app: &App, color_scheme: ColorScheme) -> Line<'static> {
             fg_colors[i] = ref_color;
         }
         spans.push(Span::styled(
-            format!(" {} ", label),
+            format!(" {} ", display_name),
             Style::default().fg(fg_colors[i]).bg(bg_colors[i]),
         ));
     }
@@ -743,14 +743,25 @@ fn create_reference_block(ref_padding: u16, color_scheme: ColorScheme) -> Block<
     let bg_color = color_scheme.bg_color();
     let main_color = color_scheme.main_color();
     let border_color = color_scheme.border_color();
+    let dimmer_main = color_scheme.dimmer_main();
+
+    let title = if color_scheme == ColorScheme::Light {
+        Line::from(vec![
+            " Type".fg(dimmer_main).bg(bg_color),
+            "Man ".fg(border_color).bg(bg_color),
+        ])
+    } else {
+        Line::from(vec![
+            " Type".fg(main_color).bg(bg_color),
+            "Man ".fg(Color::White).bg(bg_color),
+        ])
+    };
+
     Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(border_color).bg(bg_color))
         .style(Style::default().bg(bg_color))
-        .title(Line::from(vec![
-            " Type".fg(main_color).bg(bg_color),
-            "Man ".fg(Color::White).bg(bg_color),
-        ]))
+        .title(title)
         .padding(Padding {
             left: ref_padding,
             right: ref_padding.saturating_sub(2),

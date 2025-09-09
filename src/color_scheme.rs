@@ -7,7 +7,10 @@ pub enum ColorScheme {
     Light,
     Monochrome,
     Ocean,
+    OceanDark,
     Forest,
+    ForestDark,
+    Pink,
 }
 
 impl ColorScheme {
@@ -18,7 +21,10 @@ impl ColorScheme {
             ColorScheme::Light,
             ColorScheme::Monochrome,
             ColorScheme::Ocean,
+            ColorScheme::OceanDark,
             ColorScheme::Forest,
+            ColorScheme::ForestDark,
+            ColorScheme::Pink,
         ]
     }
 
@@ -29,7 +35,10 @@ impl ColorScheme {
             ColorScheme::Light => "Light",
             ColorScheme::Monochrome => "Monochrome",
             ColorScheme::Ocean => "Ocean",
+            ColorScheme::OceanDark => "Ocean Dark",
             ColorScheme::Forest => "Forest",
+            ColorScheme::ForestDark => "Forest Dark",
+            ColorScheme::Pink => "Pink",
         }
     }
 
@@ -40,7 +49,10 @@ impl ColorScheme {
             ColorScheme::Light => Color::Rgb(200, 180, 160),
             ColorScheme::Monochrome => Color::White,
             ColorScheme::Ocean => Color::Rgb(0, 100, 150),
+            ColorScheme::OceanDark => Color::Rgb(0, 50, 80),
             ColorScheme::Forest => Color::Rgb(50, 100, 50),
+            ColorScheme::ForestDark => Color::Rgb(60, 120, 60),
+            ColorScheme::Pink => Color::Rgb(100, 20, 70),
         }
     }
 
@@ -51,7 +63,10 @@ impl ColorScheme {
             ColorScheme::Light => Color::Rgb(120, 120, 120),
             ColorScheme::Monochrome => Color::Gray,
             ColorScheme::Ocean => Color::Rgb(100, 150, 200),
+            ColorScheme::OceanDark => Color::Rgb(70, 100, 130),
             ColorScheme::Forest => Color::Rgb(100, 150, 100),
+            ColorScheme::ForestDark => Color::Rgb(70, 80, 70),
+            ColorScheme::Pink => Color::Rgb(80, 70, 70),
         }
     }
 
@@ -62,7 +77,10 @@ impl ColorScheme {
             ColorScheme::Light => Color::Rgb(250, 250, 250),
             ColorScheme::Monochrome => Color::Black,
             ColorScheme::Ocean => Color::Rgb(10, 30, 50),
+            ColorScheme::OceanDark => Color::Rgb(0, 5, 10),
             ColorScheme::Forest => Color::Rgb(20, 40, 20),
+            ColorScheme::ForestDark => Color::Rgb(10, 10, 10),
+            ColorScheme::Pink => Color::Rgb(7, 0, 2),
         }
     }
 
@@ -73,7 +91,10 @@ impl ColorScheme {
             ColorScheme::Light => Color::Rgb(80, 80, 80),
             ColorScheme::Monochrome => Color::White,
             ColorScheme::Ocean => Color::Rgb(100, 200, 255),
+            ColorScheme::OceanDark => Color::Rgb(80, 180, 230),
             ColorScheme::Forest => Color::Rgb(150, 255, 150),
+            ColorScheme::ForestDark => Color::Rgb(100, 200, 100),
+            ColorScheme::Pink => Color::Rgb(255, 20, 147),
         }
     }
 
@@ -84,7 +105,10 @@ impl ColorScheme {
             ColorScheme::Light => Color::Rgb(60, 60, 60),
             ColorScheme::Monochrome => Color::Gray,
             ColorScheme::Ocean => Color::Rgb(60, 140, 200),
+            ColorScheme::OceanDark => Color::Rgb(50, 120, 180),
             ColorScheme::Forest => Color::Rgb(100, 180, 100),
+            ColorScheme::ForestDark => Color::Rgb(150, 230, 100),
+            ColorScheme::Pink => Color::Rgb(200, 10, 120),
         }
     }
 
@@ -95,7 +119,10 @@ impl ColorScheme {
             ColorScheme::Light => Color::Black,
             ColorScheme::Monochrome => Color::White,
             ColorScheme::Ocean => Color::Rgb(200, 230, 255),
+            ColorScheme::OceanDark => Color::Rgb(180, 220, 255),
             ColorScheme::Forest => Color::Rgb(200, 255, 200),
+            ColorScheme::ForestDark => Color::Rgb(180, 255, 180),
+            ColorScheme::Pink => Color::Rgb(255, 182, 193),
         }
     }
 }

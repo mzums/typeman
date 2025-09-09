@@ -165,8 +165,8 @@ impl App {
         use crossterm::event::KeyCode;
 
         let button_states = vec![
-            ("! punctuation", self.punctuation, !self.quote && !self.practice_mode),
-            ("# numbers", self.numbers, !self.quote && !self.practice_mode),
+            ("punctuation", self.punctuation, !self.quote && !self.practice_mode),
+            ("numbers", self.numbers, !self.quote && !self.practice_mode),
             ("|", true, true),
             ("language", false, !self.quote && !self.practice_mode),
             ("theme", false, true),
@@ -371,10 +371,10 @@ impl App {
                                 self.practice_menu = !self.practice_menu;
                                 self.selected_level = practice::get_first_not_done();
                             }
-                            "! punctuation" => {
+                            "punctuation" => {
                                 self.punctuation = !self.punctuation;
                             }
-                            "# numbers" => {
+                            "numbers" => {
                                 self.numbers = !self.numbers;
                             }
                             "language" => {

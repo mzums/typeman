@@ -198,12 +198,6 @@ fn main() {
         run_cli(&args);
         return;
     }
-
-    #[cfg(not(any(feature = "cli", feature = "gui", feature = "tui")))]
-    {
-        eprintln!("No mode is available. Enable at least one feature: cli, gui, or tui.");
-        std::process::exit(1);
-    }
 }
 
 
