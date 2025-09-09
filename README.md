@@ -79,6 +79,10 @@ Additional action needed for succesfull install
     - `typeman --cli -l` - list all practice levels
     - `typeman --cli -l=1` - practice first level
 
+## Customization:
+- multi-language support
+- multiple themes
+
 ---
 
 ### Credits:
