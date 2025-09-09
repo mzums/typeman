@@ -125,6 +125,48 @@ impl ColorScheme {
             ColorScheme::Pink => Color::Rgb(255, 182, 193),
         }
     }
+
+    pub fn chart_color(&self) -> Color {
+        match self {
+            ColorScheme::Default => Color::Rgb(150, 80, 0),
+            ColorScheme::Dark => Color::Rgb(180, 180, 180),
+            ColorScheme::Light => Color::Rgb(80, 80, 80),
+            ColorScheme::Monochrome => Color::White,
+            ColorScheme::Ocean => Color::Rgb(100, 200, 255),
+            ColorScheme::OceanDark => Color::Rgb(80, 180, 230),
+            ColorScheme::Forest => Color::Rgb(150, 255, 150),
+            ColorScheme::ForestDark => Color::Rgb(100, 200, 100),
+            ColorScheme::Pink => Color::Rgb(100, 20, 70),
+        }
+    }
+
+    pub fn correct_color(&self) -> Color {
+        match self {
+            ColorScheme::Default => Color::White,
+            ColorScheme::Dark => Color::White,
+            ColorScheme::Light => Color::Rgb(150, 200, 150),
+            ColorScheme::Monochrome => Color::White,
+            ColorScheme::Ocean => Color::White,
+            ColorScheme::OceanDark => Color::White,
+            ColorScheme::Forest => Color::White,
+            ColorScheme::ForestDark => Color::White,
+            ColorScheme::Pink => Color::White,
+        }
+    }
+
+    pub fn incorrect_color(&self) -> Color {
+        match self {
+            ColorScheme::Default => Color::Rgb(255, 155, 0),
+            ColorScheme::Dark => Color::Rgb(100, 60, 0),
+            ColorScheme::Light => Color::Rgb(150, 100, 0),
+            ColorScheme::Monochrome => Color::Rgb(200, 50, 50),
+            ColorScheme::Ocean => Color::Rgb(255, 100, 150),
+            ColorScheme::OceanDark => Color::Rgb(255, 100, 200),
+            ColorScheme::Forest => Color::Rgb(255, 100, 100),
+            ColorScheme::ForestDark => Color::Rgb(255, 100, 100),
+            ColorScheme::Pink => Color::Rgb(255, 100, 100),
+        }
+    }
 }
 
 impl Default for ColorScheme {

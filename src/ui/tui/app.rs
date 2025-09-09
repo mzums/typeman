@@ -304,7 +304,7 @@ impl App {
                             self.reference = utils::get_random_quote();
                             self.batch_size = self.reference.split_whitespace().count();
                         } else if self.practice_mode {
-                            self.reference = practice::create_words(TYPING_LEVELS[self.selected_level].1, 5);
+                            self.reference = practice::create_words(TYPING_LEVELS[self.selected_level].1, 50);
                         }
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pressed_vec.clear();
@@ -340,7 +340,7 @@ impl App {
                         self.correct_count = 0;
                         self.error_count = 0;
                         self.config = false;
-                        self.reference = practice::create_words(TYPING_LEVELS[self.selected_level].1, 5);
+                        self.reference = practice::create_words(TYPING_LEVELS[self.selected_level].1, 50);
                         self.is_correct = vec![0; self.reference.chars().count()];
                     }
                     if self.config {

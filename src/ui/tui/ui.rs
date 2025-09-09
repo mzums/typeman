@@ -288,6 +288,7 @@ fn get_chart(smoothed_speeds: &[f64], app: &App, step: usize, color_scheme: Colo
     let bg_color = color_scheme.bg_color();
     let _main_color = color_scheme.main_color();
     let ref_color = color_scheme.ref_color();
+    let chart_color = color_scheme.chart_color();
     let data: Vec<(f64, f64)> = smoothed_speeds
         .iter()
         .enumerate()
@@ -302,7 +303,7 @@ fn get_chart(smoothed_speeds: &[f64], app: &App, step: usize, color_scheme: Colo
 
     let bar_dataset = Dataset::default()
         .graph_type(GraphType::Bar)
-        .style(Style::default().fg(Color::Rgb(150, 80, 0)).bg(bg_color))
+        .style(Style::default().fg(chart_color).bg(bg_color))
         .marker(symbols::Marker::HalfBlock)
         .data(data);
     
@@ -673,6 +674,8 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize, color_scheme: Color
     let bg_color = color_scheme.bg_color();
     let main_color = color_scheme.main_color();
     let ref_color = color_scheme.ref_color();
+    let correct_color = color_scheme.correct_color();
+    let incorrect_color = color_scheme.incorrect_color();
     let mut fg_colors: Vec<Color> = vec![ref_color; app.reference.chars().count()];
     let mut bg_colors: Vec<Color> = vec![bg_color; app.reference.chars().count()];
 
@@ -683,9 +686,9 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize, color_scheme: Color
         } else if app.is_correct[i] == 0 || i >= app.pos1{
             fg_colors[i] = ref_color;
         } else if app.is_correct[i] == 2 {
-            fg_colors[i] = Color::White;
+            fg_colors[i] = correct_color;
         } else if app.is_correct[i] == 1 {
-            fg_colors[i] = main_color;
+            fg_colors[i] = incorrect_color;
         } else if app.is_correct[i] == -1 {
             fg_colors[i] = Color::Rgb(255, 0, 0);
         } else {
