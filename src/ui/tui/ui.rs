@@ -10,6 +10,7 @@ use ratatui::widgets::canvas::Canvas;
 use crate::ui::tui::app::{App, GameState};
 use crate::practice::TYPING_LEVELS;
 use crate::practice;
+use crate::language::Language;
 
 
 const BORDER_COLOR: Color = Color::Rgb(100, 60, 0);
@@ -754,17 +755,16 @@ fn render_language_popup(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_widget(ratatui::widgets::Clear, popup_area);
     
     // Create popup content
-    let languages = vec!["English", "Indonesian"];
-    let items: Vec<ListItem> = languages
+    let items: Vec<ListItem> = Language::all()
         .iter()
         .enumerate()
-        .map(|(i, &lang)| {
+        .map(|(i, lang)| {
             let style = if i == app.language_popup_selected {
                 Style::default().fg(BG_COLOR).bg(MAIN_COLOR)
             } else {
                 Style::default().fg(REF_COLOR)
             };
-            ListItem::new(lang).style(style)
+            ListItem::new(lang.to_string()).style(style)
         })
         .collect();
 

@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub enum Language {
     English,
     Indonesian,
+    Italian,
 }
 
 impl Display for Language {
@@ -12,6 +13,7 @@ impl Display for Language {
         match self {
             Language::English => write!(f, "English"),
             Language::Indonesian => write!(f, "Indonesian"),
+            Language::Italian => write!(f, "Italian"),
         }
     }
 }
@@ -21,6 +23,7 @@ impl Language {
         match s.to_lowercase().as_str() {
             "english" | "en" => Some(Language::English),
             "indonesian" | "indonesia" | "id" | "indo" => Some(Language::Indonesian),
+            "italian" | "ita" | "it" => Some(Language::Italian),
             _ => None,
         }
     }
@@ -29,6 +32,7 @@ impl Language {
         match self {
             Language::English => include_str!("../assets/common_eng_words.txt"),
             Language::Indonesian => include_str!("../assets/common_ind_words.txt"),
+            Language::Italian=> include_str!("../assets/common_ita_words.txt"),
         }
     }
 
@@ -39,6 +43,17 @@ impl Language {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty() && s.chars().all(|c| c.is_alphabetic() || c.is_whitespace()))
             .collect()
+    }
+    pub fn all() -> &'static [Language] {
+        &[
+            Language::English,
+            Language::Indonesian,
+            Language::Italian,
+        ]
+    }
+
+    pub fn count() -> usize {
+        Self::all().len()
     }
 }
 
