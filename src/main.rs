@@ -33,6 +33,7 @@ mod color_scheme;
 mod language;
 mod practice;
 mod utils;
+mod config;
 
 #[cfg(feature = "cli")]
 use crate::ui::cli::modes;
