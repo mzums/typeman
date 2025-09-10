@@ -234,7 +234,7 @@ impl App {
                         return Ok(());
                     }
                     KeyCode::Down => {
-                        if self.language_popup_selected < 1 { // 0=English, 1=Indonesian
+                        if self.language_popup_selected < Language::count() - 1 { 
                             self.language_popup_selected += 1;
                         }
                         return Ok(());
@@ -243,6 +243,7 @@ impl App {
                         self.language = match self.language_popup_selected {
                             0 => Language::English,
                             1 => Language::Indonesian,
+                            2 => Language::Italian,
                             _ => Language::English,
                         };
                         self.language_popup_open = false;
@@ -382,6 +383,7 @@ impl App {
                                 self.language_popup_selected = match self.language {
                                     Language::English => 0,
                                     Language::Indonesian => 1,
+                                    Language::Italian=> 2,
                                 };
                             }
                             "theme" => {
