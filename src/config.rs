@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use crate::language::Language;
+use crate::color_scheme::ColorScheme;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AppConfig {
@@ -13,6 +15,8 @@ pub struct AppConfig {
     pub batch_size: usize,
     pub test_time: f32,
     pub selected_level: usize,
+    pub language: Language,
+    pub color_scheme: ColorScheme,
 }
 
 impl Default for AppConfig {
@@ -27,6 +31,8 @@ impl Default for AppConfig {
             batch_size: 50,
             test_time: 30.0,
             selected_level: 0,
+            language: Language::default(),
+            color_scheme: ColorScheme::default(),
         }
     }
 }

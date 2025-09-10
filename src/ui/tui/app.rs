@@ -93,10 +93,10 @@ impl App {
             practice_mode: app_config.practice_mode,
             selected_level: app_config.selected_level,
             timer: Duration::from_secs(0),
-            language: Language::default(),
+            language: app_config.language,
             language_popup_open: false,
             language_popup_selected: 0,
-            color_scheme: ColorScheme::default(),
+            color_scheme: app_config.color_scheme,
             theme_popup_open: false,
             theme_popup_selected: 0,
             app_config,
@@ -223,6 +223,7 @@ impl App {
                             self.color_scheme = schemes[self.theme_popup_selected];
                         }
                         self.theme_popup_open = false;
+                        self.save_config();
                         return Ok(());
                     }
                     _ => return Ok(()),
@@ -264,6 +265,7 @@ impl App {
                             self.pos1 = 0;
                             self.words_done = 0;
                         }
+                        self.save_config();
                         return Ok(());
                     }
                     _ => return Ok(()),
@@ -574,6 +576,8 @@ impl App {
             batch_size: self.batch_size,
             test_time: self.test_time,
             selected_level: self.selected_level,
+            language: self.language,
+            color_scheme: self.color_scheme,
         };
         
         let _ = self.app_config.save();
