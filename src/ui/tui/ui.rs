@@ -11,6 +11,7 @@ use crate::ui::tui::app::{App, GameState};
 use crate::practice::TYPING_LEVELS;
 use crate::practice;
 use crate::color_scheme::ColorScheme;
+use crate::language::Language;
 
 fn render_instructions(frame: &mut Frame, area: Rect, show: bool, practice_menu: bool, color_scheme: ColorScheme) {
     let mut lines = Vec::new();
@@ -809,17 +810,16 @@ fn render_language_popup(frame: &mut Frame, app: &App, area: Rect, color_scheme:
     frame.render_widget(ratatui::widgets::Clear, popup_area);
     
     // Create popup content
-    let languages = vec!["English", "Indonesian"];
-    let items: Vec<ListItem> = languages
+    let items: Vec<ListItem> = Language::all()
         .iter()
         .enumerate()
-        .map(|(i, &lang)| {
+        .map(|(i, lang)| {
             let style = if i == app.language_popup_selected {
                 Style::default().fg(bg_color).bg(main_color)
             } else {
                 Style::default().fg(ref_color)
             };
-            ListItem::new(lang).style(style)
+            ListItem::new(lang.to_string()).style(style)
         })
         .collect();
 

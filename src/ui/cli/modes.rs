@@ -1,4 +1,4 @@
-use std::{path::PathBuf};
+use std::path::PathBuf;
 use std::fs;
 use std::time::Instant;
 use std::collections::VecDeque;

@@ -471,7 +471,7 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                 let size = egui::Vec2::new(chart_width, chart_height);
                 let (rect, _response) = ui.allocate_exact_size(size, egui::Sense::hover());
 
-                let mut child_ui = ui.new_child(egui::UiBuilder::new().max_rect(rect));
+                let mut child_ui = ui.new_child(egui::UiBuilder::new().max_rect(rect).layout(*ui.layout()));
 
                 let grid_spacer = |input: egui_plot::GridInput| -> Vec<egui_plot::GridMark> {
                     let min = input.bounds.0;
