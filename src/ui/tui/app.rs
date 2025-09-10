@@ -93,7 +93,6 @@ impl App {
             practice_mode: app_config.practice_mode,
             selected_level: app_config.selected_level,
             timer: Duration::from_secs(0),
-<<<<<<< HEAD
             language: Language::default(),
             language_popup_open: false,
             language_popup_selected: 0,
