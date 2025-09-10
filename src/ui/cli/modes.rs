@@ -1,4 +1,4 @@
-use std::{path::PathBuf};
+use std::path::PathBuf;
 use std::fs;
 use std::time::Instant;
 use std::fs::File;
@@ -163,6 +163,5 @@ pub fn practice(args: &Cli) {
     let res = cli::main::type_loop(&reference, None, &mut start_time, Some(curr_level), &mut is_correct, "practice");
     if res == 1 {
         println!("Exiting practice mode.");
-        return;
     }
 }

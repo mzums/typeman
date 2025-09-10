@@ -63,7 +63,7 @@ pub fn create_words(chars: &[char], word_number: usize) -> String {
             reference.push(' ');
         }
     }
-    return reference;
+    reference
 }
 
 
@@ -123,7 +123,7 @@ pub fn check_if_completed(results_path: &str) -> bool {
             }
         }
     }
-    return false;
+    false
 }
 
 pub fn get_first_not_done() -> usize {
@@ -134,5 +134,5 @@ pub fn get_first_not_done() -> usize {
             return i;
         }
     }
-    return 1;
+    1
 }

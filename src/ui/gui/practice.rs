@@ -177,7 +177,7 @@ pub fn display_practice_menu(
             y + 1.2 * font_size as f32 - *scroll_offset,
             TextParams {
                 font: font.as_ref(),
-                font_size: font_size,
+                font_size,
                 color: text_color,
                 ..Default::default()
             },

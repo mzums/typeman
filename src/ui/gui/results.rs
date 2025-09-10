@@ -161,11 +161,11 @@ pub fn write_results(
         };
         let text_size = measure_text(&practice_text, font, passed_text_font, 1.0);
 
-        draw_text_ex(practice_text.as_str(), (screen_width - text_size.width) / 2.0, chart_y + chart_height + screen_height / 4.0, TextParams { font: font, font_size: passed_text_font, font_scale: 1.0, color: Color::from_rgba(255, 255, 255, 100), ..Default::default() });
+        draw_text_ex(practice_text.as_str(), (screen_width - text_size.width) / 2.0, chart_y + chart_height + screen_height / 4.0, TextParams { font, font_size: passed_text_font, font_scale: 1.0, color: Color::from_rgba(255, 255, 255, 100), ..Default::default() });
         if practice::get_prev_best_wpm(practice_level.unwrap() + 1) < wpm as f64 {
             let new_highscore_text = "New highscore for this level!";
             let text_size = measure_text(new_highscore_text, font, 30, 1.0);
-            draw_text_ex(new_highscore_text, (screen_width - text_size.width) / 2.0, chart_y + chart_height + 250.0, TextParams { font: font, font_size: passed_text_font, font_scale: 1.0, color: Color::from_rgba(255, 255, 255, 100), ..Default::default() });
+            draw_text_ex(new_highscore_text, (screen_width - text_size.width) / 2.0, chart_y + chart_height + 250.0, TextParams { font, font_size: passed_text_font, font_scale: 1.0, color: Color::from_rgba(255, 255, 255, 100), ..Default::default() });
         }
         if !*saved_results {
             *saved_results = true;
@@ -386,7 +386,7 @@ fn write_wpm(
             ..Default::default()
         },
     );
-    return wpm;
+    wpm
 }
 
 fn write_acc(accuracy: f64, font: Option<&Font>, x: f32, y: f32, fontsize_1: u16, fontsize_2: u16) {
@@ -471,7 +471,7 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                 let size = egui::Vec2::new(chart_width, chart_height);
                 let (rect, _response) = ui.allocate_exact_size(size, egui::Sense::hover());
 
-                let mut child_ui = ui.child_ui(rect, *ui.layout(), None);
+                let mut child_ui = ui.new_child(egui::UiBuilder::new().max_rect(rect).layout(*ui.layout()));
 
                 let grid_spacer = |input: egui_plot::GridInput| -> Vec<egui_plot::GridMark> {
                     let min = input.bounds.0;

@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 use crate::ui::tui::ui::render_app;
 use crate::{practice, utils};
 use crate::practice::TYPING_LEVELS;
+use crate::config::AppConfig;
 
 
 #[derive(PartialEq, Eq)]
@@ -44,10 +45,13 @@ pub struct App {
     pub practice_mode: bool,
     pub selected_level: usize,
     pub timer: Duration,
+    pub app_config: AppConfig,
 }
 
 impl App {
     pub fn new() -> Self {
+        let app_config = AppConfig::load();
+        
         Self {
             exit: false,
             reference: String::new(),
@@ -56,17 +60,21 @@ impl App {
             words_done: 0,
             is_correct: Vec::new(),
             errors_this_second: 0.0,
-            test_time: 30.0,
+            test_time: app_config.test_time,
             start_time: None,
             game_state: GameState::NotStarted,
             config: false,
-            punctuation: false,
-            numbers: false,
-            time_mode: true,
-            word_mode: false,
-            quote: false,
-            batch_size: 50,
-            selected_config: "time",
+            punctuation: app_config.punctuation,
+            numbers: app_config.numbers,
+            time_mode: app_config.time_mode,
+            word_mode: app_config.word_mode,
+            quote: app_config.quote,
+            batch_size: app_config.batch_size,
+            selected_config: if app_config.time_mode { "time" } 
+                else if app_config.word_mode { "words" }
+                else if app_config.quote { "quote" }
+                else if app_config.practice_mode { "practice" }
+                else { "time" },
             speed_per_second: Vec::new(),
             char_number: 0,
             errors_per_second: Vec::new(),
@@ -74,9 +82,10 @@ impl App {
             correct_count: 0,
             error_count: 0,
             practice_menu: false,
-            practice_mode: false,
-            selected_level: 0,
+            practice_mode: app_config.practice_mode,
+            selected_level: app_config.selected_level,
             timer: Duration::from_secs(0),
+            app_config,
         }
     }
 
@@ -164,7 +173,10 @@ impl App {
 
         if key_event.kind == crossterm::event::KeyEventKind::Press {
             match key_event.code {
-                KeyCode::Esc => self.exit = true,
+                KeyCode::Esc => {
+                    self.save_config();
+                    self.exit = true;
+                },
                 KeyCode::Backspace => {
                     if !self.pressed_vec.is_empty() && reference_chars.get(self.pos1) == Some(&' ') {
                         self.words_done = self.words_done.saturating_sub(1);
@@ -254,6 +266,7 @@ impl App {
                                 self.time_mode = true;
                                 self.word_mode = false;
                                 self.quote = false;
+                                self.practice_mode = false;
                                 self.batch_size = 50;
                             }
                             "words" => {
@@ -325,6 +338,7 @@ impl App {
                         self.correct_count = 0;
                         self.error_count = 0;
                         self.config = false;
+                        self.save_config();
                     }
                 }
                 KeyCode::Left => {
@@ -437,5 +451,21 @@ impl App {
             }
         }
         Ok(())
+    }
+
+    fn save_config(&mut self) {
+        self.app_config = AppConfig {
+            punctuation: self.punctuation,
+            numbers: self.numbers,
+            time_mode: self.time_mode,
+            word_mode: self.word_mode,
+            quote: self.quote,
+            practice_mode: self.practice_mode,
+            batch_size: self.batch_size,
+            test_time: self.test_time,
+            selected_level: self.selected_level,
+        };
+        
+        let _ = self.app_config.save();
     }
 }

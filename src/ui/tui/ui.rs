@@ -313,7 +313,7 @@ fn get_chart(smoothed_speeds: &[f64], app: &App) -> Chart<'static> {
                     Span::from(format!("{:.0}", max_speed)).style(Style::default().fg(REF_COLOR)),
                 ]),
         );
-    return chart;
+    chart
 }
 
 fn render_results(frame: &mut Frame, area: Rect, app: &App) {

@@ -1,5 +1,5 @@
 use clap::{Parser, ValueHint};
-use std::{path::PathBuf};
+use std::path::PathBuf;
 use serde::Deserialize;
 
 use crate ::ui::cli::modes;
@@ -23,6 +23,7 @@ mod ui {
 }
 mod practice;
 mod utils;
+mod config;
 
 #[derive(Parser)]
 #[command(
