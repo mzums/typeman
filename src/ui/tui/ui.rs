@@ -225,10 +225,10 @@ fn get_stats(app: &App, color_scheme: ColorScheme) -> (Line<'static>, Line<'stat
     } else {
         "practice".to_string()
     };
-    if app.punctuation {
+    if app.punctuation && !app.quote && !app.practice_mode {
         mode_str += " !";
     }
-    if app.numbers {
+    if app.numbers && !app.quote && !app.practice_mode {
         mode_str += " #";
     }
 

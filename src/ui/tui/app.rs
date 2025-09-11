@@ -136,7 +136,7 @@ impl App {
                 || (self.words_done >= self.batch_size 
                     && (self.word_mode || self.quote) 
                     && self.game_state != GameState::Results)
-                || (self.words_done >= 5 && self.practice_mode && self.game_state != GameState::Results)
+                || (self.words_done >= 50 && self.practice_mode && self.game_state != GameState::Results)
             {
                 self.errors_per_second.push(self.errors_this_second);
                 let total_typed = self.pressed_vec.len();
