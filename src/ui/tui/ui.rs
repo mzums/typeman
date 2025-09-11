@@ -13,18 +13,23 @@ use crate::practice;
 use crate::color_scheme::ColorScheme;
 use crate::language::Language;
 
-fn render_instructions(frame: &mut Frame, area: Rect, show: bool, practice_menu: bool, color_scheme: ColorScheme) {
+fn render_instructions(frame: &mut Frame, area: Rect, show: bool, practice_menu: bool, leaderboard_open: bool, color_scheme: ColorScheme) {
     let mut lines = Vec::new();
-    if show {
+    if leaderboard_open {
+        lines.push(Line::from("  ↑/↓ - navigate, Tab + L - close, Esc - exit"));
+    } else if show {
         lines.push(Line::from("  \u{2191} - enter config, \u{2190}/\u{2192} - toggle config, ↵ - apply config"));
     } else if practice_menu {
         lines.push(Line::from("  ↑ or ↓ to navigate, ↵ to select"));
         lines.push(Line::from("  q - quit menu"));
     }
-    if !practice_menu {
+    if !practice_menu && !leaderboard_open {
         lines.push(Line::from("  Tab + Enter - restart"));
+        lines.push(Line::from("  Tab + L - local leaderboard"));
     }
-    lines.push(Line::from("  Esc - exit"));
+    if !leaderboard_open {
+        lines.push(Line::from("  Esc - exit"));
+    }
 
     let text = Paragraph::new(lines)
         .style(Style::default().fg(color_scheme.border_color()).bg(color_scheme.bg_color()))
@@ -46,7 +51,9 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
         ])
         .split(frame.area());
     
-    if app.game_state == GameState::Results {
+    if app.leaderboard_open {
+        render_leaderboard(frame, chunks[0], app, app.color_scheme);
+    } else if app.game_state == GameState::Results {
         render_results(frame, chunks[0], app, app.color_scheme);
     } else if app.practice_menu {
         render_practice_menu(frame, chunks[0], app, app.color_scheme);
@@ -54,7 +61,7 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
     else {
         render_reference_frame(frame, chunks[0], app, timer, app.color_scheme);
     }
-    render_instructions(frame, chunks[1], app.game_state != GameState::Results && !app.practice_menu, app.practice_menu, app.color_scheme);
+    render_instructions(frame, chunks[1], app.game_state != GameState::Results && !app.practice_menu && !app.leaderboard_open, app.practice_menu, app.leaderboard_open, app.color_scheme);
     
     // Render language popup if open
     if app.language_popup_open {
@@ -901,4 +908,95 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
             Constraint::Percentage((100 - safe_percent_x) / 2),
         ])
         .split(popup_layout[1])[1]
+}
+
+fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorScheme) {
+    let block = Block::default()
+        .title("Local Leaderboard")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(color_scheme.border_color()))
+        .title_style(Style::default().fg(color_scheme.main_color()));
+
+    let inner_area = block.inner(area);
+    frame.render_widget(block, area);
+
+    if app.leaderboard_entries.is_empty() {
+        let empty_text = Paragraph::new("No typing test results yet.\nComplete a test to see your scores here!")
+            .style(Style::default().fg(color_scheme.ref_color()))
+            .alignment(Alignment::Center)
+            .wrap(Wrap { trim: true });
+        frame.render_widget(empty_text, inner_area);
+        return;
+    }
+
+    // Create table headers
+    let header = Row::new(vec![
+        Cell::from("Rank").style(Style::default().fg(color_scheme.main_color())),
+        Cell::from("Date").style(Style::default().fg(color_scheme.main_color())),
+        Cell::from("Type").style(Style::default().fg(color_scheme.main_color())),
+        Cell::from("WPM").style(Style::default().fg(color_scheme.main_color())),
+        Cell::from("Acc%").style(Style::default().fg(color_scheme.main_color())),
+        Cell::from("Words").style(Style::default().fg(color_scheme.main_color())),
+        Cell::from("Lang").style(Style::default().fg(color_scheme.main_color())),
+    ]);
+
+    // Create table rows
+    let mut rows = Vec::new();
+    for (i, entry) in app.leaderboard_entries.iter().enumerate() {
+        let rank = (i + 1).to_string();
+        
+        // Format date (take first 10 chars for YYYY-MM-DD)
+        let date = if entry.timestamp.len() >= 10 {
+            &entry.timestamp[..10]
+        } else {
+            &entry.timestamp
+        };
+
+        // Format test type
+        let test_type = match &entry.test_type {
+            crate::leaderboard::TestType::Time(secs) => format!("{}s", secs),
+            crate::leaderboard::TestType::Word(words) => format!("{}w", words),
+            crate::leaderboard::TestType::Quote => "Quote".to_string(),
+            crate::leaderboard::TestType::Practice(level) => format!("L{}", level),
+        };
+
+        // Format language
+        let lang = match entry.language {
+            Language::English => "EN",
+            Language::Indonesian => "ID", 
+            Language::Italian => "IT",
+        };
+
+        let row_style = if i == app.leaderboard_selected {
+            Style::default().bg(color_scheme.dimmer_main()).fg(color_scheme.bg_color())
+        } else {
+            Style::default().fg(color_scheme.text_color())
+        };
+
+        let row = Row::new(vec![
+            Cell::from(rank),
+            Cell::from(date),
+            Cell::from(test_type),
+            Cell::from(format!("{:.1}", entry.wpm)),
+            Cell::from(format!("{:.1}", entry.accuracy)),
+            Cell::from(entry.word_count.to_string()),
+            Cell::from(lang),
+        ]).style(row_style);
+
+        rows.push(row);
+    }
+
+    let table = Table::new(rows, [
+        Constraint::Length(4),  // Rank
+        Constraint::Length(10), // Date  
+        Constraint::Length(8),  // Type
+        Constraint::Length(6),  // WPM
+        Constraint::Length(5),  // Acc%
+        Constraint::Length(6),  // Words
+        Constraint::Length(4),  // Lang
+    ])
+    .header(header)
+    .style(Style::default().fg(color_scheme.text_color()));
+
+    frame.render_widget(table, inner_area);
 }

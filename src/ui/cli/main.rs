@@ -79,11 +79,10 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: &mut Opti
 
         let byte_opt = poll_input();
         if byte_opt.is_none() {
-            if let Some(limit) = time_limit {
-                if start_time.is_some() && start_time.unwrap().elapsed().as_secs() >= limit {
+            if let Some(limit) = time_limit
+                && start_time.is_some() && start_time.unwrap().elapsed().as_secs() >= limit {
                     break;
                 }
-            }
             std::thread::sleep(std::time::Duration::from_millis(10));
             continue;
         }
@@ -113,8 +112,8 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: &mut Opti
             break;
         }
     }
-    if practice.is_some() && start_time.is_some() {
-        let elapsed = start_time.unwrap().elapsed().as_secs_f64();
+    if let (Some(practice_level), Some(start_time_val)) = (practice, start_time.as_ref()) {
+        let elapsed = start_time_val.elapsed().as_secs_f64();
         let error_count = error_positions.iter().filter(|&&e| e).count();
         let accuracy = 100.0 - (error_count as f64 / reference.len() as f64 * 100.0);
         let wpm = (user_input.len() as f64 / 5.0) / (elapsed / 60.0);
@@ -126,7 +125,7 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: &mut Opti
             elapsed,
             accuracy,
             wpm,
-            practice.unwrap(),
+            practice_level,
         );
 
         queue!(
@@ -140,7 +139,7 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: &mut Opti
             println!("\nAchive WPM of 35 to pass this level.\n");
         }
 
-        let prev_best_wpm = practice::get_prev_best_wpm(practice.unwrap());
+        let prev_best_wpm = practice::get_prev_best_wpm(practice_level);
 
         if prev_best_wpm < wpm {
             println!("\nNew highscore for this level!");
@@ -249,12 +248,13 @@ fn handle_control_keys(byte: u8, stdout: &mut std::io::Stdout) -> bool {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_typing(
     byte: u8,
     user_input: &mut String,
     ref_chars: &[char],
     position: &mut usize,
-    error_positions: &mut Vec<bool>,
+    error_positions: &mut [bool],
     stdout: &mut std::io::Stdout,
     is_correct: &mut VecDeque<i32>,
     practice_mode: bool,

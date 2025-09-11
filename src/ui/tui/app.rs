@@ -54,6 +54,9 @@ pub struct App {
     pub theme_popup_open: bool,
     pub theme_popup_selected: usize,
     pub app_config: AppConfig,
+    pub leaderboard_open: bool,
+    pub leaderboard_entries: Vec<crate::leaderboard::LeaderboardEntry>,
+    pub leaderboard_selected: usize,
 }
 
 impl App {
@@ -100,6 +103,9 @@ impl App {
             theme_popup_open: false,
             theme_popup_selected: 0,
             app_config,
+            leaderboard_open: false,
+            leaderboard_entries: crate::leaderboard::load_entries().unwrap_or_default(),
+            leaderboard_selected: 0,
         }
     }
 
@@ -144,6 +150,9 @@ impl App {
                 let cpm = chars_in_this_second as f64 * 60.0;
                 self.speed_per_second.push(cpm);
                 self.game_state = GameState::Results;
+                
+                // Save result to leaderboard
+                self.save_to_leaderboard();
             }
             let now = Instant::now();
             let time_since_last = now.duration_since(last_recorded_time);
@@ -224,6 +233,40 @@ impl App {
                         }
                         self.theme_popup_open = false;
                         self.save_config();
+                        return Ok(());
+                    }
+                    _ => return Ok(()),
+                }
+            }
+
+            // Handle leaderboard if it's open
+            if self.leaderboard_open {
+                match key_event.code {
+                    KeyCode::Esc => {
+                        self.leaderboard_open = false;
+                        return Ok(());
+                    }
+                    KeyCode::Up => {
+                        if self.leaderboard_selected > 0 {
+                            self.leaderboard_selected -= 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Down => {
+                        if self.leaderboard_selected < self.leaderboard_entries.len().saturating_sub(1) {
+                            self.leaderboard_selected += 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Tab => {
+                        self.tab_pressed = Instant::now();
+                        return Ok(());
+                    }
+                    KeyCode::Char('l') | KeyCode::Char('L') => {
+                        if self.tab_pressed.elapsed() < Duration::from_secs(1) {
+                            self.leaderboard_open = false;
+                            self.tab_pressed = Instant::now() - Duration::from_secs(5);
+                        }
                         return Ok(());
                     }
                     _ => return Ok(()),
@@ -510,6 +553,18 @@ impl App {
                     }
                 }
                 KeyCode::Char(ch) => {
+                    // Handle Tab+L leaderboard toggle
+                    if (ch == 'l' || ch == 'L') && self.tab_pressed.elapsed() < Duration::from_secs(1) {
+                        self.leaderboard_open = !self.leaderboard_open;
+                        self.tab_pressed = Instant::now() - Duration::from_secs(5);
+                        // Reload entries when opening leaderboard
+                        if self.leaderboard_open {
+                            self.leaderboard_entries = crate::leaderboard::load_entries().unwrap_or_default();
+                            self.leaderboard_selected = 0;
+                        }
+                        return Ok(());
+                    }
+                    
                     if self.practice_menu && ch == 'q' {
                         self.practice_menu = false;
                         return Ok(());
@@ -581,5 +636,65 @@ impl App {
         };
         
         let _ = self.app_config.save();
+    }
+
+    fn save_to_leaderboard(&mut self) {
+        if let Some(start_time) = self.start_time {
+            let elapsed = start_time.elapsed().as_secs_f64();
+            let total_chars = self.pressed_vec.len();
+            
+            // Calculate WPM (words per minute)
+            let wpm = if elapsed > 0.0 {
+                (total_chars as f64 / 5.0) / (elapsed / 60.0)
+            } else {
+                0.0
+            };
+            
+            // Calculate accuracy
+            let correct_chars = self.correct_count;
+            let accuracy = if total_chars > 0 {
+                (correct_chars as f64 / total_chars as f64) * 100.0
+            } else {
+                0.0
+            };
+            
+            // Determine test type
+            let test_type = if self.practice_mode {
+                crate::leaderboard::TestType::Practice(self.selected_level + 1)
+            } else if self.time_mode {
+                crate::leaderboard::TestType::Time(self.test_time as u32)
+            } else if self.word_mode {
+                crate::leaderboard::TestType::Word(self.batch_size)
+            } else if self.quote {
+                crate::leaderboard::TestType::Quote
+            } else {
+                crate::leaderboard::TestType::Time(30) // Default fallback
+            };
+            
+            // Create leaderboard entry
+            let entry = crate::leaderboard::LeaderboardEntry {
+                wpm,
+                accuracy,
+                test_type,
+                test_mode: if self.practice_mode { "practice".to_string() }
+                          else if self.time_mode { "time".to_string() }
+                          else if self.word_mode { "word".to_string() }
+                          else if self.quote { "quote".to_string() }
+                          else { "time".to_string() },
+                word_count: total_chars / 5, // Approximate word count
+                test_duration: elapsed,
+                timestamp: chrono::Utc::now().to_rfc3339(),
+                language: self.language,
+            };
+            
+            // Save entry
+            if let Err(e) = crate::leaderboard::save_entry(&entry) {
+                // Log error but don't crash the app
+                eprintln!("Failed to save leaderboard entry: {:?}", e);
+            } else {
+                // Update in-memory entries
+                self.leaderboard_entries = crate::leaderboard::load_entries().unwrap_or_default();
+            }
+        }
     }
 }

@@ -1,3 +1,5 @@
+#![allow(clippy::all)]
+
 #[cfg(not(any(feature = "cli", feature = "tui", feature = "gui")))]
 compile_error!("At least one of 'cli', 'tui', or 'gui' must be enabled");
 
@@ -5,7 +7,7 @@ use clap::{Parser, ValueHint};
 use serde::Deserialize;
 use std::path::PathBuf;
 
-mod ui {
+pub mod ui {
     #[cfg(feature = "cli")]
     pub mod cli {
         pub mod main;
@@ -29,11 +31,12 @@ mod ui {
 }
 
 #[cfg(feature = "tui")]
-mod color_scheme;
-mod language;
-mod practice;
-mod utils;
-mod config;
+pub mod color_scheme;
+pub mod language;
+pub mod practice;
+pub mod utils;
+pub mod config;
+pub mod leaderboard;
 
 #[cfg(feature = "cli")]
 use crate::ui::cli::modes;
@@ -77,7 +80,7 @@ Default behavior for cli is to test typing on random words for 30 seconds with 5
 Default mode is tui.
     "
 )]
-struct Cli {
+pub struct Cli {
     #[arg(short = 'c', long = "custom", value_name = "FILE", value_hint = ValueHint::FilePath, conflicts_with_all = &["random_quote", "time_limit", "top_words", "word_number", "gui", "tui"])]
     custom_file: Option<PathBuf>,
 
