@@ -608,6 +608,15 @@ impl App {
                     self.config = false;
 
                     if self.pos1 >= self.reference.chars().count() {
+                        // If we've reached the end of reference text, count the final word for word/quote modes
+                        if (self.word_mode || self.quote) && self.pos1 > 0 {
+                            // Check if we just completed a word (not already counted)
+                            let previous_char = reference_chars.get(self.pos1 - 1);
+                            if previous_char.is_some() && previous_char != Some(&' ') {
+                                self.words_done += 1;
+                            }
+                        }
+                        
                         // Only generate new reference if we haven't reached target word count yet
                         if self.words_done < self.batch_size && (self.word_mode || self.quote) {
                             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);

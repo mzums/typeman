@@ -29,6 +29,7 @@ pub fn get_reference(punctuation: bool, digits: bool, word_list: &[String], batc
     let mut items = Vec::new();
     let mut rng = rand::rng();
 
+    // Calculate how many digits to include (if enabled)
     let num_digits = if digits {
         let max_digits = batch_size.min(batch_size / 3).max(1);
         rng.random_range((batch_size / 6).max(1)..=max_digits)
@@ -36,8 +37,10 @@ pub fn get_reference(punctuation: bool, digits: bool, word_list: &[String], batc
         0
     };
 
+    // Calculate how many words we need (remaining slots after digits)
     let num_words = batch_size - num_digits;
 
+    // Generate words
     for _ in 0..num_words {
         let mut word = word_list.choose(&mut rng).unwrap().clone();
         if punctuation {
@@ -55,24 +58,38 @@ pub fn get_reference(punctuation: bool, digits: bool, word_list: &[String], batc
         items.push(word);
     }
 
+    // Generate digits
     for _ in 0..num_digits {
         let choice = rng.random_range(0..4);
-        let number;
-        if choice == 0 {
-            number = rng.random_range(1..10000).to_string();
+        let number = if choice == 0 {
+            rng.random_range(1..10000).to_string()
         } else if choice == 1 {
-            number = format!("{:04}", rng.random_range(0..10000));
-        }
-        else {
-            number = rng.random_range(1..100).to_string();
-        }
+            format!("{:04}", rng.random_range(0..10000))
+        } else {
+            rng.random_range(1..100).to_string()
+        };
         items.push(number);
-        continue;
     }
 
+    // Shuffle all items and join with spaces
     items.shuffle(&mut rng);
+    
+    // Clean each item to remove any embedded whitespace that could cause extra words
+    let cleaned_items: Vec<String> = items.into_iter()
+        .map(|item| item.replace(|c: char| c.is_whitespace(), ""))
+        .filter(|item| !item.is_empty())
+        .collect();
+    
+    let result = cleaned_items.join(" ");
 
-    items.join(" ").replace('\n', " ")
+    // Verify the word count matches batch_size
+    debug_assert_eq!(
+        result.split_whitespace().count(), 
+        batch_size,
+        "Generated text word count doesn't match batch_size"
+    );
+
+    result
 }
 
 pub fn get_random_quote() -> String {
@@ -133,4 +150,71 @@ pub fn count_correct_words(reference: &str, is_correct: &VecDeque<i32>) -> (usiz
         all_words += 1;
     }
     (no_corrected_words, correct_words, all_words)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::language::Language;
+
+    #[test]
+    fn test_reference_text_structure() {
+        let word_list = read_first_n_words(500, Language::English);
+        
+        // Test that reference text structure is correct for word completion logic
+        for &batch_size in &[5, 10, 25] {
+            let reference = get_reference(false, false, &word_list, batch_size);
+            
+            // Reference should not end with a space (important for completion logic)
+            assert!(!reference.ends_with(' '), 
+                "Reference should not end with space: '{}'", reference);
+            
+            // Reference should not start with a space
+            assert!(!reference.starts_with(' '), 
+                "Reference should not start with space: '{}'", reference);
+            
+            // Count words by splitting on whitespace should match batch_size
+            let word_count = reference.split_whitespace().count();
+            assert_eq!(word_count, batch_size,
+                "Word count mismatch: expected {}, got {} for reference: '{}'", 
+                batch_size, word_count, reference);
+        }
+    }
+
+    #[test]
+    fn test_word_count_generation() {
+        let word_list = read_first_n_words(500, Language::English);
+        
+        // Test various batch sizes including the problematic 25
+        let test_sizes = [1, 10, 25, 50, 100];
+        let test_configs = [
+            (false, false), // no punctuation, no digits
+            (true, false),  // punctuation, no digits
+            (false, true),  // no punctuation, digits
+            (true, true),   // punctuation, digits
+        ];
+
+        for &batch_size in &test_sizes {
+            for &(punctuation, digits) in &test_configs {
+                // Run multiple times to catch random variations
+                for iteration in 0..10 {
+                    let reference = get_reference(punctuation, digits, &word_list, batch_size);
+                    let actual_word_count = reference.split_whitespace().count();
+                    
+                    assert_eq!(
+                        actual_word_count, 
+                        batch_size,
+                        "Word count mismatch: expected {}, got {} for batch_size={}, punctuation={}, digits={}, iteration={}. Reference: '{}'",
+                        batch_size, actual_word_count, batch_size, punctuation, digits, iteration, reference
+                    );
+                    
+                    // Additional check: ensure no double spaces or empty words
+                    assert!(!reference.contains("  "), 
+                        "Reference contains double spaces: '{}'", reference);
+                    assert!(!reference.trim().is_empty(), 
+                        "Reference is empty");
+                }
+            }
+        }
+    }
 }
