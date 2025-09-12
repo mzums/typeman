@@ -689,12 +689,34 @@ impl App {
             
             // Save entry
             if let Err(e) = crate::leaderboard::save_entry(&entry) {
-                // Log error but don't crash the app
-                eprintln!("Failed to save leaderboard entry: {:?}", e);
-            } else {
-                // Update in-memory entries
-                self.leaderboard_entries = crate::leaderboard::load_entries().unwrap_or_default();
+                // Enhanced error logging with specific error types
+                match e {
+                    crate::leaderboard::LeaderboardError::ValidationError(ref validation_err) => {
+                        eprintln!("Invalid leaderboard entry data: {:?}", validation_err);
+                        eprintln!("Entry not saved due to validation failure");
+                    }
+                    crate::leaderboard::LeaderboardError::IoError(ref io_err) => {
+                        eprintln!("Failed to save leaderboard entry due to file system error: {}", io_err);
+                        eprintln!("Check file permissions and disk space");
+                    }
+                    crate::leaderboard::LeaderboardError::SerializationError(ref serde_err) => {
+                        eprintln!("Failed to serialize leaderboard data: {}", serde_err);
+                        eprintln!("This may indicate data corruption");
+                    }
+                    crate::leaderboard::LeaderboardError::LockTimeout => {
+                        eprintln!("Failed to save leaderboard entry: file lock timeout");
+                        eprintln!("Another instance may be writing to the leaderboard");
+                    }
+                    crate::leaderboard::LeaderboardError::LockError(ref lock_err) => {
+                        eprintln!("Failed to acquire leaderboard file lock: {}", lock_err);
+                        eprintln!("Check file permissions and system resources");
+                    }
+                }
             }
+            
+            // Always update in-memory entries to ensure synchronization
+            // This ensures the leaderboard immediately reflects the latest game results
+            self.leaderboard_entries = crate::leaderboard::load_entries().unwrap_or_default();
         }
     }
 }
