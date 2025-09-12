@@ -39,7 +39,7 @@ pub fn word_mode(args: &Cli) {
     }
 
     let language = get_language_from_args(args);
-    let word_list = utils::read_first_n_words(top_words as usize, language);
+    let word_list = utils::read_first_n_words(top_words, language);
 
     let reference = utils::get_reference(punctuation, digits, &word_list, word_number);
     let mut start_time: Option<Instant> = None;
@@ -65,7 +65,7 @@ pub fn time_mode(args: &Cli) {
     println!("Starting common words test with {} second time limit", time_limit);
 
     let language = get_language_from_args(args);
-    let word_list = utils::read_first_n_words(top_words as usize, language);
+    let word_list = utils::read_first_n_words(top_words, language);
 
     let batch_size = 20;
     let mut start_time: Option<Instant> = None;
@@ -77,8 +77,8 @@ pub fn time_mode(args: &Cli) {
         let reference = utils::get_reference(punctuation, digits, &word_list, batch_size) + " ";
         let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
         
-        if start_time.is_some() {
-            let elapsed = start_time.unwrap().elapsed().as_secs();
+        if let Some(start_time_val) = start_time {
+            let elapsed = start_time_val.elapsed().as_secs();
             let remaining_time = if time_limit > elapsed {
                 Some(time_limit - elapsed)
             } else {

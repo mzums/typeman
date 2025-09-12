@@ -54,6 +54,9 @@ pub struct App {
     pub theme_popup_open: bool,
     pub theme_popup_selected: usize,
     pub app_config: AppConfig,
+    pub leaderboard_open: bool,
+    pub leaderboard_entries: Vec<crate::leaderboard::LeaderboardEntry>,
+    pub leaderboard_selected: usize,
 }
 
 impl App {
@@ -100,12 +103,15 @@ impl App {
             theme_popup_open: false,
             theme_popup_selected: 0,
             app_config,
+            leaderboard_open: false,
+            leaderboard_entries: crate::leaderboard::load_entries().unwrap_or_default(),
+            leaderboard_selected: 0,
         }
     }
 
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         let word_list = utils::read_first_n_words(500, self.language);
-        self.reference = utils::get_reference(false, false, &word_list, self.batch_size);
+        self.reference = utils::get_reference(self.punctuation, self.numbers, &word_list, self.batch_size);
         self.is_correct = vec![0; self.reference.chars().count()];
         let mut last_recorded_time = Instant::now();
         
@@ -144,6 +150,9 @@ impl App {
                 let cpm = chars_in_this_second as f64 * 60.0;
                 self.speed_per_second.push(cpm);
                 self.game_state = GameState::Results;
+                
+                // Save result to leaderboard
+                self.save_to_leaderboard();
             }
             let now = Instant::now();
             let time_since_last = now.duration_since(last_recorded_time);
@@ -224,6 +233,40 @@ impl App {
                         }
                         self.theme_popup_open = false;
                         self.save_config();
+                        return Ok(());
+                    }
+                    _ => return Ok(()),
+                }
+            }
+
+            // Handle leaderboard if it's open
+            if self.leaderboard_open {
+                match key_event.code {
+                    KeyCode::Esc => {
+                        self.leaderboard_open = false;
+                        return Ok(());
+                    }
+                    KeyCode::Up => {
+                        if self.leaderboard_selected > 0 {
+                            self.leaderboard_selected -= 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Down => {
+                        if self.leaderboard_selected < self.leaderboard_entries.len().saturating_sub(1) {
+                            self.leaderboard_selected += 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Tab => {
+                        self.tab_pressed = Instant::now();
+                        return Ok(());
+                    }
+                    KeyCode::Char('l') | KeyCode::Char('L') => {
+                        if self.tab_pressed.elapsed() < Duration::from_secs(1) {
+                            self.leaderboard_open = false;
+                            self.tab_pressed = Instant::now() - Duration::from_secs(5);
+                        }
                         return Ok(());
                     }
                     _ => return Ok(()),
@@ -510,6 +553,18 @@ impl App {
                     }
                 }
                 KeyCode::Char(ch) => {
+                    // Handle Tab+L leaderboard toggle
+                    if (ch == 'l' || ch == 'L') && self.tab_pressed.elapsed() < Duration::from_secs(1) {
+                        self.leaderboard_open = !self.leaderboard_open;
+                        self.tab_pressed = Instant::now() - Duration::from_secs(5);
+                        // Reload entries when opening leaderboard
+                        if self.leaderboard_open {
+                            self.leaderboard_entries = crate::leaderboard::load_entries().unwrap_or_default();
+                            self.leaderboard_selected = 0;
+                        }
+                        return Ok(());
+                    }
+                    
                     if self.practice_menu && ch == 'q' {
                         self.practice_menu = false;
                         return Ok(());
@@ -553,10 +608,21 @@ impl App {
                     self.config = false;
 
                     if self.pos1 >= self.reference.chars().count() {
-                        self.words_done += 1;
-                        self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
-                        self.is_correct = vec![0; self.reference.chars().count()];
-                        self.pos1 = 0;
+                        // If we've reached the end of reference text, count the final word for word/quote modes
+                        if (self.word_mode || self.quote) && self.pos1 > 0 {
+                            // Check if we just completed a word (not already counted)
+                            let previous_char = reference_chars.get(self.pos1 - 1);
+                            if previous_char.is_some() && previous_char != Some(&' ') {
+                                self.words_done += 1;
+                            }
+                        }
+                        
+                        // Only generate new reference if we haven't reached target word count yet
+                        if self.words_done < self.batch_size && (self.word_mode || self.quote) {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                            self.is_correct = vec![0; self.reference.chars().count()];
+                            self.pos1 = 0;
+                        }
                     }
                 }
                 _ => {}
@@ -581,5 +647,87 @@ impl App {
         };
         
         let _ = self.app_config.save();
+    }
+
+    fn save_to_leaderboard(&mut self) {
+        if let Some(start_time) = self.start_time {
+            let elapsed = start_time.elapsed().as_secs_f64();
+            let total_chars = self.pressed_vec.len();
+            
+            // Calculate WPM (words per minute) - using original formula: words_done / time
+            let wpm = if elapsed > 0.0 {
+                (self.words_done as f64 / elapsed) * 60.0
+            } else {
+                0.0
+            };
+            
+            // Calculate accuracy
+            let correct_chars = self.correct_count;
+            let accuracy = if total_chars > 0 {
+                (correct_chars as f64 / total_chars as f64) * 100.0
+            } else {
+                0.0
+            };
+            
+            // Determine test type
+            let test_type = if self.practice_mode {
+                crate::leaderboard::TestType::Practice(self.selected_level + 1)
+            } else if self.time_mode {
+                crate::leaderboard::TestType::Time(self.test_time as u32)
+            } else if self.word_mode {
+                crate::leaderboard::TestType::Word(self.batch_size)
+            } else if self.quote {
+                crate::leaderboard::TestType::Quote
+            } else {
+                crate::leaderboard::TestType::Time(30) // Default fallback
+            };
+            
+            // Create leaderboard entry
+            let entry = crate::leaderboard::LeaderboardEntry {
+                wpm,
+                accuracy,
+                test_type,
+                test_mode: if self.practice_mode { "practice".to_string() }
+                          else if self.time_mode { "time".to_string() }
+                          else if self.word_mode { "word".to_string() }
+                          else if self.quote { "quote".to_string() }
+                          else { "time".to_string() },
+                word_count: self.words_done, // Actual completed words
+                test_duration: elapsed,
+                timestamp: chrono::Local::now().to_rfc3339(),
+                language: self.language,
+            };
+            
+            // Save entry
+            if let Err(e) = crate::leaderboard::save_entry(&entry) {
+                // Enhanced error logging with specific error types
+                match e {
+                    crate::leaderboard::LeaderboardError::ValidationError(ref validation_err) => {
+                        eprintln!("Invalid leaderboard entry data: {:?}", validation_err);
+                        eprintln!("Entry not saved due to validation failure");
+                    }
+                    crate::leaderboard::LeaderboardError::IoError(ref io_err) => {
+                        eprintln!("Failed to save leaderboard entry due to file system error: {}", io_err);
+                        eprintln!("Check file permissions and disk space");
+                    }
+                    crate::leaderboard::LeaderboardError::SerializationError(ref serde_err) => {
+                        eprintln!("Failed to serialize leaderboard data: {}", serde_err);
+                        eprintln!("This may indicate data corruption");
+                    }
+                    crate::leaderboard::LeaderboardError::LockTimeout => {
+                        eprintln!("Failed to save leaderboard entry: file lock timeout");
+                        eprintln!("Another instance may be writing to the leaderboard");
+                    }
+                    crate::leaderboard::LeaderboardError::LockError(ref lock_err) => {
+                        eprintln!("Failed to acquire leaderboard file lock: {}", lock_err);
+                        eprintln!("Check file permissions and system resources");
+                    }
+                }
+            }
+            
+            // Always update in-memory entries to ensure synchronization
+            // This ensures the leaderboard immediately reflects the latest game results
+            self.leaderboard_entries = crate::leaderboard::load_entries().unwrap_or_default();
+        }
     }
 }
