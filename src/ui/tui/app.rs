@@ -643,9 +643,9 @@ impl App {
             let elapsed = start_time.elapsed().as_secs_f64();
             let total_chars = self.pressed_vec.len();
             
-            // Calculate WPM (words per minute)
+            // Calculate WPM (words per minute) - using original formula: words_done / time
             let wpm = if elapsed > 0.0 {
-                (total_chars as f64 / 5.0) / (elapsed / 60.0)
+                (self.words_done as f64 / elapsed) * 60.0
             } else {
                 0.0
             };
@@ -681,7 +681,7 @@ impl App {
                           else if self.word_mode { "word".to_string() }
                           else if self.quote { "quote".to_string() }
                           else { "time".to_string() },
-                word_count: total_chars / 5, // Approximate word count
+                word_count: self.words_done, // Actual completed words
                 test_duration: elapsed,
                 timestamp: chrono::Utc::now().to_rfc3339(),
                 language: self.language,
