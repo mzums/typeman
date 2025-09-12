@@ -111,7 +111,7 @@ impl App {
 
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         let word_list = utils::read_first_n_words(500, self.language);
-        self.reference = utils::get_reference(false, false, &word_list, self.batch_size);
+        self.reference = utils::get_reference(self.punctuation, self.numbers, &word_list, self.batch_size);
         self.is_correct = vec![0; self.reference.chars().count()];
         let mut last_recorded_time = Instant::now();
         
@@ -608,10 +608,12 @@ impl App {
                     self.config = false;
 
                     if self.pos1 >= self.reference.chars().count() {
-                        self.words_done += 1;
-                        self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
-                        self.is_correct = vec![0; self.reference.chars().count()];
-                        self.pos1 = 0;
+                        // Only generate new reference if we haven't reached target word count yet
+                        if self.words_done < self.batch_size && (self.word_mode || self.quote) {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                            self.is_correct = vec![0; self.reference.chars().count()];
+                            self.pos1 = 0;
+                        }
                     }
                 }
                 _ => {}
@@ -683,7 +685,7 @@ impl App {
                           else { "time".to_string() },
                 word_count: self.words_done, // Actual completed words
                 test_duration: elapsed,
-                timestamp: chrono::Utc::now().to_rfc3339(),
+                timestamp: chrono::Local::now().to_rfc3339(),
                 language: self.language,
             };
             

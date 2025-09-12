@@ -933,6 +933,7 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
     let header = Row::new(vec![
         Cell::from("Rank").style(Style::default().fg(color_scheme.main_color())),
         Cell::from("Date").style(Style::default().fg(color_scheme.main_color())),
+        Cell::from("Time").style(Style::default().fg(color_scheme.main_color())),
         Cell::from("Type").style(Style::default().fg(color_scheme.main_color())),
         Cell::from("WPM").style(Style::default().fg(color_scheme.main_color())),
         Cell::from("Acc%").style(Style::default().fg(color_scheme.main_color())),
@@ -940,9 +941,30 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
         Cell::from("Lang").style(Style::default().fg(color_scheme.main_color())),
     ]);
 
-    // Create table rows
+    // Calculate viewport for scrolling
+    let available_height = inner_area.height.saturating_sub(2); // Subtract header and border
+    let max_visible_rows = available_height as usize;
+    
+    // Calculate scroll offset to keep selected item visible
+    let scroll_offset = if app.leaderboard_entries.len() <= max_visible_rows {
+        0
+    } else if app.leaderboard_selected < max_visible_rows / 2 {
+        0
+    } else if app.leaderboard_selected >= app.leaderboard_entries.len().saturating_sub(max_visible_rows / 2) {
+        app.leaderboard_entries.len().saturating_sub(max_visible_rows)
+    } else {
+        app.leaderboard_selected.saturating_sub(max_visible_rows / 2)
+    };
+
+    // Create table rows for visible entries only
     let mut rows = Vec::new();
-    for (i, entry) in app.leaderboard_entries.iter().enumerate() {
+    let visible_entries = app.leaderboard_entries
+        .iter()
+        .enumerate()
+        .skip(scroll_offset)
+        .take(max_visible_rows);
+
+    for (i, entry) in visible_entries {
         let rank = (i + 1).to_string();
         
         // Format date (take first 10 chars for YYYY-MM-DD)
@@ -950,6 +972,13 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
             &entry.timestamp[..10]
         } else {
             &entry.timestamp
+        };
+
+        // Format time (HH:MM AM/PM from timestamp)
+        let time = if let Ok(parsed_time) = chrono::DateTime::parse_from_rfc3339(&entry.timestamp) {
+            parsed_time.format("%I:%M %p").to_string()
+        } else {
+            "--:-- --".to_string()
         };
 
         // Format test type
@@ -976,6 +1005,7 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
         let row = Row::new(vec![
             Cell::from(rank),
             Cell::from(date),
+            Cell::from(time),
             Cell::from(test_type),
             Cell::from(format!("{:.1}", entry.wpm)),
             Cell::from(format!("{:.1}", entry.accuracy)),
@@ -988,9 +1018,10 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
 
     let table = Table::new(rows, [
         Constraint::Length(4),  // Rank
-        Constraint::Length(10), // Date  
-        Constraint::Length(8),  // Type
-        Constraint::Length(6),  // WPM
+        Constraint::Length(10), // Date
+        Constraint::Length(8),  // Time (HH:MM AM/PM)
+        Constraint::Length(6),  // Type
+        Constraint::Length(5),  // WPM
         Constraint::Length(5),  // Acc%
         Constraint::Length(6),  // Words
         Constraint::Length(4),  // Lang
@@ -999,4 +1030,21 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
     .style(Style::default().fg(color_scheme.text_color()));
 
     frame.render_widget(table, inner_area);
+
+    // Show scroll indicators if there are more entries than visible
+    if app.leaderboard_entries.len() > max_visible_rows {
+        let scroll_info = format!("{}/{}", app.leaderboard_selected + 1, app.leaderboard_entries.len());
+        let scroll_indicator = Paragraph::new(scroll_info)
+            .style(Style::default().fg(color_scheme.dimmer_main()))
+            .alignment(Alignment::Right);
+        
+        // Position scroll indicator in bottom-right corner of leaderboard area
+        let indicator_area = Rect {
+            x: inner_area.x + inner_area.width.saturating_sub(10),
+            y: inner_area.y + inner_area.height.saturating_sub(1),
+            width: 10,
+            height: 1,
+        };
+        frame.render_widget(scroll_indicator, indicator_area);
+    }
 }
