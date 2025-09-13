@@ -56,7 +56,7 @@ fn test_app_state_integration() {
     assert!(!app.leaderboard_open); // Should start closed
     assert_eq!(app.leaderboard_selected, 0); // Should start at first entry
     // leaderboard_entries should be a vector (length >= 0)
-    assert!(app.leaderboard_entries.len() >= 0);
+    //assert!(app.leaderboard_entries.len() >= 0);
 }
 
 #[test]

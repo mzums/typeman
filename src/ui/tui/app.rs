@@ -110,8 +110,16 @@ impl App {
     }
 
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
-        let word_list = utils::read_first_n_words(500, self.language);
-        self.reference = utils::get_reference(self.punctuation, self.numbers, &word_list, self.batch_size);
+        if self.quote {
+            self.reference = utils::get_random_quote();
+            self.batch_size = self.reference.split_whitespace().count();
+        } else if self.practice_mode {
+            let level = practice::get_first_not_done();
+            self.reference = practice::create_words(TYPING_LEVELS[level].1, 50);
+        } else {
+            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+        }
+   
         self.is_correct = vec![0; self.reference.chars().count()];
         let mut last_recorded_time = Instant::now();
         
@@ -142,7 +150,8 @@ impl App {
                 || (self.words_done >= self.batch_size 
                     && (self.word_mode || self.quote) 
                     && self.game_state != GameState::Results)
-                || (self.words_done >= 50 && self.practice_mode && self.game_state != GameState::Results)
+                || ((self.words_done >= 50 || self.pos1 >= self.reference.chars().count()) && self.practice_mode && self.game_state != GameState::Results)
+
             {
                 self.errors_per_second.push(self.errors_this_second);
                 let total_typed = self.pressed_vec.len();
@@ -150,6 +159,23 @@ impl App {
                 let cpm = chars_in_this_second as f64 * 60.0;
                 self.speed_per_second.push(cpm);
                 self.game_state = GameState::Results;
+
+                let wpm = (self.words_done as f32 / self.timer.as_secs_f32()) * 60.0;
+
+                let accuracy = if self.words_done > 0 {
+                    (self.correct_count as f32 / self.pressed_vec.len() as f32) * 100.0
+                } else {
+                    0.0
+                };
+
+                if self.practice_mode {
+                    practice::save_results(
+                        self.test_time as f64,
+                        accuracy as f64,
+                        wpm as f64,
+                        self.selected_level + 1,
+                    );
+                }
                 
                 // Save result to leaderboard
                 self.save_to_leaderboard();

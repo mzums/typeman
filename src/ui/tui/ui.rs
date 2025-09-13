@@ -195,7 +195,7 @@ fn calc_standard_deviation(values: &[f64], average_word_length: f64) -> f64 {
     variance.sqrt()
 }
 
-fn get_stats(app: &App, color_scheme: ColorScheme) -> (Line<'static>, Line<'static>) {
+fn get_stats(app: &App, color_scheme: ColorScheme) -> (Line<'static>, Line<'static>, bool) {
     let bg_color = color_scheme.bg_color();
     let main_color = color_scheme.main_color();
     let ref_color = color_scheme.ref_color();
@@ -289,6 +289,7 @@ fn get_stats(app: &App, color_scheme: ColorScheme) -> (Line<'static>, Line<'stat
     (
         Line::from(label_spans).alignment(Alignment::Center),
         Line::from(value_spans).alignment(Alignment::Center),
+        wpm >= practice::WPM_MIN as f32
     )
 }
 
@@ -355,7 +356,7 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorS
         area,
     );
 
-    let (wpm_line, acc_line) = get_stats(app, color_scheme);
+    let (wpm_line, acc_line, passed) = get_stats(app, color_scheme);
 
     let columns_for_sec: HashMap<u32, usize> = [(5, 4), (15, 3), (30, 2), (60, 1)]
         .iter()
@@ -477,7 +478,9 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorS
     let chunks = Layout::vertical([
         Constraint::Length(9),
         Constraint::Length(1),
-        Constraint::Length(3),
+        Constraint::Min(3),
+        Constraint::Length(1),
+        Constraint::Length(1),
     ]).split(centered_area);
 
     let max_chart_width: u16 = 2 * smoothed_speeds.len() as u16 + 4;
@@ -542,8 +545,17 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorS
 
     frame.render_widget(canvas, chart_area);
 
-    frame.render_widget(empty_line, chunks[1]);
+    frame.render_widget(empty_line.clone(), chunks[1]);
     frame.render_widget(stats, chunks[2]);
+    frame.render_widget(empty_line, chunks[3]);
+
+    if app.practice_mode {
+        if passed {
+            frame.render_widget(Line::from("Congratulations! You passed this level.").alignment(Alignment::Center), chunks[4]);
+        } else {
+            frame.render_widget(Line::from(format!("You need at least {} WPM to pass this level.", practice::WPM_MIN)).alignment(Alignment::Center), chunks[4]);
+        }
+    }
 }
 
 fn render_reference_frame(frame: &mut Frame, area: Rect, app: &App, timer: Duration, color_scheme: ColorScheme) {
