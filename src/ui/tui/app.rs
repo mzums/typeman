@@ -9,6 +9,7 @@ use crate::practice::TYPING_LEVELS;
 use crate::language::Language;
 use crate::color_scheme::ColorScheme;
 use crate::config::AppConfig;
+use crate::button_states::{ButtonStates, ButtonState};
 
 
 #[derive(PartialEq, Eq)]
@@ -36,7 +37,7 @@ pub struct App {
     pub word_mode: bool,
     pub quote: bool,
     pub batch_size: usize,
-    pub selected_config: &'static str,
+    pub selected_config: String,
     pub speed_per_second: Vec<f64>,
     pub char_number: usize,
     pub errors_per_second: Vec<f32>,
@@ -81,11 +82,11 @@ impl App {
             word_mode: app_config.word_mode,
             quote: app_config.quote,
             batch_size: app_config.batch_size,
-            selected_config: if app_config.time_mode { "time" } 
-                else if app_config.word_mode { "words" }
-                else if app_config.quote { "quote" }
-                else if app_config.practice_mode { "practice" }
-                else { "time" },
+            selected_config: if app_config.time_mode { "time".into() }
+                else if app_config.word_mode { "words".into() }
+                else if app_config.quote { "quote".into() }
+                else if app_config.practice_mode { "practice".into() }
+                else { "time".into() },
             speed_per_second: Vec::new(),
             char_number: 0,
             errors_per_second: Vec::new(),
@@ -208,26 +209,26 @@ impl App {
     ) -> io::Result<()> {
         use crossterm::event::KeyCode;
 
-        let button_states = vec![
-            ("punctuation", self.punctuation, !self.quote && !self.practice_mode),
-            ("numbers", self.numbers, !self.quote && !self.practice_mode),
-            ("|", true, true),
-            ("language", false, !self.quote && !self.practice_mode),
-            ("theme", false, true),
-            ("|", true, true),
-            ("time", self.time_mode, true),
-            ("words", self.word_mode, true),
-            ("quote", self.quote, true),
-            ("practice", self.practice_mode, true),
-            ("|", true, true),
-            ("15", self.test_time == 15.0, self.time_mode),
-            ("30", self.test_time == 30.0, self.time_mode),
-            ("60", self.test_time == 60.0, self.time_mode),
-            ("120", self.test_time == 120.0, self.time_mode),
-            ("25", self.batch_size == 25, self.word_mode),
-            ("50", self.batch_size == 50, self.word_mode),
-            ("100", self.batch_size == 100, self.word_mode),
-        ];
+        let button_states = ButtonStates {
+            punctuation: ButtonState::new("punctuation", "punctuation", "punct", self.punctuation, !self.quote && !self.practice_mode),
+            numbers: ButtonState::new("numbers", "numbers", "num", self.numbers, !self.quote && !self.practice_mode),
+            divider1: ButtonState::new("|", "|", "|", true, true),
+            language: ButtonState::new("language", "language", "lang", false, !self.quote && !self.practice_mode),
+            theme: ButtonState::new("theme", "theme", "theme", false, true),
+            divider2: ButtonState::new("|", "|", "|", true, true),
+            time: ButtonState::new("time", "time", "time", self.time_mode, true),
+            words: ButtonState::new("words", "words", "words", self.word_mode, true),
+            quote: ButtonState::new("quote", "quote", "quote", self.quote, true),
+            practice: ButtonState::new("practice", "practice", "practice", self.practice_mode, true),
+            divider3: ButtonState::new("|", "|", "|", true, true),
+            time_15: ButtonState::new("15", "15", "15", self.test_time == 15.0, self.time_mode),
+            time_30: ButtonState::new("30", "30", "30", self.test_time == 30.0, self.time_mode),
+            time_60: ButtonState::new("60", "60", "60", self.test_time == 60.0, self.time_mode),
+            time_120: ButtonState::new("120", "120", "120", self.test_time == 120.0, self.time_mode),
+            batch_25: ButtonState::new("25", "25", "25", self.batch_size == 25, self.word_mode),
+            batch_50: ButtonState::new("50", "50", "50", self.batch_size == 50, self.word_mode),
+            batch_100: ButtonState::new("100", "100", "100", self.batch_size == 100, self.word_mode),
+        };
 
         let reference_chars: Vec<char> = reference.chars().collect();
 
@@ -428,7 +429,7 @@ impl App {
                         self.is_correct = vec![0; self.reference.chars().count()];
                     }
                     if self.config {
-                        match self.selected_config {
+                        match self.selected_config.as_str() {
                             "time" => {
                                 self.time_mode = true;
                                 self.word_mode = false;
@@ -526,22 +527,22 @@ impl App {
                     if !self.config {
                         return Ok(());
                     }
-                    for (i, (label, _state_val, visible)) in button_states.iter().enumerate() {
-                        if *visible && self.selected_config == *label {
+                    let buttons = button_states.as_vec();
+                    for (i, btn) in buttons.iter().enumerate() {
+                        if btn.visible && self.selected_config == btn.label {
                             let start_index = i;
                             let mut j = if i == 0 {
-                                button_states.len() - 1
+                                buttons.len() - 1
                             } else {
                                 i - 1
                             };
-
                             while j != start_index {
-                                if button_states[j].2 && button_states[j].0 != "|" {
-                                    self.selected_config = button_states[j].0;
+                                if buttons[j].visible && buttons[j].label != "|" {
+                                    self.selected_config = buttons[j].label.clone(); // Clone the string
                                     break;
                                 }
                                 j = if j == 0 {
-                                    button_states.len() - 1
+                                    buttons.len() - 1
                                 } else {
                                     j - 1
                                 };
@@ -554,25 +555,25 @@ impl App {
                     if !self.config {
                         return Ok(());
                     }
-                    for (i, (label, _state_val, visible)) in button_states.iter().enumerate() {
-                        if *visible && self.selected_config == *label {
-                            if i == button_states.len() - 1 {
-                                self.selected_config = button_states[0].0;
+                    let buttons = button_states.as_vec();
+                    for (i, btn) in buttons.iter().enumerate() {
+                        if btn.visible && self.selected_config == btn.label {
+                            let start_index = i;
+                            let mut j = if i == buttons.len() - 1 {
+                                0
                             } else {
-                                let mut next = i + 1;
-                                if button_states[next].0 == "|" {
-                                    next += 1;
+                                i + 1
+                            };
+                            while j != start_index {
+                                if buttons[j].visible && buttons[j].label != "|" {
+                                    self.selected_config = buttons[j].label.clone(); // Clone the string
+                                    break;
                                 }
-                                while next != i {
-                                    if next >= button_states.len() {
-                                        next = 0;
-                                    }
-                                    if button_states[next].2 {
-                                        self.selected_config = button_states[next].0;
-                                        break;
-                                    }
-                                    next += 1;
-                                }
+                                j = if j == buttons.len() - 1 {
+                                    0
+                                } else {
+                                    j + 1
+                                };
                             }
                             break;
                         }

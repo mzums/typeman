@@ -34,6 +34,7 @@ pub mod practice;
 pub mod utils;
 pub mod config;
 pub mod leaderboard;
+pub mod button_states;
 
 // Re-export types needed by modules
 #[derive(Parser)]

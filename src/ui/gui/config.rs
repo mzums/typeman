@@ -182,24 +182,24 @@ pub fn handle_settings_buttons(
     let mut total_width = 0.0;
 
     let mut button_states = vec![
-        ("! punctuation", *punctuation, !*quote && !*practice_mode),
-        ("# numbers", *numbers, !*quote && !*practice_mode),
-        ("|", divider, true),
-        ("english", *language == Language::English, !*quote && !*practice_mode),
-        ("indonesian", *language == Language::Indonesian, !*quote && !*practice_mode),
-        ("|", divider, true),
-        ("time", *time_mode, true),
-        ("words", *word_mode, true),
-        ("quote", *quote, true),
-        ("practice", *practice_mode, true),
-        ("|", divider, true),
-        ("15", test_time == &15.0, *time_mode),
-        ("30", test_time == &30.0, *time_mode),
-        ("60", test_time == &60.0, *time_mode),
-        ("120", test_time == &120.0, *time_mode),
-        ("25", *batch_size == 25, *word_mode),
-        ("50", *batch_size == 50, *word_mode),
-        ("100", *batch_size == 100, *word_mode),
+        ("! punctuation", if screen_width() > 1500.0 { "! punctuation" } else { "! punctuation" }, *punctuation, !*quote && !*practice_mode),
+        ("# numbers", if screen_width() > 1500.0 { "# numbers" } else { "# numbers" }, *numbers, !*quote && !*practice_mode),
+        ("|", "|", divider, true),
+        ("english", "english", *language == Language::English, !*quote && !*practice_mode),
+        ("indonesian", "indonesian", *language == Language::Indonesian, !*quote && !*practice_mode),
+        ("|", "|", divider, true),
+        ("time", "time", *time_mode, true),
+        ("words", "words", *word_mode, true),
+        ("quote", "quote", *quote, true),
+        ("practice", "practice", *practice_mode, true),
+        ("|", "|", divider, true),
+        ("15", "15", test_time == &15.0, *time_mode),
+        ("30", "30", test_time == &30.0, *time_mode),
+        ("60", "60", test_time == &60.0, *time_mode),
+        ("120", "120", test_time == &120.0, *time_mode),
+        ("25", "25", *batch_size == 25, *word_mode),
+        ("50", "50", *batch_size == 50, *word_mode),
+        ("100", "100", *batch_size == 100, *word_mode),
     ];
 
     if is_key_down(KeyCode::Up) {
@@ -210,7 +210,7 @@ pub fn handle_settings_buttons(
         if !*config_opened {
             return false;
         }
-        for (i, (label, _state_val, visible)) in button_states.iter().enumerate() {
+        for (i, (label, _, _state_val, visible)) in button_states.iter().enumerate() {
             if *visible && *selected_config == *label {
             let mut j = if i == 0 {
                 button_states.len() - 1
@@ -229,33 +229,33 @@ pub fn handle_settings_buttons(
                     j - 1
                 };
             }
-            break;
+                break;
             }
         }
         } else if is_key_pressed(KeyCode::Right) {
-        if !*config_opened {
-            return false;
-        }
-        for (i, (label, _state_val, visible)) in button_states.iter().enumerate() {
-            if *visible && *selected_config == *label {
-            let mut next = if i == button_states.len() - 1 {
-                0
-            } else {
-                i + 1
-            };
-
-            while next != i {
-                if button_states[next].2 && button_states[next].0 != "|" {
-                *selected_config = button_states[next].0.to_string();
-                break;
-                }
-                next = if next == button_states.len() - 1 {
-                0
-                } else {
-                next + 1
-                };
+            if !*config_opened {
+                return false;
             }
-            break;
+            for (i, (label, _, _state_val, visible)) in button_states.iter().enumerate() {
+                if *visible && *selected_config == *label {
+                let mut next = if i == button_states.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                };
+
+                while next != i {
+                    if button_states[next].2 && button_states[next].0 != "|" {
+                        *selected_config = button_states[next].0.to_string();
+                        break;
+                    }
+                    next = if next == button_states.len() - 1 {
+                        0
+                    } else {
+                        next + 1
+                    };
+                }
+                break;
             }
         }
     } else if is_key_pressed(KeyCode::Enter) && *config_opened {
@@ -279,7 +279,7 @@ pub fn handle_settings_buttons(
 
     let mut any_button_hovered = false;
 
-    for (label, state_val, visible) in button_states.iter_mut() {
+    for (label, display_name, state_val, visible) in button_states.iter_mut() {
         let x = start_x + total_width;
         let is_active = *state_val;
         
@@ -287,7 +287,7 @@ pub fn handle_settings_buttons(
             x, 
             btn_y,
             btn_padding,
-            label,
+            display_name,
             font, 
             is_active, 
             inactive_color,
