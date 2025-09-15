@@ -8,6 +8,56 @@ use crate::{practice, utils};
 use crate::language::Language;
 
 
+struct Popup {
+    visible: bool,
+    text: String,
+}
+
+impl Popup {
+    fn new(text: &str) -> Self {
+        Self {
+            visible: false,
+            text: text.to_string(),
+        }
+    }
+
+    fn show(&mut self) {
+        self.visible = true;
+    }
+
+    fn hide(&mut self) {
+        self.visible = false;
+    }
+
+    fn draw(&self) {
+        if !self.visible {
+            return;
+        }
+
+        let screen_w = screen_width();
+        let screen_h = screen_height();
+        let popup_w = 300.0;
+        let popup_h = 150.0;
+        let x = (screen_w - popup_w) / 2.0;
+        let y = (screen_h - popup_h) / 2.0;
+
+        draw_rectangle(0.0, 0.0, screen_w, screen_h, Color::new(0.0, 0.0, 0.0, 0.5));
+
+        draw_rectangle(x, y, popup_w, popup_h, WHITE);
+        draw_rectangle_lines(x, y, popup_w, popup_h, 3.0, BLACK);
+
+        let font_size = 24.0;
+        let text_size = measure_text(&self.text, None, font_size as u16, 1.0);
+        draw_text(
+            &self.text,
+            x + (popup_w - text_size.width) / 2.0,
+            y + popup_h / 2.0,
+            font_size,
+            BLACK,
+        );
+    }
+}
+
 pub fn draw_rounded_rect(x: f32, y: f32, w: f32, h: f32, radius: f32, color: Color) {
     draw_rectangle(x + radius, y, w - 2.0 * radius, h, color);
     draw_rectangle(x, y + radius, w, h - 2.0 * radius, color);
@@ -170,7 +220,19 @@ pub fn handle_settings_buttons(
     saved_results: &mut bool,
     error_positions: &mut Vec<bool>,
     language: &mut Language,
+    popup_open: &mut bool,
 ) -> bool {
+    let mut popup = Popup::new("Hello from popup!");
+    //println!("Popup visible: {}", popup_open);
+    if *popup_open {
+        if !popup.visible {
+            popup.show();
+        }
+        popup.draw();
+    } else {
+        popup.hide();
+    }
+
     let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = screen_height() / 5.0;
     let btn_padding = if screen_width() > 800.0 {
@@ -182,11 +244,12 @@ pub fn handle_settings_buttons(
     let mut total_width = 0.0;
 
     let mut button_states = vec![
-        ("! punctuation", if screen_width() > 1500.0 { "! punctuation" } else { "! punctuation" }, *punctuation, !*quote && !*practice_mode),
-        ("# numbers", if screen_width() > 1500.0 { "# numbers" } else { "# numbers" }, *numbers, !*quote && !*practice_mode),
+        ("punctuation", "! punctuation", *punctuation, !*quote && !*practice_mode),
+        ("numbers", "# numbers", *numbers, !*quote && !*practice_mode),
         ("|", "|", divider, true),
         ("english", "english", *language == Language::English, !*quote && !*practice_mode),
         ("indonesian", "indonesian", *language == Language::Indonesian, !*quote && !*practice_mode),
+        ("language", "language", false, true),
         ("|", "|", divider, true),
         ("time", "time", *time_mode, true),
         ("words", "words", *word_mode, true),
@@ -210,7 +273,8 @@ pub fn handle_settings_buttons(
         if !*config_opened {
             return false;
         }
-        for (i, (label, _, _state_val, visible)) in button_states.iter().enumerate() {
+
+        for (i, (label, _display_name, _state_val, visible)) in button_states.iter().enumerate() {
             if *visible && *selected_config == *label {
             let mut j = if i == 0 {
                 button_states.len() - 1
@@ -219,7 +283,7 @@ pub fn handle_settings_buttons(
             };
 
             while j != i {
-                if button_states[j].2 && button_states[j].0 != "|" {
+                if button_states[j].3 && button_states[j].0 != "|" {
                     *selected_config = button_states[j].0.to_string();
                     break;
                 }
@@ -229,37 +293,38 @@ pub fn handle_settings_buttons(
                     j - 1
                 };
             }
-                break;
+            break;
             }
         }
         } else if is_key_pressed(KeyCode::Right) {
-            if !*config_opened {
-                return false;
-            }
-            for (i, (label, _, _state_val, visible)) in button_states.iter().enumerate() {
-                if *visible && *selected_config == *label {
-                let mut next = if i == button_states.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                };
+        if !*config_opened {
+            return false;
+        }
 
-                while next != i {
-                    if button_states[next].2 && button_states[next].0 != "|" {
-                        *selected_config = button_states[next].0.to_string();
-                        break;
-                    }
-                    next = if next == button_states.len() - 1 {
-                        0
-                    } else {
-                        next + 1
-                    };
+        for (i, (label, _display_name, _state_val, visible)) in button_states.iter().enumerate() {
+            if *visible && *selected_config == *label {
+            let mut next = if i == button_states.len() - 1 {
+                0
+            } else {
+                i + 1
+            };
+
+            while next != i {
+                if button_states[next].3 && button_states[next].0 != "|" {
+                    *selected_config = button_states[next].0.to_string();
+                    break;
                 }
-                break;
+                next = if next == button_states.len() - 1 {
+                0
+                } else {
+                    next + 1
+                };
+            }
+            break;
             }
         }
     } else if is_key_pressed(KeyCode::Enter) && *config_opened {
-        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language);
+        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, popup_open);
 
         if *quote {
             *reference = utils::get_random_quote();
@@ -279,7 +344,7 @@ pub fn handle_settings_buttons(
 
     let mut any_button_hovered = false;
 
-    for (label, display_name, state_val, visible) in button_states.iter_mut() {
+    for (label, _display_name, state_val, visible) in button_states.iter_mut() {
         let x = start_x + total_width;
         let is_active = *state_val;
         
@@ -287,7 +352,7 @@ pub fn handle_settings_buttons(
             x, 
             btn_y,
             btn_padding,
-            display_name,
+            label,
             font, 
             is_active, 
             inactive_color,
@@ -302,8 +367,8 @@ pub fn handle_settings_buttons(
         }
         
         if clicked && *label != "|" {
-            
-            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language);
+
+            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, popup_open);
             if *quote {
                 *reference = utils::get_random_quote();
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
@@ -326,13 +391,13 @@ pub fn handle_settings_buttons(
     any_button_hovered
 }
 
-fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize, practice_menu: &mut bool, selected_practice_level: &mut Option<usize>, practice_mode: &mut bool, language: &mut Language) {
+fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize, practice_menu: &mut bool, selected_practice_level: &mut Option<usize>, practice_mode: &mut bool, language: &mut Language, popup_open: &mut bool) {
     match label {
-        "! punctuation" => {
+        "punctuation" => {
             *punctuation = !*punctuation;
             *quote = false;
         },
-        "# numbers" => {
+        "numbers" => {
             *numbers = !*numbers;
             *quote = false;
         },
@@ -392,6 +457,9 @@ fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_m
         "indonesian" => {
             *language = Language::Indonesian;
         },
+        "language" => {
+            *popup_open = true;
+        }
         _ => {}
     }
 }

@@ -70,6 +70,9 @@ pub async fn gui_main_async() {
     let mut selected_practice_level: Option<usize> = None;
     let mut saved_results = false;
 
+    let mut popup_open = false;
+    
+
     let words: Vec<&str> = reference.split_whitespace().collect();
     let average_word_length: f64 = if !words.is_empty() {
         words.iter().map(|w| w.len()).sum::<usize>() as f64 / words.len() as f64 + 1.0
@@ -139,6 +142,7 @@ pub async fn gui_main_async() {
                 &mut saved_results,
                 &mut error_positions,
                 &mut language,
+                &mut popup_open,
             );
 
             
@@ -335,8 +339,12 @@ pub async fn gui_main_async() {
                 config_opened = false;
             }
         }
-        if is_key_down(KeyCode::Escape) {
-            break;
+        if is_key_pressed(KeyCode::Escape) {
+            if popup_open {
+                popup_open = false;
+            } else {
+                break;
+            }
         }
 
         if is_key_down(KeyCode::Tab) && is_key_down(KeyCode::Enter) && !practice_menu {
