@@ -6,67 +6,8 @@ use std::time::{Instant, Duration};
 use crate::ui::gui::main;
 use crate::{practice, utils};
 use crate::language::Language;
+use crate::ui::gui::popup::Popup;
 
-
-struct Popup {
-    visible: bool,
-    text: String,
-}
-
-impl Popup {
-    fn new(text: &str) -> Self {
-        Self {
-            visible: false,
-            text: text.to_string(),
-        }
-    }
-
-    fn show(&mut self) {
-        self.visible = true;
-    }
-
-    fn hide(&mut self) {
-        self.visible = false;
-    }
-
-    fn draw(&self) {
-        if !self.visible {
-            return;
-        }
-
-        let screen_w = screen_width();
-        let screen_h = screen_height();
-        let popup_w = 300.0;
-        let popup_h = 150.0;
-        let x = (screen_w - popup_w) / 2.0;
-        let y = (screen_h - popup_h) / 2.0;
-
-        draw_rectangle(0.0, 0.0, screen_w, screen_h, Color::new(0.0, 0.0, 0.0, 0.5));
-
-        draw_rectangle(x, y, popup_w, popup_h, WHITE);
-        draw_rectangle_lines(x, y, popup_w, popup_h, 3.0, BLACK);
-
-        let font_size = 24.0;
-        let text_size = measure_text(&self.text, None, font_size as u16, 1.0);
-        draw_text(
-            &self.text,
-            x + (popup_w - text_size.width) / 2.0,
-            y + popup_h / 2.0,
-            font_size,
-            BLACK,
-        );
-    }
-}
-
-pub fn draw_rounded_rect(x: f32, y: f32, w: f32, h: f32, radius: f32, color: Color) {
-    draw_rectangle(x + radius, y, w - 2.0 * radius, h, color);
-    draw_rectangle(x, y + radius, w, h - 2.0 * radius, color);
-
-    draw_circle(x + radius, y + radius, radius, color);
-    draw_circle(x + w - radius, y + radius, radius, color);
-    draw_circle(x + radius, y + h - radius, radius, color);
-    draw_circle(x + w - radius, y + h - radius, radius, color);
-}
 
 fn draw_toggle_button(
     x: f32,
@@ -112,7 +53,7 @@ fn draw_toggle_button(
     
     let corner_radius: f32 = font_size as f32 / 3.0;
     let btn_x = x;
-    draw_rounded_rect(btn_x, y, btn_width, btn_height, corner_radius, bg_color);
+    utils::draw_rounded_rect(btn_x, y, btn_width, btn_height, corner_radius, bg_color);
     draw_text_ex(
         label,
         x + btn_padding,
@@ -220,18 +161,10 @@ pub fn handle_settings_buttons(
     saved_results: &mut bool,
     error_positions: &mut Vec<bool>,
     language: &mut Language,
-    popup_open: &mut bool,
+    popup: &mut Popup,
 ) -> bool {
-    let mut popup = Popup::new("Hello from popup!");
     //println!("Popup visible: {}", popup_open);
-    if *popup_open {
-        if !popup.visible {
-            popup.show();
-        }
-        popup.draw();
-    } else {
-        popup.hide();
-    }
+
 
     let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = screen_height() / 5.0;
@@ -265,10 +198,14 @@ pub fn handle_settings_buttons(
         ("100", "100", *batch_size == 100, *word_mode),
     ];
 
-    if is_key_down(KeyCode::Up) {
-        *config_opened = true;
-    } else if is_key_down(KeyCode::Down) {
-        *config_opened = false;
+    if is_key_pressed(KeyCode::Up) {
+        if !popup.visible {
+            *config_opened = true;
+        }
+    } else if is_key_pressed(KeyCode::Down) {
+        if !popup.visible {
+            *config_opened = false;
+        }
     } else if is_key_pressed(KeyCode::Left) {
         if !*config_opened {
             return false;
@@ -323,8 +260,8 @@ pub fn handle_settings_buttons(
             break;
             }
         }
-    } else if is_key_pressed(KeyCode::Enter) && *config_opened {
-        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, popup_open);
+    } else if is_key_pressed(KeyCode::Enter) && *config_opened && !popup.visible {
+        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, popup);
 
         if *quote {
             *reference = utils::get_random_quote();
@@ -368,7 +305,7 @@ pub fn handle_settings_buttons(
         
         if clicked && *label != "|" {
 
-            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, popup_open);
+            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, popup);
             if *quote {
                 *reference = utils::get_random_quote();
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
@@ -387,11 +324,15 @@ pub fn handle_settings_buttons(
             }
         }
     }
+    if popup.visible {
+        if is_key_pressed(KeyCode::Enter) {}
+        popup.draw(font, language);
+    }
 
     any_button_hovered
 }
 
-fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize, practice_menu: &mut bool, selected_practice_level: &mut Option<usize>, practice_mode: &mut bool, language: &mut Language, popup_open: &mut bool) {
+fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize, practice_menu: &mut bool, selected_practice_level: &mut Option<usize>, practice_mode: &mut bool, language: &mut Language, popup: &mut Popup) {
     match label {
         "punctuation" => {
             *punctuation = !*punctuation;
@@ -458,7 +399,7 @@ fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_m
             *language = Language::Indonesian;
         },
         "language" => {
-            *popup_open = true;
+            popup.show();
         }
         _ => {}
     }

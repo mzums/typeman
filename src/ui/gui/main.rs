@@ -12,6 +12,7 @@ use crate::ui::gui::config::{self, reset_game_state};
 use crate::language::Language;
 use crate::ui::gui::practice as gui_practice;
 use crate::practice::{self, TYPING_LEVELS};
+use crate::ui::gui::popup::{Popup, PopupContent};
 
 
 pub const MAIN_COLOR: macroquad::color::Color = macroquad::color::Color::from_rgba(255, 155, 0, 255);
@@ -71,7 +72,7 @@ pub async fn gui_main_async() {
     let mut saved_results = false;
 
     let mut popup_open = false;
-    
+    let mut popup = Popup::new(PopupContent::Language(Language::English));
 
     let words: Vec<&str> = reference.split_whitespace().collect();
     let average_word_length: f64 = if !words.is_empty() {
@@ -109,7 +110,23 @@ pub async fn gui_main_async() {
             pos1 = 0;
         }
         
-        if !game_over && !practice_menu {
+        if !game_over && !practice_menu {                    
+            let total_height = lines.len() as f32 * font_size * 1.2;
+            let start_y = screen_height() / 2.0 - total_height / 2.0 + font_size;
+            let start_x = screen_width() / 2.0 - max_width / 2.0;
+            let title_y = screen_height() / 7.5;
+
+            draw_reference_text(
+                &lines,
+                &pressed_vec,
+                &is_correct,
+                Some(&font.clone()),
+                font_size,
+                start_x,
+                start_y,
+                popup_open,
+            );
+
             let any_button_hovered = config::handle_settings_buttons(
                 &Option::Some(font.clone()),
                 &word_list,
@@ -142,7 +159,7 @@ pub async fn gui_main_async() {
                 &mut saved_results,
                 &mut error_positions,
                 &mut language,
-                &mut popup_open,
+                &mut popup,
             );
 
             
@@ -179,11 +196,7 @@ pub async fn gui_main_async() {
                     game_over = true;
                 }
             }            
-            
-            let total_height = lines.len() as f32 * font_size * 1.2;
-            let start_y = screen_height() / 2.0 - total_height / 2.0 + font_size;
-            let start_x = screen_width() / 2.0 - max_width / 2.0;
-            let title_y = screen_height() / 7.5;
+
             
             write_title(
                 Some(title_font.clone()),
@@ -208,15 +221,7 @@ pub async fn gui_main_async() {
                 draw_word_count(Some(&font.clone()), font_size, start_x, start_y, &mut words_done, reference.split_whitespace().count());
             }
 
-            draw_reference_text(
-                &lines,
-                &pressed_vec,
-                &is_correct,
-                Some(&font.clone()),
-                font_size,
-                start_x,
-                start_y,
-            );
+            
             let (calc_pos_x, calc_pos_y) = calc_pos(&chars_in_line, pos1);
             if !game_started {
                 let blink_interval = 0.5;
@@ -668,28 +673,31 @@ fn draw_reference_text(
     font_size: f32,
     start_x: f32,
     start_y: f32,
+    popup_open: bool,
 ) {
     let mut pos = 0;
     let mut pos_y = 0.0;
+
+    let alpha = if popup_open { 100 } else { 255 };
 
     for line in lines.iter() {
         let mut pos_x = 0;
         for char in line.chars() {
             let mut curr_char = char;
             let color = if pos + 1 > pressed_vec.len() || is_correct[pos] == 0 {
-                macroquad::color::Color::from_rgba(255, 255, 255, 80)
+                macroquad::color::Color::from_rgba(100, 100, 100, alpha)
             } else if is_correct.get(pos).is_some() && is_correct[pos] == 2 {
-                macroquad::color::Color::from_rgba(255, 255, 255, 200)
+                macroquad::color::Color::from_rgba(200, 200, 200, alpha)
             } else if is_correct.get(pos).is_some() && is_correct[pos] == 1 {
                 if char == ' ' {
                     curr_char = '_';
                 }
-                macroquad::color::Color::from_rgba(255, 165, 0, 255)
+                macroquad::color::Color::from_rgba(255, 165, 0, alpha)
             } else {
                 if char == ' ' {
                     curr_char = '_';
                 }
-                macroquad::color::Color::from_rgba(255, 50, 50, 180)
+                macroquad::color::Color::from_rgba(200, 30, 30, alpha)
             };
             draw_text_ex(
                 &curr_char.to_string(),

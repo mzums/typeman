@@ -20,6 +20,7 @@ pub mod ui {
         pub mod main;
         pub mod practice;
         pub mod results;
+        pub mod popup;
     }
 
     #[cfg(feature = "tui")]

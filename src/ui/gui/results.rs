@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use macroquad::prelude::*;
 use eframe::egui;
-use egui::{Color32,  Area, pos2};
+use egui::{Color32, Area, pos2};
 use egui_plot::{Line, Plot};
 
 use crate::utils;

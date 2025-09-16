@@ -7,6 +7,7 @@ use std::time::{Instant, Duration};
 
 use crate::ui::gui::config;
 use crate::practice::{check_if_completed, TYPING_LEVELS};
+use crate::utils;
 
 
 pub fn display_practice_menu(
@@ -323,7 +324,7 @@ pub fn display_practice_menu(
             100.0
         };
         
-        config::draw_rounded_rect(
+        utils::draw_rounded_rect(
             screen_width() - 20.0,
             thumb_position,
             10.0,
