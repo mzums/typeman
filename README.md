@@ -9,6 +9,8 @@ Typing speed test with practice mode in GUI, TUI and CLI
 <br>
 <img src="screenshots/image.png" alt="Alt Text" width="700">
 <br>
+<img src="screenshots/image-5.png" alt="Alt Text" width="700">
+<br>
 <img src="screenshots/image-4.png" alt="Alt Text" width="700">
 <br>
 <img src="screenshots/image-1.png" alt="Alt Text" width="700">
@@ -59,6 +61,12 @@ Additional action needed for succesfull install
 - **GUI** (macroquad)
 - **CLI**
 
+## Features:
+- multi-language support
+- theme selection
+- local leaderboard
+- saving user interface preferences 
+
 ## CLI parameters:
 - **word number**: number of displayed words
 - **top words**: number of top most common english words used to generae test
@@ -78,10 +86,6 @@ Additional action needed for succesfull install
     - `typeman --cli -w=50 -n=500 -p -d` - 50 random words from 500 most used english words with punctuation and digits
     - `typeman --cli -l` - list all practice levels
     - `typeman --cli -l=1` - practice first level
-
-## Customization:
-- multi-language support
-- multiple themes
 
 ---
 
