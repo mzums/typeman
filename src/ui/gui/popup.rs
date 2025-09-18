@@ -36,7 +36,7 @@ impl Popup {
         self.visible = false;
     }
 
-    pub fn draw(&mut self, font: &Option<Font>, language: &mut Language) -> Option<Language> {
+    pub fn draw(&mut self, font: &Option<Font>, language: &mut Option<Language>, _theme: &mut Option<ColorScheme>) -> Option<Language> {
         if !self.visible {
             return None;
         }
@@ -82,50 +82,105 @@ impl Popup {
         );
 
         let item_h = 30.0;
-        for (i, lang) in Language::all().iter().enumerate() {
-            let item_y = y + 90.0 + i as f32 * item_h;
-            let rect = Rect::new(x + 20.0, item_y - 20.0, popup_w - 40.0, item_h);
+        if language.is_some() {
+            for (i, lang) in Language::all().iter().enumerate() {
+                let item_y = y + 90.0 + i as f32 * item_h;
+                let rect = Rect::new(x + 20.0, item_y - 20.0, popup_w - 40.0, item_h);
+    
+                if i == self.selected {
+                    draw_rectangle(rect.x, rect.y, rect.w, rect.h, main_color);
+                    draw_text_ex(
+                        &lang.to_string(),
+                        rect.x + 10.0,
+                        rect.y + rect.h - 8.0,
+                        TextParams {
+                            font: font.as_ref(),
+                            font_size: 20,
+                            font_scale: 1.0,
+                            color: bg_color,
+                            ..Default::default()
+                        },
+                    );
+                } else {
+                    draw_text_ex(
+                        &lang.to_string(),
+                        rect.x + 10.0,
+                        rect.y + rect.h - 8.0,
+                        TextParams {
+                            font: font.as_ref(),
+                            font_size: 20,
+                            font_scale: 1.0,
+                            color: ref_color,
+                            ..Default::default()
+                        },
+                    );
+                }
+            }
+            if is_key_pressed(KeyCode::Down) && self.selected + 1 < Language::count() {
+                self.selected += 1;
+            }
+        } else {
+            let title = "Select Theme";
+            let title_size = measure_text(title, font.as_ref(), 24, 1.0);
+            draw_text_ex(
+                title,
+                x + (popup_w - title_size.width) / 2.0,
+                y + 50.0,
+                TextParams {
+                    font: font.as_ref(),
+                    font_size: 24,
+                    font_scale: 1.0,
+                    color: ref_color,
+                    ..Default::default()
+                },
+            );
 
-            if i == self.selected {
-                draw_rectangle(rect.x, rect.y, rect.w, rect.h, main_color);
-                draw_text_ex(
-                    &lang.to_string(),
-                    rect.x + 10.0,
-                    rect.y + rect.h - 8.0,
-                    TextParams {
-                        font: font.as_ref(),
-                        font_size: 20,
-                        font_scale: 1.0,
-                        color: bg_color,
-                        ..Default::default()
-                    },
-                );
-            } else {
-                draw_text_ex(
-                    &lang.to_string(),
-                    rect.x + 10.0,
-                    rect.y + rect.h - 8.0,
-                    TextParams {
-                        font: font.as_ref(),
-                        font_size: 20,
-                        font_scale: 1.0,
-                        color: ref_color,
-                        ..Default::default()
-                    },
-                );
+            for (i, _theme) in ColorScheme::all().iter().enumerate() {
+                let item_y = y + 90.0 + i as f32 * item_h;
+                let rect = Rect::new(x + 20.0, item_y - 20.0, popup_w - 40.0, item_h);
+    
+                if i == self.selected {
+                    draw_rectangle(rect.x, rect.y, rect.w, rect.h, main_color);
+                    draw_text_ex(
+                        "selected",
+                        rect.x + 10.0,
+                        rect.y + rect.h - 8.0,
+                        TextParams {
+                            font: font.as_ref(),
+                            font_size: 20,
+                            font_scale: 1.0,
+                            color: bg_color,
+                            ..Default::default()
+                        },
+                    );
+                } else {
+                    draw_text_ex(
+                        "not selected",
+                        rect.x + 10.0,
+                        rect.y + rect.h - 8.0,
+                        TextParams {
+                            font: font.as_ref(),
+                            font_size: 20,
+                            font_scale: 1.0,
+                            color: ref_color,
+                            ..Default::default()
+                        },
+                    );
+                }
+            }
+            if is_key_pressed(KeyCode::Down) && self.selected + 1 < 5 {
+                self.selected += 1;
             }
         }
 
         if is_key_pressed(KeyCode::Up) && self.selected > 0 {
             self.selected -= 1;
         }
-        if is_key_pressed(KeyCode::Down) && self.selected + 1 < Language::count() {
-            self.selected += 1;
-        }
+        
         if is_key_pressed(KeyCode::Enter) {
-            *language = Language::all()[self.selected];
+            //*language = Language::all()[self.selected];
             self.hide();
-            return Some(*language);
+            return *language;
         }
 
         None

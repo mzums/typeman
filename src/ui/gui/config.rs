@@ -7,6 +7,7 @@ use crate::ui::gui::main;
 use crate::{practice, utils};
 use crate::language::Language;
 use crate::ui::gui::popup::Popup;
+use crate::color_scheme::ColorScheme;
 
 
 fn draw_toggle_button(
@@ -162,6 +163,7 @@ pub fn handle_settings_buttons(
     error_positions: &mut Vec<bool>,
     language: &mut Language,
     popup: &mut Popup,
+    theme_popup: &mut Popup,
 ) -> bool {
     //println!("Popup visible: {}", popup_open);
 
@@ -183,6 +185,7 @@ pub fn handle_settings_buttons(
         ("english", "english", *language == Language::English, !*quote && !*practice_mode),
         ("indonesian", "indonesian", *language == Language::Indonesian, !*quote && !*practice_mode),
         ("language", "language", false, true),
+        ("theme", "theme", false, true),
         ("|", "|", divider, true),
         ("time", "time", *time_mode, true),
         ("words", "words", *word_mode, true),
@@ -261,7 +264,7 @@ pub fn handle_settings_buttons(
             }
         }
     } else if is_key_pressed(KeyCode::Enter) && *config_opened && !popup.visible {
-        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, popup);
+        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, popup, theme_popup);
 
         if *quote {
             *reference = utils::get_random_quote();
@@ -305,7 +308,7 @@ pub fn handle_settings_buttons(
         
         if clicked && *label != "|" {
 
-            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, popup);
+            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, popup, theme_popup);
             if *quote {
                 *reference = utils::get_random_quote();
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
@@ -326,13 +329,25 @@ pub fn handle_settings_buttons(
     }
     if popup.visible {
         if is_key_pressed(KeyCode::Enter) {}
-        popup.draw(font, language);
+        // Wrap language in an Option and pass as mutable reference
+        let mut language_option = Some(language.clone());
+        popup.draw(font, &mut language_option, &mut None);
+        if let Some(new_lang) = language_option {
+            *language = new_lang;
+        }
+    }
+    if theme_popup.visible {
+        if is_key_pressed(KeyCode::Enter) {}
+        // You need to have a mutable Option<ColorScheme> variable named theme
+        // For now, we create a dummy variable to avoid compile errors
+        let mut theme: Option<ColorScheme> = None;
+        theme_popup.draw(font, &mut None, &mut theme);
     }
 
     any_button_hovered
 }
 
-fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize, practice_menu: &mut bool, selected_practice_level: &mut Option<usize>, practice_mode: &mut bool, language: &mut Language, popup: &mut Popup) {
+fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize, practice_menu: &mut bool, selected_practice_level: &mut Option<usize>, practice_mode: &mut bool, language: &mut Language, popup: &mut Popup, theme_popup: &mut Popup) {
     match label {
         "punctuation" => {
             *punctuation = !*punctuation;
@@ -400,7 +415,10 @@ fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_m
         },
         "language" => {
             popup.show();
-        }
+        },
+        "theme" => {
+            theme_popup.show();
+        },
         _ => {}
     }
 }

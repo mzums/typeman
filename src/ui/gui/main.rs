@@ -10,6 +10,7 @@ use crate::utils;
 use crate::ui::gui::results;
 use crate::ui::gui::config::{self, reset_game_state};
 use crate::language::Language;
+use crate::color_scheme::ColorScheme;
 use crate::ui::gui::practice as gui_practice;
 use crate::practice::{self, TYPING_LEVELS};
 use crate::ui::gui::popup::{Popup, PopupContent};
@@ -73,6 +74,7 @@ pub async fn gui_main_async() {
 
     let mut popup_open = false;
     let mut popup = Popup::new(PopupContent::Language(Language::English));
+    let mut theme_popup = Popup::new(PopupContent::ColorScheme(ColorScheme::Default));
 
     let words: Vec<&str> = reference.split_whitespace().collect();
     let average_word_length: f64 = if !words.is_empty() {
@@ -160,6 +162,7 @@ pub async fn gui_main_async() {
                 &mut error_positions,
                 &mut language,
                 &mut popup,
+                &mut theme_popup,
             );
 
             
