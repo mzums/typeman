@@ -7,7 +7,6 @@ use crate::ui::gui::main;
 use crate::{practice, utils};
 use crate::language::Language;
 use crate::ui::gui::popup::Popup;
-use crate::color_scheme::ColorScheme;
 
 
 fn draw_toggle_button(
@@ -162,11 +161,12 @@ pub fn handle_settings_buttons(
     saved_results: &mut bool,
     error_positions: &mut Vec<bool>,
     language: &mut Language,
-    popup: &mut Popup,
+    lang_popup: &mut Popup,
+    lang_popup_recently_closed: &mut bool,
     theme_popup: &mut Popup,
+    theme_popup_recently_closed: &mut bool,
+    theme: &mut crate::color_scheme::ColorScheme,
 ) -> bool {
-    //println!("Popup visible: {}", popup_open);
-
 
     let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = screen_height() / 5.0;
@@ -182,10 +182,8 @@ pub fn handle_settings_buttons(
         ("punctuation", "! punctuation", *punctuation, !*quote && !*practice_mode),
         ("numbers", "# numbers", *numbers, !*quote && !*practice_mode),
         ("|", "|", divider, true),
-        ("english", "english", *language == Language::English, !*quote && !*practice_mode),
-        ("indonesian", "indonesian", *language == Language::Indonesian, !*quote && !*practice_mode),
-        ("language", "language", false, true),
-        ("theme", "theme", false, true),
+        ("language", "language", lang_popup.visible, true),
+        ("theme", "theme", theme_popup.visible, true),
         ("|", "|", divider, true),
         ("time", "time", *time_mode, true),
         ("words", "words", *word_mode, true),
@@ -202,11 +200,11 @@ pub fn handle_settings_buttons(
     ];
 
     if is_key_pressed(KeyCode::Up) {
-        if !popup.visible {
+        if !lang_popup.visible && !theme_popup.visible {
             *config_opened = true;
         }
     } else if is_key_pressed(KeyCode::Down) {
-        if !popup.visible {
+        if !lang_popup.visible && !theme_popup.visible {
             *config_opened = false;
         }
     } else if is_key_pressed(KeyCode::Left) {
@@ -263,8 +261,8 @@ pub fn handle_settings_buttons(
             break;
             }
         }
-    } else if is_key_pressed(KeyCode::Enter) && *config_opened && !popup.visible {
-        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, popup, theme_popup);
+    } else if is_key_pressed(KeyCode::Enter) && *config_opened && !lang_popup.visible && !theme_popup.visible {
+        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, lang_popup, theme_popup);
 
         if *quote {
             *reference = utils::get_random_quote();
@@ -273,13 +271,15 @@ pub fn handle_settings_buttons(
                 practice::TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1,
                 *batch_size,
             );
-        } else {
+        } else if *selected_config != "language" && *selected_config != "theme" {
             let updated_word_list = utils::read_first_n_words(500, *language);
             *reference = utils::get_reference(*punctuation, *numbers, &updated_word_list, *batch_size);
         }
-        *is_correct = VecDeque::from(vec![0; reference.len()]);
-        *error_positions = vec![false; is_correct.len()];
-        reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, saved_results, &mut vec![false; reference.chars().count()]);
+        if selected_config != "language" && selected_config != "theme" {
+            *is_correct = VecDeque::from(vec![0; reference.len()]);
+            *error_positions = vec![false; is_correct.len()];
+            reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, saved_results, &mut vec![false; reference.chars().count()]);
+        }
     }
 
     let mut any_button_hovered = false;
@@ -306,9 +306,10 @@ pub fn handle_settings_buttons(
             any_button_hovered = true;
         }
         
-        if clicked && *label != "|" {
+        if clicked && *label != "|" && *label != "language" {
+            println!("Clicked button: {}", label);
 
-            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, popup, theme_popup);
+            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, lang_popup, theme_popup);
             if *quote {
                 *reference = utils::get_random_quote();
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
@@ -327,27 +328,16 @@ pub fn handle_settings_buttons(
             }
         }
     }
-    if popup.visible {
-        if is_key_pressed(KeyCode::Enter) {}
-        // Wrap language in an Option and pass as mutable reference
-        let mut language_option = Some(language.clone());
-        popup.draw(font, &mut language_option, &mut None);
-        if let Some(new_lang) = language_option {
-            *language = new_lang;
-        }
-    }
-    if theme_popup.visible {
-        if is_key_pressed(KeyCode::Enter) {}
-        // You need to have a mutable Option<ColorScheme> variable named theme
-        // For now, we create a dummy variable to avoid compile errors
-        let mut theme: Option<ColorScheme> = None;
-        theme_popup.draw(font, &mut None, &mut theme);
+    if lang_popup.visible {
+        lang_popup.draw(font, language, theme, lang_popup_recently_closed);
+    } else if theme_popup.visible {
+        theme_popup.draw(font, language, theme, theme_popup_recently_closed);
     }
 
     any_button_hovered
 }
 
-fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize, practice_menu: &mut bool, selected_practice_level: &mut Option<usize>, practice_mode: &mut bool, language: &mut Language, popup: &mut Popup, theme_popup: &mut Popup) {
+fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize, practice_menu: &mut bool, selected_practice_level: &mut Option<usize>, practice_mode: &mut bool, language: &mut Language, lang_popup: &mut Popup, theme_popup: &mut Popup) {
     match label {
         "punctuation" => {
             *punctuation = !*punctuation;
@@ -414,7 +404,7 @@ fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_m
             *language = Language::Indonesian;
         },
         "language" => {
-            popup.show();
+            lang_popup.show();
         },
         "theme" => {
             theme_popup.show();

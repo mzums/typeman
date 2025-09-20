@@ -3610,6 +3610,7 @@ dependencies = [
  "egui_plot",
  "fs2",
  "macroquad",
+ "paste",
  "rand 0.9.2",
  "ratatui",
  "serde",

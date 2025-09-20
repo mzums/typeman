@@ -1,5 +1,7 @@
-use ratatui::prelude::Color;
 use serde::{Deserialize, Serialize};
+use paste::paste;
+
+use crate::custom_colors::MyColor;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ColorScheme {
@@ -12,6 +14,21 @@ pub enum ColorScheme {
     Forest,
     ForestDark,
     Pink,
+}
+
+macro_rules! fw_colors {
+    ($($name:ident),*) => {
+        paste! {
+            $(
+                pub fn [<$name _tui>](&self) -> ratatui::style::Color {
+                    self.$name().into()
+                }
+                pub fn [<$name _mq>](&self) -> macroquad::color::Color {
+                    self.$name().into()
+                }
+            )*
+        }
+    };
 }
 
 impl ColorScheme {
@@ -43,129 +60,131 @@ impl ColorScheme {
         }
     }
 
-    pub fn border_color(&self) -> Color {
+    fw_colors!(border_color, ref_color, bg_color, main_color, dimmer_main, text_color, chart_color, correct_color, incorrect_color);
+
+    pub fn border_color(&self) -> MyColor {
         match self {
-            ColorScheme::Default => Color::Rgb(100, 60, 0),
-            ColorScheme::Dark => Color::Rgb(60, 60, 60),
-            ColorScheme::Light => Color::Rgb(200, 180, 160),
-            ColorScheme::Monochrome => Color::White,
-            ColorScheme::Ocean => Color::Rgb(0, 100, 150),
-            ColorScheme::OceanDark => Color::Rgb(0, 50, 80),
-            ColorScheme::Forest => Color::Rgb(50, 100, 50),
-            ColorScheme::ForestDark => Color::Rgb(60, 120, 60),
-            ColorScheme::Pink => Color::Rgb(100, 20, 70),
+            ColorScheme::Default => MyColor::new(100, 60, 0, 255),
+            ColorScheme::Dark => MyColor::new(60, 60, 60, 255),
+            ColorScheme::Light => MyColor::new(200, 180, 160, 255),
+            ColorScheme::Monochrome => MyColor::new(200, 255, 255, 255),
+            ColorScheme::Ocean => MyColor::new(0, 100, 150, 255),
+            ColorScheme::OceanDark => MyColor::new(0, 50, 80, 255),
+            ColorScheme::Forest => MyColor::new(50, 100, 50, 255),
+            ColorScheme::ForestDark => MyColor::new(60, 120, 60, 255),
+            ColorScheme::Pink => MyColor::new(100, 20, 70, 255),
         }
     }
 
-    pub fn ref_color(&self) -> Color {
+    pub fn ref_color(&self) -> MyColor {
         match self {
-            ColorScheme::Default => Color::Rgb(100, 100, 100),
-            ColorScheme::Dark => Color::Rgb(80, 80, 80),
-            ColorScheme::Light => Color::Rgb(120, 120, 120),
-            ColorScheme::Monochrome => Color::Gray,
-            ColorScheme::Ocean => Color::Rgb(100, 150, 200),
-            ColorScheme::OceanDark => Color::Rgb(70, 100, 130),
-            ColorScheme::Forest => Color::Rgb(100, 150, 100),
-            ColorScheme::ForestDark => Color::Rgb(70, 80, 70),
-            ColorScheme::Pink => Color::Rgb(80, 70, 70),
+            ColorScheme::Default => MyColor::new(100, 100, 100, 255),
+            ColorScheme::Dark => MyColor::new(80, 80, 80, 255),
+            ColorScheme::Light => MyColor::new(120, 120, 120, 255),
+            ColorScheme::Monochrome => MyColor::new(128, 128, 128, 255),
+            ColorScheme::Ocean => MyColor::new(100, 150, 200, 255),
+            ColorScheme::OceanDark => MyColor::new(70, 100, 130, 255),
+            ColorScheme::Forest => MyColor::new(100, 150, 100, 255),
+            ColorScheme::ForestDark => MyColor::new(70, 80, 70, 255),
+            ColorScheme::Pink => MyColor::new(80, 70, 70, 255),
         }
     }
 
-    pub fn bg_color(&self) -> Color {
+    pub fn bg_color(&self) -> MyColor {
         match self {
-            ColorScheme::Default => Color::Rgb(10, 10, 10),
-            ColorScheme::Dark => Color::Black,
-            ColorScheme::Light => Color::Rgb(250, 250, 250),
-            ColorScheme::Monochrome => Color::Black,
-            ColorScheme::Ocean => Color::Rgb(10, 30, 50),
-            ColorScheme::OceanDark => Color::Rgb(0, 5, 10),
-            ColorScheme::Forest => Color::Rgb(20, 40, 20),
-            ColorScheme::ForestDark => Color::Rgb(10, 10, 10),
-            ColorScheme::Pink => Color::Rgb(7, 0, 2),
+            ColorScheme::Default => MyColor::new(10, 10, 10, 255),
+            ColorScheme::Dark => MyColor::new(10, 10, 10, 255),
+            ColorScheme::Light => MyColor::new(250, 250, 250, 255),
+            ColorScheme::Monochrome => MyColor::new(0, 0, 0, 255),
+            ColorScheme::Ocean => MyColor::new(10, 30, 50, 255),
+            ColorScheme::OceanDark => MyColor::new(0, 5, 10, 255),
+            ColorScheme::Forest => MyColor::new(20, 40, 20, 255),
+            ColorScheme::ForestDark => MyColor::new(10, 10, 10, 255),
+            ColorScheme::Pink => MyColor::new(7, 0, 2, 255),
         }
     }
 
-    pub fn main_color(&self) -> Color {
+    pub fn main_color(&self) -> MyColor {
         match self {
-            ColorScheme::Default => Color::Rgb(255, 155, 0),
-            ColorScheme::Dark => Color::Rgb(180, 180, 180),
-            ColorScheme::Light => Color::Rgb(80, 80, 80),
-            ColorScheme::Monochrome => Color::White,
-            ColorScheme::Ocean => Color::Rgb(100, 200, 255),
-            ColorScheme::OceanDark => Color::Rgb(80, 180, 230),
-            ColorScheme::Forest => Color::Rgb(150, 255, 150),
-            ColorScheme::ForestDark => Color::Rgb(100, 200, 100),
-            ColorScheme::Pink => Color::Rgb(255, 20, 147),
+            ColorScheme::Default => MyColor::new(255, 155, 0, 255),
+            ColorScheme::Dark => MyColor::new(180, 180, 180, 255),
+            ColorScheme::Light => MyColor::new(80, 80, 80, 255),
+            ColorScheme::Monochrome => MyColor::new(200, 255, 255, 255),
+            ColorScheme::Ocean => MyColor::new(100, 200, 255, 255),
+            ColorScheme::OceanDark => MyColor::new(80, 180, 230, 255),
+            ColorScheme::Forest => MyColor::new(150, 255, 150, 255),
+            ColorScheme::ForestDark => MyColor::new(100, 200, 100, 255),
+            ColorScheme::Pink => MyColor::new(255, 20, 147, 255),
         }
     }
 
-    pub fn dimmer_main(&self) -> Color {
+    pub fn dimmer_main(&self) -> MyColor {
         match self {
-            ColorScheme::Default => Color::Rgb(180, 100, 0),
-            ColorScheme::Dark => Color::Rgb(120, 120, 120),
-            ColorScheme::Light => Color::Rgb(60, 60, 60),
-            ColorScheme::Monochrome => Color::Gray,
-            ColorScheme::Ocean => Color::Rgb(60, 140, 200),
-            ColorScheme::OceanDark => Color::Rgb(50, 120, 180),
-            ColorScheme::Forest => Color::Rgb(100, 180, 100),
-            ColorScheme::ForestDark => Color::Rgb(150, 230, 100),
-            ColorScheme::Pink => Color::Rgb(200, 10, 120),
+            ColorScheme::Default => MyColor::new(180, 100, 0, 255),
+            ColorScheme::Dark => MyColor::new(120, 120, 120, 255),
+            ColorScheme::Light => MyColor::new(60, 60, 60, 255),
+            ColorScheme::Monochrome => MyColor::new(128, 128, 128, 255),
+            ColorScheme::Ocean => MyColor::new(60, 140, 200, 255),
+            ColorScheme::OceanDark => MyColor::new(50, 120, 180, 255),
+            ColorScheme::Forest => MyColor::new(100, 180, 100, 255),
+            ColorScheme::ForestDark => MyColor::new(150, 230, 100, 255),
+            ColorScheme::Pink => MyColor::new(200, 10, 120, 255),
         }
     }
 
-    pub fn text_color(&self) -> Color {
+    pub fn text_color(&self) -> MyColor {
         match self {
-            ColorScheme::Default => Color::White,
-            ColorScheme::Dark => Color::White,
-            ColorScheme::Light => Color::Black,
-            ColorScheme::Monochrome => Color::White,
-            ColorScheme::Ocean => Color::Rgb(200, 230, 255),
-            ColorScheme::OceanDark => Color::Rgb(180, 220, 255),
-            ColorScheme::Forest => Color::Rgb(200, 255, 200),
-            ColorScheme::ForestDark => Color::Rgb(180, 255, 180),
-            ColorScheme::Pink => Color::Rgb(255, 182, 193),
+            ColorScheme::Default => MyColor::new(200, 255, 255, 255),
+            ColorScheme::Dark => MyColor::new(200, 255, 255, 255),
+            ColorScheme::Light => MyColor::new(0, 0, 0, 255),
+            ColorScheme::Monochrome => MyColor::new(200, 255, 255, 255),
+            ColorScheme::Ocean => MyColor::new(200, 230, 255, 255),
+            ColorScheme::OceanDark => MyColor::new(180, 220, 255, 255),
+            ColorScheme::Forest => MyColor::new(200, 255, 200, 255),
+            ColorScheme::ForestDark => MyColor::new(180, 255, 180, 255),
+            ColorScheme::Pink => MyColor::new(255, 182, 193, 255),
         }
     }
 
-    pub fn chart_color(&self) -> Color {
+    pub fn chart_color(&self) -> MyColor {
         match self {
-            ColorScheme::Default => Color::Rgb(150, 80, 0),
-            ColorScheme::Dark => Color::Rgb(180, 180, 180),
-            ColorScheme::Light => Color::Rgb(80, 80, 80),
-            ColorScheme::Monochrome => Color::White,
-            ColorScheme::Ocean => Color::Rgb(100, 200, 255),
-            ColorScheme::OceanDark => Color::Rgb(80, 180, 230),
-            ColorScheme::Forest => Color::Rgb(150, 255, 150),
-            ColorScheme::ForestDark => Color::Rgb(100, 200, 100),
-            ColorScheme::Pink => Color::Rgb(100, 20, 70),
+            ColorScheme::Default => MyColor::new(150, 80, 0, 255),
+            ColorScheme::Dark => MyColor::new(180, 180, 180, 255),
+            ColorScheme::Light => MyColor::new(80, 80, 80, 255),
+            ColorScheme::Monochrome => MyColor::new(200, 255, 255, 255),
+            ColorScheme::Ocean => MyColor::new(100, 200, 255, 255),
+            ColorScheme::OceanDark => MyColor::new(80, 180, 230, 255),
+            ColorScheme::Forest => MyColor::new(150, 255, 150, 255),
+            ColorScheme::ForestDark => MyColor::new(100, 200, 100, 255),
+            ColorScheme::Pink => MyColor::new(100, 20, 70, 255),
         }
     }
 
-    pub fn correct_color(&self) -> Color {
+    pub fn correct_color(&self) -> MyColor {
         match self {
-            ColorScheme::Default => Color::White,
-            ColorScheme::Dark => Color::White,
-            ColorScheme::Light => Color::Rgb(150, 200, 150),
-            ColorScheme::Monochrome => Color::White,
-            ColorScheme::Ocean => Color::White,
-            ColorScheme::OceanDark => Color::White,
-            ColorScheme::Forest => Color::White,
-            ColorScheme::ForestDark => Color::White,
-            ColorScheme::Pink => Color::White,
+            ColorScheme::Default => MyColor::new(200, 255, 255, 255),
+            ColorScheme::Dark => MyColor::new(200, 255, 255, 255),
+            ColorScheme::Light => MyColor::new(150, 200, 150, 255),
+            ColorScheme::Monochrome => MyColor::new(200, 255, 255, 255),
+            ColorScheme::Ocean => MyColor::new(200, 255, 255, 255),
+            ColorScheme::OceanDark => MyColor::new(200, 255, 255, 255),
+            ColorScheme::Forest => MyColor::new(200, 255, 255, 255),
+            ColorScheme::ForestDark => MyColor::new(200, 255, 255, 255),
+            ColorScheme::Pink => MyColor::new(200, 255, 255, 255),
         }
     }
 
-    pub fn incorrect_color(&self) -> Color {
+    pub fn incorrect_color(&self) -> MyColor {
         match self {
-            ColorScheme::Default => Color::Rgb(255, 155, 0),
-            ColorScheme::Dark => Color::Rgb(100, 60, 0),
-            ColorScheme::Light => Color::Rgb(150, 100, 0),
-            ColorScheme::Monochrome => Color::Rgb(200, 50, 50),
-            ColorScheme::Ocean => Color::Rgb(255, 100, 150),
-            ColorScheme::OceanDark => Color::Rgb(255, 100, 200),
-            ColorScheme::Forest => Color::Rgb(255, 100, 100),
-            ColorScheme::ForestDark => Color::Rgb(255, 100, 100),
-            ColorScheme::Pink => Color::Rgb(255, 100, 100),
+            ColorScheme::Default => MyColor::new(255, 155, 0, 255),
+            ColorScheme::Dark => MyColor::new(100, 60, 0, 255),
+            ColorScheme::Light => MyColor::new(150, 100, 0, 255),
+            ColorScheme::Monochrome => MyColor::new(200, 50, 50, 255),
+            ColorScheme::Ocean => MyColor::new(255, 100, 150, 255),
+            ColorScheme::OceanDark => MyColor::new(255, 100, 200, 255),
+            ColorScheme::Forest => MyColor::new(255, 100, 100, 255),
+            ColorScheme::ForestDark => MyColor::new(255, 100, 100, 255),
+            ColorScheme::Pink => MyColor::new(255, 100, 100, 255),
         }
     }
 }

@@ -39,6 +39,7 @@ pub mod utils;
 pub mod config;
 pub mod leaderboard;
 pub mod button_states;
+pub mod custom_colors;
 
 #[cfg(feature = "cli")]
 use crate::ui::cli::modes;

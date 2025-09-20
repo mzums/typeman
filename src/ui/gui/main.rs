@@ -72,9 +72,12 @@ pub async fn gui_main_async() {
     let mut selected_practice_level: Option<usize> = None;
     let mut saved_results = false;
 
-    let mut popup_open = false;
-    let mut popup = Popup::new(PopupContent::Language(Language::English));
-    let mut theme_popup = Popup::new(PopupContent::ColorScheme(ColorScheme::Default));
+    let mut lang_popup = Popup::new(PopupContent::Language);
+    let mut lang_popup_recently_closed = false;
+
+    let mut theme_popup = Popup::new(PopupContent::ColorScheme);
+    let mut theme_popup_recently_closed = false;
+    let mut theme = ColorScheme::Default;
 
     let words: Vec<&str> = reference.split_whitespace().collect();
     let average_word_length: f64 = if !words.is_empty() {
@@ -126,7 +129,7 @@ pub async fn gui_main_async() {
                 font_size,
                 start_x,
                 start_y,
-                popup_open,
+                lang_popup.visible,
             );
 
             let any_button_hovered = config::handle_settings_buttons(
@@ -161,9 +164,27 @@ pub async fn gui_main_async() {
                 &mut saved_results,
                 &mut error_positions,
                 &mut language,
-                &mut popup,
+                &mut lang_popup,
+                &mut lang_popup_recently_closed,
                 &mut theme_popup,
+                &mut theme_popup_recently_closed,
+                &mut theme,
             );
+            if lang_popup_recently_closed {
+                reference = if quote {
+                    utils::get_random_quote()
+                } else if practice_mode {
+                    practice::create_words(
+                        practice::TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1,
+                        batch_size,
+                    )
+                } else {
+                    let updated_word_list = utils::read_first_n_words(500, language);
+                    utils::get_reference(punctuation, numbers, &updated_word_list, batch_size)
+                };
+                lang_popup_recently_closed = false;
+                reset_game_state(&mut pressed_vec, &mut is_correct, &mut pos1, &mut timer, &mut start_time, &mut game_started, &mut game_over, &mut speed_per_second, &mut last_recorded_time, &mut words_done, &mut errors_per_second, &mut saved_results, &mut error_positions);
+            }
 
             
             set_mouse_cursor(if any_button_hovered {
@@ -210,6 +231,7 @@ pub async fn gui_main_async() {
                     },
                 start_x,
                 title_y,
+                &theme,
             );
             
             handle_input(&reference, &mut pressed_vec, &mut is_correct, &mut pos1, &mut words_done, &mut errors_this_second, &mut config_opened, &mut error_positions, practice_mode, practice_menu);
@@ -348,8 +370,8 @@ pub async fn gui_main_async() {
             }
         }
         if is_key_pressed(KeyCode::Escape) {
-            if popup_open {
-                popup_open = false;
+            if lang_popup.visible {
+                lang_popup.visible = false;
             } else {
                 break;
             }
@@ -398,13 +420,13 @@ pub async fn gui_main_async() {
     }
 }
 
-fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32) {
+fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32, _theme: &ColorScheme) {
     let (type_text, man_text) = ("Type", "Man");
     let type_width = measure_text(type_text, font.as_ref(), font_size as u16, 1.0).width;
 
     for (text, color, dx) in [
         (type_text, MAIN_COLOR, 0.0),
-        (man_text, macroquad::color::Color::from_rgba(255, 255, 255, 220), type_width),
+        (man_text, Color::from_rgba(255, 255, 255, 220), type_width),
         ] {
             draw_text_ex(
                 text,
@@ -676,12 +698,12 @@ fn draw_reference_text(
     font_size: f32,
     start_x: f32,
     start_y: f32,
-    popup_open: bool,
+    lang_popup_open: bool,
 ) {
     let mut pos = 0;
     let mut pos_y = 0.0;
 
-    let alpha = if popup_open { 100 } else { 255 };
+    let alpha = if lang_popup_open { 100 } else { 255 };
 
     for line in lines.iter() {
         let mut pos_x = 0;
