@@ -16,10 +16,10 @@ fn draw_toggle_button(
     label: &str,
     font: &Option<Font>,
     is_active: bool,
-    inactive_color: Color,
     visible: bool,
     font_size: u16,
     selected: bool,
+    color_scheme: &crate::color_scheme::ColorScheme,
 ) -> (bool, bool, f32) {
     if !visible {
         return (false, false, 0.0);
@@ -35,14 +35,14 @@ fn draw_toggle_button(
     let hovered = rect.contains(vec2(mx, my));
     let clicked = hovered && is_mouse_button_pressed(MouseButton::Left);
 
-    let mut text_color = if is_active { main::MAIN_COLOR } else { inactive_color };
+    let mut text_color = if is_active { color_scheme.main_color_mq() } else { color_scheme.ref_color_mq() };
     let mut bg_color = Color::from_rgba(255, 0, 0, 0);
     if selected && is_active {
         text_color = macroquad::color::BLACK;
-        bg_color = Color::from_rgba(150, 90, 0, 255);
+        bg_color = color_scheme.dimmer_main_mq();
     } else if selected {
         text_color = macroquad::color::BLACK;
-        bg_color = Color::from_rgba(100, 60, 0, 255);
+        bg_color = color_scheme.border_color_mq();
     }
 
     let font_size: u16 = if label == "|" {
@@ -165,10 +165,8 @@ pub fn handle_settings_buttons(
     lang_popup_recently_closed: &mut bool,
     theme_popup: &mut Popup,
     theme_popup_recently_closed: &mut bool,
-    theme: &mut crate::color_scheme::ColorScheme,
+    color_scheme: &mut crate::color_scheme::ColorScheme,
 ) -> bool {
-
-    let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = screen_height() / 5.0;
     let btn_padding = if screen_width() > 800.0 {
         font_size as f32 * 0.5
@@ -295,10 +293,10 @@ pub fn handle_settings_buttons(
             label,
             font, 
             is_active, 
-            inactive_color,
             *visible,
             font_size,
             selected_config == label && *config_opened,
+            color_scheme
         );
         total_width += btni_width;
         
@@ -329,9 +327,9 @@ pub fn handle_settings_buttons(
         }
     }
     if lang_popup.visible {
-        lang_popup.draw(font, language, theme, lang_popup_recently_closed);
+        lang_popup.draw(font, language, color_scheme, lang_popup_recently_closed);
     } else if theme_popup.visible {
-        theme_popup.draw(font, language, theme, theme_popup_recently_closed);
+        theme_popup.draw(font, language, color_scheme, theme_popup_recently_closed);
     }
 
     any_button_hovered

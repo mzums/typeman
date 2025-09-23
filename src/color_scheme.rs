@@ -60,7 +60,16 @@ impl ColorScheme {
         }
     }
 
-    fw_colors!(border_color, ref_color, bg_color, main_color, dimmer_main, text_color, chart_color, correct_color, incorrect_color);
+    #[cfg(feature = "gui")]
+    pub fn mq_to_color32(c: macroquad::color::Color) -> egui_macroquad::egui::Color32 {
+        egui_macroquad::egui::Color32::from_rgb(
+            (c.r * 255.0) as u8,
+            (c.g * 255.0) as u8,
+            (c.b * 255.0) as u8,
+        )
+    }
+
+    fw_colors!(border_color, ref_color, bg_color, main_color, dimmer_main, text_color, chart_color, correct_color, corrected_color);
 
     pub fn border_color(&self) -> MyColor {
         match self {
@@ -174,7 +183,7 @@ impl ColorScheme {
         }
     }
 
-    pub fn incorrect_color(&self) -> MyColor {
+    pub fn corrected_color(&self) -> MyColor {
         match self {
             ColorScheme::Default => MyColor::new(255, 155, 0, 255),
             ColorScheme::Dark => MyColor::new(100, 60, 0, 255),

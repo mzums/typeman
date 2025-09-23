@@ -66,10 +66,10 @@ impl Popup {
         let x = (screen_w - popup_w) / 2.0;
         let y = (screen_h - popup_h) / 2.0;
 
-        let bg_color = Color::from_rgba(10, 10, 10, 255);
-        let main_color = Color::from_rgba(255, 155, 0, 255);
-        let ref_color = Color::from_rgba(100, 60, 0, 255);
-        let border_color = Color::from_rgba(100, 60, 0, 255);
+        let bg_color = theme.bg_color_mq();
+        let main_color = theme.main_color_mq();
+        let ref_color = theme.ref_color_mq();
+        let border_color = theme.border_color_mq();
 
         utils::draw_rounded_rect(x, y, popup_w, popup_h, 20.0, bg_color);
         utils::draw_rounded_rect_lines(x, y, popup_w, popup_h, 20.0, 5.0, border_color);

@@ -8,6 +8,7 @@ use std::time::{Instant, Duration};
 use crate::ui::gui::config;
 use crate::practice::{check_if_completed, TYPING_LEVELS};
 use crate::utils;
+use crate::color_scheme::ColorScheme;
 
 
 pub fn display_practice_menu(
@@ -30,6 +31,7 @@ pub fn display_practice_menu(
     errors_per_second: &mut Vec<f64>,
     saved_results: &mut bool,
     error_positions: &mut Vec<bool>,
+    color_scheme: &ColorScheme,
 ) -> Option<usize> {
     let font_size = if screen_width() > 3000.0 {
         20
@@ -69,7 +71,7 @@ pub fn display_practice_menu(
                     } else {
                         25
                     },
-                color: Color::from_rgba(255, 150, 0, 255),
+                color: color_scheme.main_color_mq(),
                 ..Default::default()
             },
         );
@@ -152,9 +154,9 @@ pub fn display_practice_menu(
         }
 
         let text_color = if is_hovered {
-            Color::from_rgba(255, 150, 0, 255)
+            color_scheme.main_color_mq()
         } else {
-            Color::from_rgba(200, 200, 200, 230)
+            color_scheme.text_color_mq()
         };
 
         if show_tick {

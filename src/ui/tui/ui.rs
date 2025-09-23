@@ -697,7 +697,7 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize, color_scheme: Color
     let main_color = color_scheme.main_color_tui();
     let ref_color = color_scheme.ref_color_tui();
     let correct_color = color_scheme.correct_color_tui();
-    let incorrect_color = color_scheme.incorrect_color_tui();
+    let corrected_color = color_scheme.corrected_color_tui();
     let mut fg_colors: Vec<Color> = vec![ref_color; app.reference.chars().count()];
     let mut bg_colors: Vec<Color> = vec![bg_color; app.reference.chars().count()];
 
@@ -710,7 +710,7 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize, color_scheme: Color
         } else if app.is_correct[i] == 2 {
             fg_colors[i] = correct_color;
         } else if app.is_correct[i] == 1 {
-            fg_colors[i] = incorrect_color;
+            fg_colors[i] = corrected_color;
         } else if app.is_correct[i] == -1 {
             fg_colors[i] = Color::Rgb(255, 0, 0);
         } else {

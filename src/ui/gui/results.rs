@@ -6,6 +6,7 @@ use egui_plot::{Line, Plot};
 
 use crate::utils;
 use crate::practice;
+use crate::color_scheme::ColorScheme;
 
 
 fn calc_standard_deviation(values: &[f64], average_word_length: f64) -> f64 {
@@ -30,6 +31,7 @@ pub fn write_results(
     reference: &String,
     practice_level: Option<usize>,
     saved_results: &mut bool,
+    color_scheme: &ColorScheme,
 ) {
     let (no_corrected_words, correct_words, all_words) = utils::count_correct_words(reference, is_correct);
 
@@ -85,6 +87,7 @@ pub fn write_results(
         wpm,
         fontsize_1,
         fontsize_2,
+        color_scheme,
     );
     write_acc(
         accuracy,
@@ -93,6 +96,7 @@ pub fn write_results(
         wpm_y + text_size.height * 2.0,
         fontsize_1,
         fontsize_2,
+        color_scheme,
     );
     write_raw_wpm(
         raw,
@@ -101,6 +105,7 @@ pub fn write_results(
         chart_y + chart_height + fontsize_4 as f32 * 2.0,
         fontsize_3,
         fontsize_4,
+        color_scheme,
     );
     write_consistency(
         speed_per_second,
@@ -111,6 +116,7 @@ pub fn write_results(
         avg_wpm,
         fontsize_3,
         fontsize_4,
+        color_scheme,
     );
     write_time(
         test_time,
@@ -119,6 +125,7 @@ pub fn write_results(
         chart_y + chart_height + fontsize_4 as f32 * 2.0,
         fontsize_3,
         fontsize_4,
+        color_scheme,
     );
     write_mode(
         font,
@@ -129,7 +136,8 @@ pub fn write_results(
         numbers,
         fontsize_3,
         fontsize_4,
-        practice_level
+        practice_level,
+        color_scheme,
     );
 
     let mut speed2: Vec<f64> = speed_per_second.to_owned();
@@ -142,7 +150,7 @@ pub fn write_results(
         .map(|(i, &cpm)| [i as f64, cpm])
         .collect();
 
-    draw_chart(&chart_points, chart_width, chart_height, chart_x, chart_y, errors_per_second, fontsize_1);
+    draw_chart(&chart_points, chart_width, chart_height, chart_x, chart_y, errors_per_second, fontsize_1, color_scheme);
     egui_macroquad::draw();
     
     if practice_level.is_some() {
@@ -189,6 +197,7 @@ fn write_mode(
     fontsize_3: u16,
     fontsize4: u16,
     practice_level: Option<usize>,
+    color_scheme: &ColorScheme,
 ) {
     let mut fontsize_3 = fontsize_3;
     let fontsize_4 = fontsize4;
@@ -204,7 +213,7 @@ fn write_mode(
         TextParams {
             font,
             font_size: fontsize_4,
-            color: Color::from_rgba(255, 255, 255, 80),
+            color: color_scheme.ref_color_mq(),
             ..Default::default()
         },
     );
@@ -234,7 +243,7 @@ fn write_mode(
         TextParams {
             font,
             font_size: fontsize_3,
-            color: Color::from_rgba(255, 155, 0, 255),
+            color: color_scheme.main_color_mq(),
             ..Default::default()
         },
     );
@@ -246,7 +255,7 @@ fn write_mode(
             TextParams {
                 font,
                 font_size: fontsize_4,
-                color: Color::from_rgba(255, 155, 0, 255),
+                color: color_scheme.main_color_mq(),
                 ..Default::default()
             },
         );
@@ -259,7 +268,7 @@ fn write_mode(
             TextParams {
                 font,
                 font_size: fontsize_4,
-                color: Color::from_rgba(255, 155, 0, 255),
+                color: color_scheme.main_color_mq(),
                 ..Default::default()
             },
         );
@@ -273,7 +282,7 @@ fn write_mode(
             TextParams {
                 font,
                 font_size: fontsize_4,
-                color: Color::from_rgba(255, 155, 0, 255),
+                color: color_scheme.main_color_mq(),
                 ..Default::default()
             },
         );
@@ -287,6 +296,7 @@ fn write_time(
     y: f32,
     fontsize_3: u16,
     fontsize_4: u16,
+    color_scheme: &ColorScheme,
 ) {
     let time_text = format!("{:.0}s", test_time);
     draw_text_ex(
@@ -296,7 +306,7 @@ fn write_time(
         TextParams {
             font,
             font_size: fontsize_4,
-            color: Color::from_rgba(255, 255, 255, 80),
+            color: color_scheme.ref_color_mq(),
             ..Default::default()
         },
     );
@@ -307,7 +317,7 @@ fn write_time(
         TextParams {
             font,
             font_size: fontsize_3,
-            color: Color::from_rgba(255, 155, 0, 255),
+            color: color_scheme.main_color_mq(),
             ..Default::default()
         },
     );
@@ -322,6 +332,7 @@ fn write_consistency(
     avg_wpm: f32,
     fontsize_3: u16,
     fontsize_4: u16,
+    color_scheme: &ColorScheme,
 ) {
     let standard_deviation = calc_standard_deviation(speed_per_second, average_word_length);
     let consistency = if avg_wpm > 0.0 {
@@ -338,7 +349,7 @@ fn write_consistency(
         TextParams {
             font,
             font_size: fontsize_4,
-            color: Color::from_rgba(255, 255, 255, 80),
+            color: color_scheme.ref_color_mq(),
             ..Default::default()
         },
     );
@@ -349,7 +360,7 @@ fn write_consistency(
         TextParams {
             font,
             font_size: fontsize_3,
-            color: Color::from_rgba(255, 155, 0, 255),
+            color: color_scheme.main_color_mq(),
             ..Default::default()
         },
     );
@@ -362,6 +373,7 @@ fn write_wpm(
     wpm: f32,
     fontsize_1: u16,
     fontsize_2: u16,
+    color_scheme: &ColorScheme,
 ) -> f32 {
     let wpm_text = format!("{:.0}", wpm);
     draw_text_ex(
@@ -371,7 +383,7 @@ fn write_wpm(
         TextParams {
             font,
             font_size: fontsize_2,
-            color: Color::from_rgba(255, 255, 255, 80),
+            color: color_scheme.ref_color_mq(),
             ..Default::default()
         },
     );
@@ -382,14 +394,14 @@ fn write_wpm(
         TextParams {
             font,
             font_size: fontsize_1,
-            color: Color::from_rgba(255, 155, 0, 255),
+            color: color_scheme.main_color_mq(),
             ..Default::default()
         },
     );
     wpm
 }
 
-fn write_acc(accuracy: f64, font: Option<&Font>, x: f32, y: f32, fontsize_1: u16, fontsize_2: u16) {
+fn write_acc(accuracy: f64, font: Option<&Font>, x: f32, y: f32, fontsize_1: u16, fontsize_2: u16, color_scheme: &ColorScheme,) {
     let acc_text = format!("{:.0}%", accuracy);
     draw_text_ex(
         "acc",
@@ -398,7 +410,7 @@ fn write_acc(accuracy: f64, font: Option<&Font>, x: f32, y: f32, fontsize_1: u16
         TextParams {
             font,
             font_size: fontsize_2,
-            color: Color::from_rgba(255, 255, 255, 80),
+            color: color_scheme.ref_color_mq(),
             ..Default::default()
         },
     );
@@ -409,13 +421,13 @@ fn write_acc(accuracy: f64, font: Option<&Font>, x: f32, y: f32, fontsize_1: u16
         TextParams {
             font,
             font_size: fontsize_1,
-            color: Color::from_rgba(255, 155, 0, 255),
+            color: color_scheme.main_color_mq(),
             ..Default::default()
         },
     );
 }
 
-fn write_raw_wpm(raw_wpm: f32, font: Option<&Font>, x: f32, y: f32, fontsize_3: u16, fontsize_4: u16) {
+fn write_raw_wpm(raw_wpm: f32, font: Option<&Font>, x: f32, y: f32, fontsize_3: u16, fontsize_4: u16, color_scheme: &ColorScheme,) {
     let raw_text = format!("{:.0}", raw_wpm);
     draw_text_ex(
         "raw wpm",
@@ -424,7 +436,7 @@ fn write_raw_wpm(raw_wpm: f32, font: Option<&Font>, x: f32, y: f32, fontsize_3: 
         TextParams {
             font,
             font_size: fontsize_4,
-            color: Color::from_rgba(255, 255, 255, 80),
+            color: color_scheme.ref_color_mq(),
             ..Default::default()
         },
     );
@@ -435,7 +447,7 @@ fn write_raw_wpm(raw_wpm: f32, font: Option<&Font>, x: f32, y: f32, fontsize_3: 
         TextParams {
             font,
             font_size: fontsize_3,
-            color: Color::from_rgba(255, 155, 0, 255),
+            color: color_scheme.main_color_mq(),
             ..Default::default()
         },
     );
@@ -459,7 +471,7 @@ fn smooth(values: &[f64], window: usize, average_word_length: f64) -> Vec<f64> {
     smoothed
 }
 
-fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x: f32, chart_y: f32, errors_per_second: &[f64], fontsize_1: u16) {
+fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x: f32, chart_y: f32, errors_per_second: &[f64], fontsize_1: u16, color_scheme: &ColorScheme) {
     let mut errors: Vec<f64> = Vec::new();
     errors.push(0.0);
     errors.extend(errors_per_second.iter().cloned());
@@ -511,7 +523,7 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                     .default_y_bounds(0.0, 1.2 * max_y)
                     .show(&mut child_ui, |plot_ui| {
                         let line = Line::new("Performance", points.to_vec())
-                            .color(Color32::from_rgb(255, 155, 0))
+                            .color(ColorScheme::mq_to_color32(color_scheme.main_color_mq()))
                             .highlight(true)
                             .name("Performance");
                         plot_ui.line(line);
