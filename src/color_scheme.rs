@@ -69,7 +69,7 @@ impl ColorScheme {
         )
     }
 
-    fw_colors!(border_color, ref_color, bg_color, main_color, dimmer_main, text_color, chart_color, correct_color, corrected_color);
+    fw_colors!(border_color, ref_color, bg_color, main_color, dimmer_main, text_color, chart_color, correct_color, corrected_color, incorrect_color);
 
     pub fn border_color(&self) -> MyColor {
         match self {
@@ -90,9 +90,9 @@ impl ColorScheme {
             ColorScheme::Default => MyColor::new(100, 100, 100, 255),
             ColorScheme::Dark => MyColor::new(80, 80, 80, 255),
             ColorScheme::Light => MyColor::new(120, 120, 120, 255),
-            ColorScheme::Monochrome => MyColor::new(128, 128, 128, 255),
+            ColorScheme::Monochrome => MyColor::new(80, 80, 80, 255),
             ColorScheme::Ocean => MyColor::new(100, 150, 200, 255),
-            ColorScheme::OceanDark => MyColor::new(70, 100, 130, 255),
+            ColorScheme::OceanDark => MyColor::new(70, 70, 80, 255),
             ColorScheme::Forest => MyColor::new(100, 150, 100, 255),
             ColorScheme::ForestDark => MyColor::new(70, 80, 70, 255),
             ColorScheme::Pink => MyColor::new(80, 70, 70, 255),
@@ -143,15 +143,15 @@ impl ColorScheme {
 
     pub fn text_color(&self) -> MyColor {
         match self {
-            ColorScheme::Default => MyColor::new(200, 255, 255, 255),
-            ColorScheme::Dark => MyColor::new(200, 255, 255, 255),
+            ColorScheme::Default => MyColor::new(200, 200, 200, 255),
+            ColorScheme::Dark => MyColor::new(200, 200, 200, 255),
             ColorScheme::Light => MyColor::new(0, 0, 0, 255),
-            ColorScheme::Monochrome => MyColor::new(200, 255, 255, 255),
+            ColorScheme::Monochrome => MyColor::new(200, 200, 200, 255),
             ColorScheme::Ocean => MyColor::new(200, 230, 255, 255),
             ColorScheme::OceanDark => MyColor::new(180, 220, 255, 255),
             ColorScheme::Forest => MyColor::new(200, 255, 200, 255),
             ColorScheme::ForestDark => MyColor::new(180, 255, 180, 255),
-            ColorScheme::Pink => MyColor::new(255, 182, 193, 255),
+            ColorScheme::Pink => MyColor::new(200, 200, 200, 255),
         }
     }
 
@@ -189,13 +189,28 @@ impl ColorScheme {
             ColorScheme::Dark => MyColor::new(100, 60, 0, 255),
             ColorScheme::Light => MyColor::new(150, 100, 0, 255),
             ColorScheme::Monochrome => MyColor::new(200, 50, 50, 255),
-            ColorScheme::Ocean => MyColor::new(255, 100, 150, 255),
-            ColorScheme::OceanDark => MyColor::new(255, 100, 200, 255),
+            ColorScheme::Ocean => MyColor::new(180, 100, 255, 255),
+            ColorScheme::OceanDark => MyColor::new(180, 100, 255, 255),
             ColorScheme::Forest => MyColor::new(255, 100, 100, 255),
-            ColorScheme::ForestDark => MyColor::new(255, 100, 100, 255),
+            ColorScheme::ForestDark => MyColor::new(180, 100, 0, 255),
             ColorScheme::Pink => MyColor::new(255, 100, 100, 255),
         }
     }
+
+    pub fn incorrect_color(&self) -> MyColor {
+        match self {
+            ColorScheme::Default => MyColor::new(200, 30, 30, 255),
+            ColorScheme::Dark => MyColor::new(200, 30, 30, 255),
+            ColorScheme::Light => MyColor::new(200, 30, 30, 255),
+            ColorScheme::Monochrome => MyColor::new(200, 30, 30, 255),
+            ColorScheme::Ocean => MyColor::new(255, 0, 200, 255),
+            ColorScheme::OceanDark => MyColor::new(255, 0, 200, 255),
+            ColorScheme::Forest => MyColor::new(200, 30, 30, 255),
+            ColorScheme::ForestDark => MyColor::new(150, 30, 30, 255),
+            ColorScheme::Pink => MyColor::new(255, 30, 30, 255),
+        }
+    }
+
 }
 
 impl Default for ColorScheme {

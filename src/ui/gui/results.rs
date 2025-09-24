@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use macroquad::prelude::*;
 use eframe::egui;
-use egui::{Color32, Area, pos2};
+use egui::{Area, pos2};
 use egui_plot::{Line, Plot};
 
 use crate::utils;
@@ -555,7 +555,7 @@ fn draw_chart(points: &[[f64; 2]], chart_width: f32, chart_height: f32, chart_x:
                                             "Error",
                                             vec![[x, cross_y]]
                                         )
-                                        .color(Color32::from_rgb(255, 50, 50))
+                                        .color(ColorScheme::mq_to_color32(color_scheme.incorrect_color_mq()))
                                         .radius(size)
                                         .shape(egui_plot::MarkerShape::Cross);
                                         

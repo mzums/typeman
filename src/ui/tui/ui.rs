@@ -539,7 +539,7 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorS
                     ctx.print(
                         (i as f64 + 0.8) * (smoothed_speeds.len() as f64 / test_time as f64),
                         1.0,
-                        Span::styled(cross, Style::default().fg(Color::Red).bg(bg_color)),
+                        Span::styled(cross, Style::default().fg(color_scheme.incorrect_color_tui()).bg(bg_color)),
                     );
                 }
             }
@@ -698,6 +698,7 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize, color_scheme: Color
     let ref_color = color_scheme.ref_color_tui();
     let correct_color = color_scheme.correct_color_tui();
     let corrected_color = color_scheme.corrected_color_tui();
+    let incorrect_color = color_scheme.incorrect_color_tui();
     let mut fg_colors: Vec<Color> = vec![ref_color; app.reference.chars().count()];
     let mut bg_colors: Vec<Color> = vec![bg_color; app.reference.chars().count()];
 
@@ -712,7 +713,7 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize, color_scheme: Color
         } else if app.is_correct[i] == 1 {
             fg_colors[i] = corrected_color;
         } else if app.is_correct[i] == -1 {
-            fg_colors[i] = Color::Rgb(255, 0, 0);
+            fg_colors[i] = incorrect_color;
         } else {
             fg_colors[i] = ref_color;
         }

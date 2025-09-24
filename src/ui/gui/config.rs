@@ -13,7 +13,7 @@ fn draw_toggle_button(
     x: f32,
     y: f32,
     btn_padding: f32,
-    label: &str,
+    display_name: &str,
     font: &Option<Font>,
     is_active: bool,
     visible: bool,
@@ -26,7 +26,7 @@ fn draw_toggle_button(
     }
     let padding = font_size as f32 * 0.5;
         
-    let text_dims = measure_text(label, Some(font.as_ref().unwrap()), font_size, 1.0);
+    let text_dims = measure_text(display_name, Some(font.as_ref().unwrap()), font_size, 1.0);
     let btn_width = text_dims.width + btn_padding * 2.0;
     let btn_height = measure_text("t", font.as_ref(), font_size, 1.0).height + padding * 2.0;
 
@@ -45,7 +45,7 @@ fn draw_toggle_button(
         bg_color = color_scheme.border_color_mq();
     }
 
-    let font_size: u16 = if label == "|" {
+    let font_size: u16 = if display_name == "|" {
         (font_size as f32 * 1.5) as u16
     } else {
         font_size
@@ -55,7 +55,7 @@ fn draw_toggle_button(
     let btn_x = x;
     utils::draw_rounded_rect(btn_x, y, btn_width, btn_height, corner_radius, bg_color);
     draw_text_ex(
-        label,
+        display_name,
         x + btn_padding,
         y + btn_height - padding,
         TextParams {
@@ -67,7 +67,7 @@ fn draw_toggle_button(
         },
     );
 
-    (clicked, hovered, btn_width + btn_padding * 2.0)
+    (clicked, hovered, btn_width)
 }
 
 pub fn update_game_state(
@@ -169,18 +169,18 @@ pub fn handle_settings_buttons(
 ) -> bool {
     let btn_y = screen_height() / 5.0;
     let btn_padding = if screen_width() > 800.0 {
-        font_size as f32 * 0.5
+        font_size as f32 * 0.7
     } else {
-        font_size as f32 * 0.25
+        font_size as f32 * 0.4
     };
     let divider = true;
     let mut total_width = 0.0;
 
     let mut button_states = vec![
-        ("punctuation", "! punctuation", *punctuation, !*quote && !*practice_mode),
-        ("numbers", "# numbers", *numbers, !*quote && !*practice_mode),
+        ("punctuation", if screen_width() > screen_height() && screen_width() > 1500.0 { "! punctuation" } else { "! punct" }, *punctuation, !*quote && !*practice_mode),
+        ("numbers", if screen_width() > screen_height() && screen_width() > 1500.0 { "# numbers" } else { "# num" }, *numbers, !*quote && !*practice_mode),
         ("|", "|", divider, true),
-        ("language", "language", lang_popup.visible, true),
+        ("language", if screen_width() > screen_height() && screen_width() > 1500.0 { "language" } else { "lang" }, lang_popup.visible, true),
         ("theme", "theme", theme_popup.visible, true),
         ("|", "|", divider, true),
         ("time", "time", *time_mode, true),
@@ -282,7 +282,7 @@ pub fn handle_settings_buttons(
 
     let mut any_button_hovered = false;
 
-    for (label, _display_name, state_val, visible) in button_states.iter_mut() {
+    for (label, display_name, state_val, visible) in button_states.iter_mut() {
         let x = start_x + total_width;
         let is_active = *state_val;
         
@@ -290,7 +290,7 @@ pub fn handle_settings_buttons(
             x, 
             btn_y,
             btn_padding,
-            label,
+            display_name,
             font, 
             is_active, 
             *visible,

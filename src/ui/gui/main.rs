@@ -9,11 +9,11 @@ use std::thread;
 use crate::utils;
 use crate::ui::gui::results;
 use crate::ui::gui::config::{self, reset_game_state};
-use crate::language::Language;
 use crate::color_scheme::ColorScheme;
 use crate::ui::gui::practice as gui_practice;
 use crate::practice::{self, TYPING_LEVELS};
 use crate::ui::gui::popup::{Popup, PopupContent};
+use crate::config::AppConfig;
 
 
 pub const MAIN_COLOR: macroquad::color::Color = macroquad::color::Color::from_rgba(255, 155, 0, 255);
@@ -26,12 +26,19 @@ const DEJAVU: &[u8] =
 
 
 pub async fn gui_main_async() {
-    let mut punctuation = false;
-    let mut numbers = false;
-    let mut quote = false;
-    let mut time_mode = true;
-    let mut word_mode = false;
-    let mut language = Language::default();
+    let mut app_config = AppConfig::load();
+
+    let mut punctuation = app_config.punctuation;
+    let mut numbers = app_config.numbers;
+    let mut quote = app_config.quote;
+    let mut time_mode = app_config.time_mode;
+    let mut word_mode = app_config.word_mode;
+    let mut language = app_config.language;
+    let mut practice_mode = app_config.practice_mode;
+
+    if !time_mode && !word_mode && !quote && !practice_mode {
+        time_mode = true;
+    }
 
     let font = load_ttf_font_from_bytes(ROBOTO_MONO).unwrap();
     let title_font = load_ttf_font_from_bytes(ROBOTO_MONO).unwrap();
@@ -39,7 +46,7 @@ pub async fn gui_main_async() {
 
     let top_words = 500;
     let word_list = utils::read_first_n_words(top_words as usize, language);
-    let mut batch_size = 50;
+    let mut batch_size = app_config.batch_size;
 
     let mut reference = utils::get_reference(punctuation, false, &word_list, batch_size);
 
@@ -48,7 +55,7 @@ pub async fn gui_main_async() {
     let mut pos1: usize = 0;
     let mut timer = time::Duration::from_secs(0);
     let mut start_time: Instant = Instant::now();
-    let mut test_time = 30.0;
+    let mut test_time = app_config.test_time as f32;
     let mut game_started = false;
     let mut game_over = false;
 
@@ -67,9 +74,8 @@ pub async fn gui_main_async() {
     let mut selected_config: String = "time".to_string();
 
     let mut practice_menu = false;
-    let mut practice_mode = false;
     let mut scroll_offset: f32 = 0.0;
-    let mut selected_practice_level: Option<usize> = None;
+    let mut selected_practice_level: Option<usize> = Some(app_config.selected_level);
     let mut saved_results = false;
 
     let mut lang_popup = Popup::new(PopupContent::Language);
@@ -77,7 +83,7 @@ pub async fn gui_main_async() {
 
     let mut theme_popup = Popup::new(PopupContent::ColorScheme);
     let mut theme_popup_recently_closed = false;
-    let mut color_scheme = ColorScheme::Default;
+    let mut color_scheme = app_config.color_scheme;
 
     let words: Vec<&str> = reference.split_whitespace().collect();
     let average_word_length: f64 = if !words.is_empty() {
@@ -89,7 +95,7 @@ pub async fn gui_main_async() {
     loop {
         clear_background(color_scheme.bg_color_mq());
         let mut max_width = f32::min(if screen_height() > screen_width() {screen_width() * 0.9} else {screen_width() * 0.7}, 1600.0);
-        if screen_width() < 1000.0 || screen_height() < 600.0 {
+        if screen_width() < 1300.0 || screen_height() < 900.0 {
             max_width = 0.85 * screen_width();
         }
         let font_size = if screen_height() > 2000.0 || screen_width() > 3800.0 {
@@ -118,7 +124,7 @@ pub async fn gui_main_async() {
         if !game_over && !practice_menu {                    
             let total_height = lines.len() as f32 * font_size * 1.2;
             let start_y = screen_height() / 2.0 - total_height / 2.0 + font_size;
-            let start_x = screen_width() / 2.0 - max_width / 2.0;
+            let start_x = screen_width() / 2.0 - max_width / 2.0 + 20.0;
             let title_y = screen_height() / 7.5;
 
             draw_reference_text(
@@ -151,7 +157,7 @@ pub async fn gui_main_async() {
                 &mut reference,
                 &mut test_time,
                 &mut batch_size,
-                screen_width() / 2.0 - max_width / 2.0,
+                start_x,
                 &mut speed_per_second,
                 &mut last_recorded_time,
                 &mut words_done,
@@ -252,7 +258,7 @@ pub async fn gui_main_async() {
             if !game_started {
                 let blink_interval = 0.5;
                 let show_cursor = ((get_time() / blink_interval) as i32) % 2 == 0;
-                if show_cursor && !game_over {
+                if show_cursor && !game_over && !config_opened {
                     draw_cursor(calc_pos_x, calc_pos_y, start_x, start_y, line_h, char_w, &color_scheme);
                 }
             } else {
@@ -376,6 +382,21 @@ pub async fn gui_main_async() {
             if lang_popup.visible {
                 lang_popup.visible = false;
             } else {
+                app_config = AppConfig {
+                    punctuation: punctuation,
+                    numbers: numbers,
+                    time_mode: time_mode,
+                    word_mode: word_mode,
+                    quote: quote,
+                    practice_mode: practice_mode,
+                    batch_size: batch_size,
+                    test_time: test_time,
+                    selected_level: selected_practice_level.unwrap_or(0),
+                    language: language,
+                    color_scheme: color_scheme,
+                };
+                let _ = app_config.save();
+
                 break;
             }
         }
@@ -713,13 +734,11 @@ fn draw_reference_text(
     font_size: f32,
     start_x: f32,
     start_y: f32,
-    lang_popup_open: bool,
+    _lang_popup_open: bool,
     color_scheme: &ColorScheme,
 ) {
     let mut pos = 0;
     let mut pos_y = 0.0;
-
-    let alpha = if lang_popup_open { 100 } else { 255 };
 
     for line in lines.iter() {
         let mut pos_x = 0;
@@ -739,7 +758,7 @@ fn draw_reference_text(
                 if char == ' ' {
                     curr_char = '_';
                 }
-                macroquad::color::Color::from_rgba(200, 30, 30, alpha)
+                color_scheme.incorrect_color_mq()
             };
             draw_text_ex(
                 &curr_char.to_string(),
@@ -749,6 +768,7 @@ fn draw_reference_text(
                     font,
                     font_size: font_size as u16,
                     color,
+                    font_scale: 1.0,
                     ..Default::default()
                 },
             );
