@@ -6,12 +6,15 @@ use std::collections::VecDeque;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crate::language::Language;
-use crate::practice::{self, TYPING_LEVELS};
-use crate::ui::gui::config::{self, reset_game_state};
-use crate::ui::gui::practice as gui_practice;
-use crate::ui::gui::results;
 use crate::utils;
+use crate::ui::gui::results;
+use crate::ui::gui::config::{self, reset_game_state};
+use crate::color_scheme::ColorScheme;
+use crate::ui::gui::practice as gui_practice;
+use crate::practice::{self, TYPING_LEVELS};
+use crate::ui::gui::popup::{Popup, PopupContent};
+use crate::config::AppConfig;
+
 
 pub const MAIN_COLOR: macroquad::color::Color =
     macroquad::color::Color::from_rgba(255, 155, 0, 255);
@@ -27,12 +30,19 @@ const DEJAVU: &[u8] = include_bytes!(concat!(
 ));
 
 pub async fn gui_main_async() {
-    let mut punctuation = false;
-    let mut numbers = false;
-    let mut quote = false;
-    let mut time_mode = true;
-    let mut word_mode = false;
-    let mut language = Language::default();
+    let mut app_config = AppConfig::load();
+
+    let mut punctuation = app_config.punctuation;
+    let mut numbers = app_config.numbers;
+    let mut quote = app_config.quote;
+    let mut time_mode = app_config.time_mode;
+    let mut word_mode = app_config.word_mode;
+    let mut language = app_config.language;
+    let mut practice_mode = app_config.practice_mode;
+
+    if !time_mode && !word_mode && !quote && !practice_mode {
+        time_mode = true;
+    }
 
     let font = load_ttf_font_from_bytes(ROBOTO_MONO).unwrap();
     let title_font = load_ttf_font_from_bytes(ROBOTO_MONO).unwrap();
@@ -40,7 +50,7 @@ pub async fn gui_main_async() {
 
     let top_words = 500;
     let word_list = utils::read_first_n_words(top_words as usize, language);
-    let mut batch_size = 50;
+    let mut batch_size = app_config.batch_size;
 
     let mut reference = utils::get_reference(punctuation, false, &word_list, batch_size);
 
@@ -49,7 +59,7 @@ pub async fn gui_main_async() {
     let mut pos1: usize = 0;
     let mut timer = time::Duration::from_secs(0);
     let mut start_time: Instant = Instant::now();
-    let mut test_time = 30.0;
+    let mut test_time = app_config.test_time as f32;
     let mut game_started = false;
     let mut game_over = false;
 
@@ -68,10 +78,16 @@ pub async fn gui_main_async() {
     let mut selected_config: String = "time".to_string();
 
     let mut practice_menu = false;
-    let mut practice_mode = false;
     let mut scroll_offset: f32 = 0.0;
-    let mut selected_practice_level: Option<usize> = None;
+    let mut selected_practice_level: Option<usize> = Some(app_config.selected_level);
     let mut saved_results = false;
+
+    let mut lang_popup = Popup::new(PopupContent::Language);
+    let mut lang_popup_recently_closed = false;
+
+    let mut theme_popup = Popup::new(PopupContent::ColorScheme);
+    let mut theme_popup_recently_closed = false;
+    let mut color_scheme = app_config.color_scheme;
 
     let words: Vec<&str> = reference.split_whitespace().collect();
     let average_word_length: f64 = if !words.is_empty() {
@@ -81,7 +97,7 @@ pub async fn gui_main_async() {
     };
 
     loop {
-        clear_background(macroquad::color::Color::from_rgba(15, 12, 10, 255));
+        clear_background(color_scheme.bg_color_mq());
         let mut max_width = f32::min(
             if screen_height() > screen_width() {
                 screen_width() * 0.9
@@ -90,7 +106,7 @@ pub async fn gui_main_async() {
             },
             1600.0,
         );
-        if screen_width() < 1000.0 || screen_height() < 600.0 {
+        if screen_width() < 1300.0 || screen_height() < 900.0 {
             max_width = 0.85 * screen_width();
         }
         let font_size = if screen_height() > 2000.0 || screen_width() > 3800.0 {
@@ -124,8 +140,25 @@ pub async fn gui_main_async() {
             start_time = Instant::now();
             pos1 = 0;
         }
+        
+        if !game_over && !practice_menu {                    
+            let total_height = lines.len() as f32 * font_size * 1.2;
+            let start_y = screen_height() / 2.0 - total_height / 2.0 + font_size;
+            let start_x = screen_width() / 2.0 - max_width / 2.0 + 20.0;
+            let title_y = screen_height() / 7.5;
 
-        if !game_over && !practice_menu {
+            draw_reference_text(
+                &lines,
+                &pressed_vec,
+                &is_correct,
+                Some(&font.clone()),
+                font_size,
+                start_x,
+                start_y,
+                lang_popup.visible,
+                &color_scheme
+            );
+
             let any_button_hovered = config::handle_settings_buttons(
                 &Option::Some(font.clone()),
                 &word_list,
@@ -144,7 +177,7 @@ pub async fn gui_main_async() {
                 &mut reference,
                 &mut test_time,
                 &mut batch_size,
-                screen_width() / 2.0 - max_width / 2.0,
+                start_x,
                 &mut speed_per_second,
                 &mut last_recorded_time,
                 &mut words_done,
@@ -158,7 +191,27 @@ pub async fn gui_main_async() {
                 &mut saved_results,
                 &mut error_positions,
                 &mut language,
+                &mut lang_popup,
+                &mut lang_popup_recently_closed,
+                &mut theme_popup,
+                &mut theme_popup_recently_closed,
+                &mut color_scheme,
             );
+            if lang_popup_recently_closed {
+                reference = if quote {
+                    utils::get_random_quote()
+                } else if practice_mode {
+                    practice::create_words(
+                        practice::TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1,
+                        batch_size,
+                    )
+                } else {
+                    let updated_word_list = utils::read_first_n_words(500, language);
+                    utils::get_reference(punctuation, numbers, &updated_word_list, batch_size)
+                };
+                lang_popup_recently_closed = false;
+                reset_game_state(&mut pressed_vec, &mut is_correct, &mut pos1, &mut timer, &mut start_time, &mut game_started, &mut game_over, &mut speed_per_second, &mut last_recorded_time, &mut words_done, &mut errors_per_second, &mut saved_results, &mut error_positions);
+            }
 
             set_mouse_cursor(if any_button_hovered {
                 CursorIcon::Pointer
@@ -207,12 +260,7 @@ pub async fn gui_main_async() {
                 {
                     game_over = true;
                 }
-            }
-
-            let total_height = lines.len() as f32 * font_size * 1.2;
-            let start_y = screen_height() / 2.0 - total_height / 2.0 + font_size;
-            let start_x = screen_width() / 2.0 - max_width / 2.0;
-            let title_y = screen_height() / 7.5;
+            }            
 
             write_title(
                 Some(title_font.clone()),
@@ -223,6 +271,7 @@ pub async fn gui_main_async() {
                 },
                 start_x,
                 title_y,
+                color_scheme,
             );
 
             handle_input(
@@ -246,6 +295,7 @@ pub async fn gui_main_async() {
                     start_y,
                     timer,
                     test_time,
+                    &color_scheme,
                 );
             } else if word_mode {
                 draw_word_count(
@@ -255,6 +305,7 @@ pub async fn gui_main_async() {
                     start_y,
                     &mut words_done,
                     batch_size,
+                    &color_scheme,
                 );
             } else if practice_mode {
                 draw_word_count(
@@ -264,6 +315,7 @@ pub async fn gui_main_async() {
                     start_y,
                     &mut words_done,
                     50,
+                    &color_scheme,
                 );
             } else if quote {
                 draw_word_count(
@@ -273,27 +325,20 @@ pub async fn gui_main_async() {
                     start_y,
                     &mut words_done,
                     reference.split_whitespace().count(),
+                    &color_scheme,
                 );
             }
 
-            draw_reference_text(
-                &lines,
-                &pressed_vec,
-                &is_correct,
-                Some(&font.clone()),
-                font_size,
-                start_x,
-                start_y,
-            );
+            
             let (calc_pos_x, calc_pos_y) = calc_pos(&chars_in_line, pos1);
             if !game_started {
                 let blink_interval = 0.5;
                 let show_cursor = ((get_time() / blink_interval) as i32) % 2 == 0;
-                if show_cursor && !game_over {
-                    draw_cursor(calc_pos_x, calc_pos_y, start_x, start_y, line_h, char_w);
+                if show_cursor && !game_over && !config_opened {
+                    draw_cursor(calc_pos_x, calc_pos_y, start_x, start_y, line_h, char_w, &color_scheme);
                 }
             } else {
-                draw_cursor(calc_pos_x, calc_pos_y, start_x, start_y, line_h, char_w);
+                draw_cursor(calc_pos_x, calc_pos_y, start_x, start_y, line_h, char_w, &color_scheme);
             }
 
             let now = Instant::now();
@@ -344,6 +389,7 @@ pub async fn gui_main_async() {
                 &reference,
                 practice_level,
                 &mut saved_results,
+                &color_scheme,
             );
 
             if is_key_pressed(KeyCode::Q) {
@@ -407,6 +453,7 @@ pub async fn gui_main_async() {
                 &mut errors_per_second,
                 &mut saved_results,
                 &mut error_positions,
+                &color_scheme,
             );
             if level.is_some() {
                 config::reset_game_state(
@@ -432,8 +479,27 @@ pub async fn gui_main_async() {
                 config_opened = false;
             }
         }
-        if is_key_down(KeyCode::Escape) {
-            break;
+        if is_key_pressed(KeyCode::Escape) {
+            if lang_popup.visible {
+                lang_popup.visible = false;
+            } else {
+                app_config = AppConfig {
+                    punctuation: punctuation,
+                    numbers: numbers,
+                    time_mode: time_mode,
+                    word_mode: word_mode,
+                    quote: quote,
+                    practice_mode: practice_mode,
+                    batch_size: batch_size,
+                    test_time: test_time,
+                    selected_level: selected_practice_level.unwrap_or(0),
+                    language: language,
+                    color_scheme: color_scheme,
+                };
+                let _ = app_config.save();
+
+                break;
+            }
         }
 
         if is_key_down(KeyCode::Tab) && is_key_down(KeyCode::Enter) && !practice_menu {
@@ -491,33 +557,40 @@ pub async fn gui_main_async() {
             practice_menu,
             game_over,
             practice_mode,
+            &color_scheme,
         );
-
         next_frame().await;
     }
 }
 
-fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32) {
+fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32, color_scheme: ColorScheme) {
     let (type_text, man_text) = ("Type", "Man");
     let type_width = measure_text(type_text, font.as_ref(), font_size as u16, 1.0).width;
 
+    let type_color = if color_scheme == ColorScheme::Light {
+        color_scheme.dimmer_main_mq()
+    } else {
+        color_scheme.main_color_mq()
+    };
+    let man_color = if color_scheme == ColorScheme::Light {
+        color_scheme.border_color_mq()
+    } else {
+        Color::from_rgba(255, 255, 255, 220)
+    };
+
     for (text, color, dx) in [
-        (type_text, MAIN_COLOR, 0.0),
-        (
-            man_text,
-            macroquad::color::Color::from_rgba(255, 255, 255, 220),
-            type_width,
-        ),
+        (type_text, type_color, 0.0),
+        (man_text, man_color, type_width),
     ] {
         draw_text_ex(
             text,
             x + dx,
-            y,
-            TextParams {
-                font: font.as_ref(),
-                font_size: font_size as u16,
-                color,
-                ..Default::default()
+                y,
+                TextParams {
+                    font: font.as_ref(),
+                    font_size: font_size as u16,
+                    color,
+                    ..Default::default()
             },
         );
     }
@@ -532,6 +605,7 @@ fn draw_shortcut_info(
     practice_menu: bool,
     game_over: bool,
     practice_mode: bool,
+    color_scheme: &ColorScheme,
 ) {
     let mut x = if practice_menu { 200.0 } else { x };
     let mut next_y = y;
@@ -590,7 +664,7 @@ fn draw_shortcut_info(
                     TextParams {
                         font: Some(&emoji_font),
                         font_size: font_size as u16,
-                        color: Color::from_rgba(255, 255, 255, 80),
+                        color: color_scheme.ref_color_mq(),
                         ..Default::default()
                     },
                 );
@@ -613,7 +687,7 @@ fn draw_shortcut_info(
                     TextParams {
                         font,
                         font_size: font_size as u16,
-                        color: Color::from_rgba(255, 255, 255, 80),
+                        color: color_scheme.ref_color_mq(),
                         ..Default::default()
                     },
                 );
@@ -629,7 +703,7 @@ fn draw_shortcut_info(
         TextParams {
             font,
             font_size: font_size as u16,
-            color: Color::from_rgba(255, 255, 255, 80),
+            color: color_scheme.ref_color_mq(),
             ..Default::default()
         },
     );
@@ -772,12 +846,13 @@ pub fn handle_input(
 }
 
 fn draw_timer(
-    font: Option<&Font>,
-    font_size: f32,
+    font: Option<&Font>, 
+    font_size: f32, 
     start_x: f32,
     start_y: f32,
     timer: time::Duration,
     test_time: f32,
+    color_scheme: &ColorScheme,
 ) {
     let timer_str = format!("{:.0}", test_time - timer.as_secs_f32());
     draw_text_ex(
@@ -787,7 +862,7 @@ fn draw_timer(
         TextParams {
             font,
             font_size: font_size as u16,
-            color: macroquad::color::Color::from_rgba(255, 155, 0, 255),
+            color: color_scheme.main_color_mq(),
             ..Default::default()
         },
     );
@@ -800,6 +875,7 @@ fn draw_word_count(
     start_y: f32,
     words_done: &mut usize,
     total_words: usize,
+    color_scheme: &ColorScheme
 ) {
     let timer_str = format!("{}/{}", words_done, total_words);
     draw_text_ex(
@@ -809,7 +885,7 @@ fn draw_word_count(
         TextParams {
             font,
             font_size: font_size as u16,
-            color: macroquad::color::Color::from_rgba(255, 155, 0, 255),
+            color: color_scheme.main_color_mq(),
             ..Default::default()
         },
     );
@@ -823,6 +899,8 @@ fn draw_reference_text(
     font_size: f32,
     start_x: f32,
     start_y: f32,
+    _lang_popup_open: bool,
+    color_scheme: &ColorScheme,
 ) {
     let mut pos = 0;
     let mut pos_y = 0.0;
@@ -832,19 +910,20 @@ fn draw_reference_text(
         for char in line.chars() {
             let mut curr_char = char;
             let color = if pos + 1 > pressed_vec.len() || is_correct[pos] == 0 {
-                macroquad::color::Color::from_rgba(255, 255, 255, 80)
+                color_scheme.ref_color_mq()
             } else if is_correct.get(pos).is_some() && is_correct[pos] == 2 {
-                macroquad::color::Color::from_rgba(255, 255, 255, 200)
+                color_scheme.text_color_mq()
             } else if is_correct.get(pos).is_some() && is_correct[pos] == 1 {
                 if char == ' ' {
                     curr_char = '_';
                 }
-                macroquad::color::Color::from_rgba(255, 165, 0, 255)
+                color_scheme.corrected_color_mq()
+
             } else {
                 if char == ' ' {
                     curr_char = '_';
                 }
-                macroquad::color::Color::from_rgba(255, 50, 50, 180)
+                color_scheme.incorrect_color_mq()
             };
             draw_text_ex(
                 &curr_char.to_string(),
@@ -854,6 +933,7 @@ fn draw_reference_text(
                     font,
                     font_size: font_size as u16,
                     color,
+                    font_scale: 1.0,
                     ..Default::default()
                 },
             );
@@ -873,6 +953,7 @@ fn draw_cursor(
     start_y: f32,
     line_h: f32,
     char_w: f32,
+    color_scheme: &ColorScheme,
 ) {
     let cursor_x = start_x + cursor_x as f32 * char_w;
     let cursor_y = start_y + cursor_y as f32 * line_h;
@@ -882,7 +963,7 @@ fn draw_cursor(
         cursor_x,
         cursor_y + line_h * 0.3,
         2.0,
-        macroquad::color::Color::from_rgba(255, 155, 0, 255),
+        color_scheme.main_color_mq(),
     );
 }
 

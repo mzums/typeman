@@ -1,9 +1,12 @@
 #[cfg(feature = "cli")]
 use std::path::PathBuf;
 
-use rand::Rng;
-use rand::prelude::IndexedRandom;
-use rand::prelude::SliceRandom;
+#[cfg(feature = "gui")]
+use macroquad::prelude::*;
+
+use ::rand::Rng;
+use ::rand::prelude::IndexedRandom;
+use ::rand::prelude::SliceRandom;
 
 
 #[cfg(any(feature = "cli", feature = "gui"))]
@@ -26,9 +29,76 @@ pub fn validate_custom_file(path: &PathBuf) -> Result<(), String> {
     }
 }
 
+#[cfg(feature = "gui")]
+pub fn draw_rounded_rect(x: f32, y: f32, w: f32, h: f32, radius: f32, color: Color) {
+    draw_rectangle(x + radius, y, w - 2.0 * radius, h, color);
+    draw_rectangle(x, y + radius, w, h - 2.0 * radius, color);
+
+    draw_circle(x + radius, y + radius, radius, color);
+    draw_circle(x + w - radius, y + radius, radius, color);
+    draw_circle(x + radius, y + h - radius, radius, color);
+    draw_circle(x + w - radius, y + h - radius, radius, color);
+}
+
+#[cfg(feature = "gui")]
+pub fn draw_rounded_rect_lines(x: f32, y: f32, w: f32, h: f32, radius: f32, width: f32, color: Color) {
+    draw_line(x + radius, y, x + w - radius, y, width, color);
+    draw_line(x + radius, y + h, x + w - radius, y + h, width, color);
+    draw_line(x, y + radius, x, y + h - radius, width, color);
+    draw_line(x + w, y + radius, x + w, y + h - radius, width, color);
+
+    let segments = 16;
+    let theta = std::f32::consts::PI / 2.0 / segments as f32;
+
+    for i in 0..segments {
+        let angle1 = i as f32 * theta;
+        let angle2 = (i + 1) as f32 * theta;
+
+        // Top-left corner
+        draw_line(
+            x + radius - radius * angle1.cos(),
+            y + radius - radius * angle1.sin(),
+            x + radius - radius * angle2.cos(),
+            y + radius - radius * angle2.sin(),
+            width,
+            color,
+        );
+
+        // Top-right corner
+        draw_line(
+            x + w - radius + radius * angle1.cos(),
+            y + radius - radius * angle1.sin(),
+            x + w - radius + radius * angle2.cos(),
+            y + radius - radius * angle2.sin(),
+            width,
+            color,
+        );
+
+        // Bottom-left corner
+        draw_line(
+            x + radius - radius * angle1.cos(),
+            y + h - radius + radius * angle1.sin(),
+            x + radius - radius * angle2.cos(),
+            y + h - radius + radius * angle2.sin(),
+            width,
+            color,
+        );
+
+        // Bottom-right corner
+        draw_line(
+            x + w - radius + radius * angle1.cos(),
+            y + h - radius + radius * angle1.sin(),
+            x + w - radius + radius * angle2.cos(),
+            y + h - radius + radius * angle2.sin(),
+            width,
+            color,
+        );
+    }
+}
+
 pub fn get_reference(punctuation: bool, digits: bool, word_list: &[String], batch_size: usize) -> String {
     let mut items = Vec::new();
-    let mut rng = rand::rng();
+    let mut rng = ::rand::rng();
 
     // Calculate how many digits to include (if enabled)
     let num_digits = if digits {
@@ -96,7 +166,7 @@ pub fn get_reference(punctuation: bool, digits: bool, word_list: &[String], batc
 pub fn get_random_quote() -> String {
     let quotes: Vec<Quote> = serde_json::from_str(QUOTES).unwrap_or_default();
 
-    let mut rng = rand::rng();
+    let mut rng = ::rand::rng();
 
     let fallback = Quote {
         text: "Welcome to TypeMan!".to_string(),

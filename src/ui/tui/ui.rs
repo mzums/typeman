@@ -32,7 +32,7 @@ fn render_instructions(frame: &mut Frame, area: Rect, show: bool, practice_menu:
     }
 
     let text = Paragraph::new(lines)
-        .style(Style::default().fg(color_scheme.border_color()).bg(color_scheme.bg_color()))
+        .style(Style::default().fg(color_scheme.border_color_tui()).bg(color_scheme.bg_color_tui()))
         .alignment(Alignment::Left);
     frame.render_widget(text, area);
 }
@@ -75,8 +75,8 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
 }
 
 fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorScheme) {
-    let _bg_color = color_scheme.bg_color();
-    let _main_color = color_scheme.main_color();
+    let _bg_color = color_scheme.bg_color_tui();
+    let _main_color = color_scheme.main_color_tui();
     let _ref_color = color_scheme.ref_color();
     let _border_color = color_scheme.border_color();
     
@@ -84,7 +84,7 @@ fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App, color_scheme: 
 
     let block = create_reference_block(3, color_scheme);
     let inner_area = block.inner(area);
-    let chunks = Layout::vertical([
+    let chunks = Layout::vertical([ 
         Constraint::Length(2),
         Constraint::Min(0),
     ]).split(inner_area);
@@ -95,12 +95,14 @@ fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App, color_scheme: 
         0
     };
     for level in TYPING_LEVELS.iter().enumerate().skip(to_skip as usize) {
-        let mut fg_color = color_scheme.ref_color();
-        let mut bg_color = color_scheme.bg_color();
+        let mut fg_color = color_scheme.text_color_tui();
+        let mut bg_color = color_scheme.dimmer_main_tui();
+
         if app.selected_level == level.0 {
-            fg_color = color_scheme.bg_color();
-            bg_color = color_scheme.dimmer_main();
+            fg_color = color_scheme.bg_color_tui();
+            bg_color = color_scheme.dimmer_main_tui();
         }
+
         let line = if practice::check_if_completed(&format!("practice_results/level_{}.txt", level.0 + 1)) {
             Line::from(vec![
                 Span::styled("✔ ", Style::default().fg(Color::Rgb(0, 255, 0)).bg(bg_color)),
@@ -128,7 +130,7 @@ fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App, color_scheme: 
         .alignment(Alignment::Left);
 
     let title = Line::from("Select practice level")
-        .style(Style::default().fg(color_scheme.main_color()).bg(color_scheme.bg_color()))
+        .style(Style::default().fg(color_scheme.main_color_tui()).bg(color_scheme.bg_color_tui()))
         .alignment(Alignment::Center);
 
     frame.render_widget(block, area);
@@ -196,9 +198,9 @@ fn calc_standard_deviation(values: &[f64], average_word_length: f64) -> f64 {
 }
 
 fn get_stats(app: &App, color_scheme: ColorScheme) -> (Line<'static>, Line<'static>, bool) {
-    let bg_color = color_scheme.bg_color();
-    let main_color = color_scheme.main_color();
-    let ref_color = color_scheme.ref_color();
+    let bg_color = color_scheme.bg_color_tui();
+    let main_color = color_scheme.main_color_tui();
+    let ref_color = color_scheme.ref_color_tui();
     let wpm = (app.words_done as f32 / app.timer.as_secs_f32()) * 60.0;
     let wpm_str = format!("{}", wpm as i32);
 
@@ -294,10 +296,10 @@ fn get_stats(app: &App, color_scheme: ColorScheme) -> (Line<'static>, Line<'stat
 }
 
 fn get_chart(smoothed_speeds: &[f64], app: &App, step: usize, color_scheme: ColorScheme) -> Chart<'static> {
-    let bg_color = color_scheme.bg_color();
-    let _main_color = color_scheme.main_color();
-    let ref_color = color_scheme.ref_color();
-    let chart_color = color_scheme.chart_color();
+    let bg_color = color_scheme.bg_color_tui();
+    let _main_color = color_scheme.main_color_tui();
+    let ref_color = color_scheme.ref_color_tui();
+    let chart_color = color_scheme.chart_color_tui();
     let data: Vec<(f64, f64)> = smoothed_speeds
         .iter()
         .enumerate()
@@ -347,12 +349,12 @@ fn get_chart(smoothed_speeds: &[f64], app: &App, step: usize, color_scheme: Colo
 }
 
 fn render_results(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorScheme) {
-    let bg_color = color_scheme.bg_color();
-    let _main_color = color_scheme.main_color();
-    let _ref_color = color_scheme.ref_color();
+    let bg_color = color_scheme.bg_color_tui();
+    let _main_color = color_scheme.main_color_tui();
+    let _ref_color = color_scheme.ref_color_tui();
     let _border_color = color_scheme.border_color();
     frame.render_widget(
-        Block::default().style(Style::default().bg(color_scheme.bg_color())),
+        Block::default().style(Style::default().bg(color_scheme.bg_color_tui())),
         area,
     );
 
@@ -537,7 +539,7 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorS
                     ctx.print(
                         (i as f64 + 0.8) * (smoothed_speeds.len() as f64 / test_time as f64),
                         1.0,
-                        Span::styled(cross, Style::default().fg(Color::Red).bg(bg_color)),
+                        Span::styled(cross, Style::default().fg(color_scheme.incorrect_color_tui()).bg(bg_color)),
                     );
                 }
             }
@@ -559,9 +561,9 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorS
 }
 
 fn render_reference_frame(frame: &mut Frame, area: Rect, app: &App, timer: Duration, color_scheme: ColorScheme) {
-    let bg_color = color_scheme.bg_color();
-    let _main_color = color_scheme.main_color();
-    let _ref_color = color_scheme.ref_color();
+    let bg_color = color_scheme.bg_color_tui();
+    let _main_color = color_scheme.main_color_tui();
+    let _ref_color = color_scheme.ref_color_tui();
     let _border_color = color_scheme.border_color();
     let _dimmer_main = color_scheme.dimmer_main();
     let max_ref_width = calculate_max_ref_width(area);
@@ -607,8 +609,8 @@ fn calculate_ref_padding(area: Rect, max_ref_width: usize) -> u16 {
 }
 
 fn create_timer(timer: Duration, test_time: f32, color_scheme: ColorScheme) -> Line<'static> {
-    let bg_color = color_scheme.bg_color();
-    let main_color = color_scheme.main_color();
+    let bg_color = color_scheme.bg_color_tui();
+    let main_color = color_scheme.main_color_tui();
     let seconds = test_time - timer.as_secs() as f32;
     let formatted_time = format!("{:?}", seconds as i32);
     
@@ -618,8 +620,8 @@ fn create_timer(timer: Duration, test_time: f32, color_scheme: ColorScheme) -> L
 }
 
 fn create_words_count(all_words: usize, typed_words: usize, color_scheme: ColorScheme) -> Line<'static> {
-    let bg_color = color_scheme.bg_color();
-    let main_color = color_scheme.main_color();
+    let bg_color = color_scheme.bg_color_tui();
+    let main_color = color_scheme.main_color_tui();
     let words_text = format!("{}/{}", typed_words, all_words);
     Line::from(words_text)
         .style(Style::default().fg(main_color).bg(bg_color))
@@ -627,11 +629,11 @@ fn create_words_count(all_words: usize, typed_words: usize, color_scheme: ColorS
 }
 
 fn create_config_line(app: &App, color_scheme: ColorScheme, area: Rect) -> Line<'static> {
-    let bg_color = color_scheme.bg_color();
-    let main_color = color_scheme.main_color();
-    let ref_color = color_scheme.ref_color();
-    let border_color = color_scheme.border_color();
-    let dimmer_main = color_scheme.dimmer_main();
+    let bg_color = color_scheme.bg_color_tui();
+    let main_color = color_scheme.main_color_tui();
+    let ref_color = color_scheme.ref_color_tui();
+    let border_color = color_scheme.border_color_tui();
+    let dimmer_main = color_scheme.dimmer_main_tui();
     let divider = true;
     let mut button_states = vec![
         ("punctuation", if area.width > 110 { "! punctuation" } else { "! punct" }, app.punctuation, !app.quote && !app.practice_mode),
@@ -683,7 +685,7 @@ fn create_config_line(app: &App, color_scheme: ColorScheme, area: Rect) -> Line<
 }
 
 fn create_horizontal_line(area: Rect, color_scheme: ColorScheme) -> Line<'static> {
-    let bg_color = color_scheme.bg_color();
+    let bg_color = color_scheme.bg_color_tui();
     let border_color = color_scheme.border_color();
     Line::from("─".repeat(area.width.saturating_sub(15) as usize)
         .fg(border_color)
@@ -691,11 +693,12 @@ fn create_horizontal_line(area: Rect, color_scheme: ColorScheme) -> Line<'static
 }
 
 fn create_colored_lines<'a>(app: &App, max_ref_width: usize, color_scheme: ColorScheme) -> Vec<Line<'a>> {
-    let bg_color = color_scheme.bg_color();
-    let main_color = color_scheme.main_color();
-    let ref_color = color_scheme.ref_color();
-    let correct_color = color_scheme.correct_color();
-    let incorrect_color = color_scheme.incorrect_color();
+    let bg_color = color_scheme.bg_color_tui();
+    let main_color = color_scheme.main_color_tui();
+    let ref_color = color_scheme.ref_color_tui();
+    let correct_color = color_scheme.correct_color_tui();
+    let corrected_color = color_scheme.corrected_color_tui();
+    let incorrect_color = color_scheme.incorrect_color_tui();
     let mut fg_colors: Vec<Color> = vec![ref_color; app.reference.chars().count()];
     let mut bg_colors: Vec<Color> = vec![bg_color; app.reference.chars().count()];
 
@@ -708,9 +711,9 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize, color_scheme: Color
         } else if app.is_correct[i] == 2 {
             fg_colors[i] = correct_color;
         } else if app.is_correct[i] == 1 {
-            fg_colors[i] = incorrect_color;
+            fg_colors[i] = corrected_color;
         } else if app.is_correct[i] == -1 {
-            fg_colors[i] = Color::Rgb(255, 0, 0);
+            fg_colors[i] = incorrect_color;
         } else {
             fg_colors[i] = ref_color;
         }
@@ -763,10 +766,10 @@ fn assemble_content<'a>(
 }
 
 fn create_reference_block(ref_padding: u16, color_scheme: ColorScheme) -> Block<'static> {
-    let bg_color = color_scheme.bg_color();
-    let main_color = color_scheme.main_color();
-    let border_color = color_scheme.border_color();
-    let dimmer_main = color_scheme.dimmer_main();
+    let bg_color = color_scheme.bg_color_tui();
+    let main_color = color_scheme.main_color_tui();
+    let border_color = color_scheme.border_color_tui();
+    let dimmer_main = color_scheme.dimmer_main_tui();
 
     let title = if color_scheme == ColorScheme::Light {
         Line::from(vec![
@@ -818,10 +821,10 @@ fn split_lines(text: &str, width: usize) -> Vec<String> {
 }
 
 fn render_language_popup(frame: &mut Frame, app: &App, area: Rect, color_scheme: ColorScheme) {
-    let bg_color = color_scheme.bg_color();
-    let main_color = color_scheme.main_color();
-    let ref_color = color_scheme.ref_color();
-    let border_color = color_scheme.border_color();
+    let bg_color = color_scheme.bg_color_tui();
+    let main_color = color_scheme.main_color_tui();
+    let ref_color = color_scheme.ref_color_tui();
+    let border_color = color_scheme.border_color_tui();
     // Create popup area (center of screen)
     let popup_area = centered_rect(30, 30, area);
     
@@ -868,9 +871,9 @@ fn render_theme_popup(frame: &mut Frame, app: &App, area: Rect, color_scheme: Co
         .enumerate()
         .map(|(i, theme)| {
             let style = if i == app.theme_popup_selected {
-                Style::default().bg(color_scheme.main_color()).fg(color_scheme.bg_color())
+                Style::default().bg(color_scheme.main_color_tui()).fg(color_scheme.bg_color_tui())
             } else {
-                Style::default().fg(color_scheme.text_color())
+                Style::default().fg(color_scheme.text_color_tui())
             };
             ListItem::new(theme.name()).style(style)
         })
@@ -881,7 +884,7 @@ fn render_theme_popup(frame: &mut Frame, app: &App, area: Rect, color_scheme: Co
             Block::default()
                 .borders(Borders::ALL)
                 .title("Select Theme")
-                .style(Style::default().bg(color_scheme.bg_color()).fg(color_scheme.border_color()))
+                .style(Style::default().bg(color_scheme.bg_color_tui()).fg(color_scheme.border_color_tui()))
         );
 
     frame.render_widget(list, popup_area);
@@ -926,15 +929,15 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
     let block = Block::default()
         .title("Local Leaderboard")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(color_scheme.border_color()))
-        .title_style(Style::default().fg(color_scheme.main_color()));
+        .border_style(Style::default().fg(color_scheme.border_color_tui()))
+        .title_style(Style::default().fg(color_scheme.main_color_tui()));
 
     let inner_area = block.inner(area);
     frame.render_widget(block, area);
 
     if app.leaderboard_entries.is_empty() {
         let empty_text = Paragraph::new("No typing test results yet.\nComplete a test to see your scores here!")
-            .style(Style::default().fg(color_scheme.ref_color()))
+            .style(Style::default().fg(color_scheme.ref_color_tui()))
             .alignment(Alignment::Center)
             .wrap(Wrap { trim: true });
         frame.render_widget(empty_text, inner_area);
@@ -943,14 +946,14 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
 
     // Create table headers
     let header = Row::new(vec![
-        Cell::from("Rank").style(Style::default().fg(color_scheme.main_color())),
-        Cell::from("Date").style(Style::default().fg(color_scheme.main_color())),
-        Cell::from("Time").style(Style::default().fg(color_scheme.main_color())),
-        Cell::from("Type").style(Style::default().fg(color_scheme.main_color())),
-        Cell::from("WPM").style(Style::default().fg(color_scheme.main_color())),
-        Cell::from("Acc%").style(Style::default().fg(color_scheme.main_color())),
-        Cell::from("Words").style(Style::default().fg(color_scheme.main_color())),
-        Cell::from("Lang").style(Style::default().fg(color_scheme.main_color())),
+        Cell::from("Rank").style(Style::default().fg(color_scheme.main_color_tui())),
+        Cell::from("Date").style(Style::default().fg(color_scheme.main_color_tui())),
+        Cell::from("Time").style(Style::default().fg(color_scheme.main_color_tui())),
+        Cell::from("Type").style(Style::default().fg(color_scheme.main_color_tui())),
+        Cell::from("WPM").style(Style::default().fg(color_scheme.main_color_tui())),
+        Cell::from("Acc%").style(Style::default().fg(color_scheme.main_color_tui())),
+        Cell::from("Words").style(Style::default().fg(color_scheme.main_color_tui())),
+        Cell::from("Lang").style(Style::default().fg(color_scheme.main_color_tui())),
     ]);
 
     // Calculate viewport for scrolling
@@ -1009,9 +1012,9 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
         };
 
         let row_style = if i == app.leaderboard_selected {
-            Style::default().bg(color_scheme.dimmer_main()).fg(color_scheme.bg_color())
+            Style::default().bg(color_scheme.dimmer_main_tui()).fg(color_scheme.bg_color_tui())
         } else {
-            Style::default().fg(color_scheme.text_color())
+            Style::default().fg(color_scheme.text_color_tui())
         };
 
         let row = Row::new(vec![
@@ -1039,7 +1042,7 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
         Constraint::Length(4),  // Lang
     ])
     .header(header)
-    .style(Style::default().fg(color_scheme.text_color()));
+    .style(Style::default().fg(color_scheme.text_color_tui()));
 
     frame.render_widget(table, inner_area);
 
@@ -1047,7 +1050,7 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
     if app.leaderboard_entries.len() > max_visible_rows {
         let scroll_info = format!("{}/{}", app.leaderboard_selected + 1, app.leaderboard_entries.len());
         let scroll_indicator = Paragraph::new(scroll_info)
-            .style(Style::default().fg(color_scheme.dimmer_main()))
+            .style(Style::default().fg(color_scheme.dimmer_main_tui()))
             .alignment(Alignment::Right);
         
         // Position scroll indicator in bottom-right corner of leaderboard area

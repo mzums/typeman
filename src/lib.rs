@@ -17,6 +17,7 @@ pub mod ui {
         pub mod main;
         pub mod practice;
         pub mod results;
+        pub mod popup;
     }
 
     #[cfg(feature = "tui")]
@@ -35,6 +36,7 @@ pub mod utils;
 pub mod config;
 pub mod leaderboard;
 pub mod button_states;
+pub mod custom_colors;
 
 // Re-export types needed by modules
 #[derive(Parser)]

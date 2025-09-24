@@ -6,36 +6,27 @@ use std::time::{Instant, Duration};
 use crate::ui::gui::main;
 use crate::{practice, utils};
 use crate::language::Language;
+use crate::ui::gui::popup::Popup;
 
-
-pub fn draw_rounded_rect(x: f32, y: f32, w: f32, h: f32, radius: f32, color: Color) {
-    draw_rectangle(x + radius, y, w - 2.0 * radius, h, color);
-    draw_rectangle(x, y + radius, w, h - 2.0 * radius, color);
-
-    draw_circle(x + radius, y + radius, radius, color);
-    draw_circle(x + w - radius, y + radius, radius, color);
-    draw_circle(x + radius, y + h - radius, radius, color);
-    draw_circle(x + w - radius, y + h - radius, radius, color);
-}
 
 fn draw_toggle_button(
     x: f32,
     y: f32,
     btn_padding: f32,
-    label: &str,
+    display_name: &str,
     font: &Option<Font>,
     is_active: bool,
-    inactive_color: Color,
     visible: bool,
     font_size: u16,
     selected: bool,
+    color_scheme: &crate::color_scheme::ColorScheme,
 ) -> (bool, bool, f32) {
     if !visible {
         return (false, false, 0.0);
     }
     let padding = font_size as f32 * 0.5;
         
-    let text_dims = measure_text(label, Some(font.as_ref().unwrap()), font_size, 1.0);
+    let text_dims = measure_text(display_name, Some(font.as_ref().unwrap()), font_size, 1.0);
     let btn_width = text_dims.width + btn_padding * 2.0;
     let btn_height = measure_text("t", font.as_ref(), font_size, 1.0).height + padding * 2.0;
 
@@ -44,17 +35,17 @@ fn draw_toggle_button(
     let hovered = rect.contains(vec2(mx, my));
     let clicked = hovered && is_mouse_button_pressed(MouseButton::Left);
 
-    let mut text_color = if is_active { main::MAIN_COLOR } else { inactive_color };
+    let mut text_color = if is_active { color_scheme.main_color_mq() } else { color_scheme.ref_color_mq() };
     let mut bg_color = Color::from_rgba(255, 0, 0, 0);
     if selected && is_active {
         text_color = macroquad::color::BLACK;
-        bg_color = Color::from_rgba(150, 90, 0, 255);
+        bg_color = color_scheme.dimmer_main_mq();
     } else if selected {
         text_color = macroquad::color::BLACK;
-        bg_color = Color::from_rgba(100, 60, 0, 255);
+        bg_color = color_scheme.border_color_mq();
     }
 
-    let font_size: u16 = if label == "|" {
+    let font_size: u16 = if display_name == "|" {
         (font_size as f32 * 1.5) as u16
     } else {
         font_size
@@ -62,9 +53,9 @@ fn draw_toggle_button(
     
     let corner_radius: f32 = font_size as f32 / 3.0;
     let btn_x = x;
-    draw_rounded_rect(btn_x, y, btn_width, btn_height, corner_radius, bg_color);
+    utils::draw_rounded_rect(btn_x, y, btn_width, btn_height, corner_radius, bg_color);
     draw_text_ex(
-        label,
+        display_name,
         x + btn_padding,
         y + btn_height - padding,
         TextParams {
@@ -76,7 +67,7 @@ fn draw_toggle_button(
         },
     );
 
-    (clicked, hovered, btn_width + btn_padding * 2.0)
+    (clicked, hovered, btn_width)
 }
 
 pub fn update_game_state(
@@ -170,23 +161,27 @@ pub fn handle_settings_buttons(
     saved_results: &mut bool,
     error_positions: &mut Vec<bool>,
     language: &mut Language,
+    lang_popup: &mut Popup,
+    lang_popup_recently_closed: &mut bool,
+    theme_popup: &mut Popup,
+    theme_popup_recently_closed: &mut bool,
+    color_scheme: &mut crate::color_scheme::ColorScheme,
 ) -> bool {
-    let inactive_color = Color::from_rgba(255, 255, 255, 80);
     let btn_y = screen_height() / 5.0;
     let btn_padding = if screen_width() > 800.0 {
-        font_size as f32 * 0.5
+        font_size as f32 * 0.7
     } else {
-        font_size as f32 * 0.25
+        font_size as f32 * 0.4
     };
     let divider = true;
     let mut total_width = 0.0;
 
     let mut button_states = vec![
-        ("! punctuation", if screen_width() > 1500.0 { "! punctuation" } else { "! punctuation" }, *punctuation, !*quote && !*practice_mode),
-        ("# numbers", if screen_width() > 1500.0 { "# numbers" } else { "# numbers" }, *numbers, !*quote && !*practice_mode),
+        ("punctuation", if screen_width() > screen_height() && screen_width() > 1500.0 { "! punctuation" } else { "! punct" }, *punctuation, !*quote && !*practice_mode),
+        ("numbers", if screen_width() > screen_height() && screen_width() > 1500.0 { "# numbers" } else { "# num" }, *numbers, !*quote && !*practice_mode),
         ("|", "|", divider, true),
-        ("english", "english", *language == Language::English, !*quote && !*practice_mode),
-        ("indonesian", "indonesian", *language == Language::Indonesian, !*quote && !*practice_mode),
+        ("language", if screen_width() > screen_height() && screen_width() > 1500.0 { "language" } else { "lang" }, lang_popup.visible, true),
+        ("theme", "theme", theme_popup.visible, true),
         ("|", "|", divider, true),
         ("time", "time", *time_mode, true),
         ("words", "words", *word_mode, true),
@@ -202,15 +197,20 @@ pub fn handle_settings_buttons(
         ("100", "100", *batch_size == 100, *word_mode),
     ];
 
-    if is_key_down(KeyCode::Up) {
-        *config_opened = true;
-    } else if is_key_down(KeyCode::Down) {
-        *config_opened = false;
+    if is_key_pressed(KeyCode::Up) {
+        if !lang_popup.visible && !theme_popup.visible {
+            *config_opened = true;
+        }
+    } else if is_key_pressed(KeyCode::Down) {
+        if !lang_popup.visible && !theme_popup.visible {
+            *config_opened = false;
+        }
     } else if is_key_pressed(KeyCode::Left) {
         if !*config_opened {
             return false;
         }
-        for (i, (label, _, _state_val, visible)) in button_states.iter().enumerate() {
+
+        for (i, (label, _display_name, _state_val, visible)) in button_states.iter().enumerate() {
             if *visible && *selected_config == *label {
             let mut j = if i == 0 {
                 button_states.len() - 1
@@ -219,7 +219,7 @@ pub fn handle_settings_buttons(
             };
 
             while j != i {
-                if button_states[j].2 && button_states[j].0 != "|" {
+                if button_states[j].3 && button_states[j].0 != "|" {
                     *selected_config = button_states[j].0.to_string();
                     break;
                 }
@@ -229,37 +229,38 @@ pub fn handle_settings_buttons(
                     j - 1
                 };
             }
-                break;
+            break;
             }
         }
         } else if is_key_pressed(KeyCode::Right) {
-            if !*config_opened {
-                return false;
-            }
-            for (i, (label, _, _state_val, visible)) in button_states.iter().enumerate() {
-                if *visible && *selected_config == *label {
-                let mut next = if i == button_states.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                };
+        if !*config_opened {
+            return false;
+        }
 
-                while next != i {
-                    if button_states[next].2 && button_states[next].0 != "|" {
-                        *selected_config = button_states[next].0.to_string();
-                        break;
-                    }
-                    next = if next == button_states.len() - 1 {
-                        0
-                    } else {
-                        next + 1
-                    };
+        for (i, (label, _display_name, _state_val, visible)) in button_states.iter().enumerate() {
+            if *visible && *selected_config == *label {
+            let mut next = if i == button_states.len() - 1 {
+                0
+            } else {
+                i + 1
+            };
+
+            while next != i {
+                if button_states[next].3 && button_states[next].0 != "|" {
+                    *selected_config = button_states[next].0.to_string();
+                    break;
                 }
-                break;
+                next = if next == button_states.len() - 1 {
+                0
+                } else {
+                    next + 1
+                };
+            }
+            break;
             }
         }
-    } else if is_key_pressed(KeyCode::Enter) && *config_opened {
-        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language);
+    } else if is_key_pressed(KeyCode::Enter) && *config_opened && !lang_popup.visible && !theme_popup.visible {
+        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, lang_popup, theme_popup);
 
         if *quote {
             *reference = utils::get_random_quote();
@@ -268,13 +269,15 @@ pub fn handle_settings_buttons(
                 practice::TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1,
                 *batch_size,
             );
-        } else {
+        } else if *selected_config != "language" && *selected_config != "theme" {
             let updated_word_list = utils::read_first_n_words(500, *language);
             *reference = utils::get_reference(*punctuation, *numbers, &updated_word_list, *batch_size);
         }
-        *is_correct = VecDeque::from(vec![0; reference.len()]);
-        *error_positions = vec![false; is_correct.len()];
-        reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, saved_results, &mut vec![false; reference.chars().count()]);
+        if selected_config != "language" && selected_config != "theme" {
+            *is_correct = VecDeque::from(vec![0; reference.len()]);
+            *error_positions = vec![false; is_correct.len()];
+            reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, saved_results, &mut vec![false; reference.chars().count()]);
+        }
     }
 
     let mut any_button_hovered = false;
@@ -290,10 +293,10 @@ pub fn handle_settings_buttons(
             display_name,
             font, 
             is_active, 
-            inactive_color,
             *visible,
             font_size,
             selected_config == label && *config_opened,
+            color_scheme
         );
         total_width += btni_width;
         
@@ -301,9 +304,10 @@ pub fn handle_settings_buttons(
             any_button_hovered = true;
         }
         
-        if clicked && *label != "|" {
-            
-            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language);
+        if clicked && *label != "|" && *label != "language" {
+            println!("Clicked button: {}", label);
+
+            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, lang_popup, theme_popup);
             if *quote {
                 *reference = utils::get_random_quote();
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
@@ -322,17 +326,22 @@ pub fn handle_settings_buttons(
             }
         }
     }
+    if lang_popup.visible {
+        lang_popup.draw(font, language, color_scheme, lang_popup_recently_closed);
+    } else if theme_popup.visible {
+        theme_popup.draw(font, language, color_scheme, theme_popup_recently_closed);
+    }
 
     any_button_hovered
 }
 
-fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize, practice_menu: &mut bool, selected_practice_level: &mut Option<usize>, practice_mode: &mut bool, language: &mut Language) {
+fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize, practice_menu: &mut bool, selected_practice_level: &mut Option<usize>, practice_mode: &mut bool, language: &mut Language, lang_popup: &mut Popup, theme_popup: &mut Popup) {
     match label {
-        "! punctuation" => {
+        "punctuation" => {
             *punctuation = !*punctuation;
             *quote = false;
         },
-        "# numbers" => {
+        "numbers" => {
             *numbers = !*numbers;
             *quote = false;
         },
@@ -391,6 +400,12 @@ fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_m
         },
         "indonesian" => {
             *language = Language::Indonesian;
+        },
+        "language" => {
+            lang_popup.show();
+        },
+        "theme" => {
+            theme_popup.show();
         },
         _ => {}
     }
