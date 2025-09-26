@@ -18,9 +18,9 @@ pub mod ui {
     pub mod gui {
         pub mod config;
         pub mod main;
+        pub mod popup;
         pub mod practice;
         pub mod results;
-        pub mod popup;
     }
 
     #[cfg(feature = "tui")]
@@ -31,15 +31,14 @@ pub mod ui {
     }
 }
 
-#[cfg(feature = "tui")]
+pub mod button_states;
 pub mod color_scheme;
+pub mod config;
+pub mod custom_colors;
 pub mod language;
+pub mod leaderboard;
 pub mod practice;
 pub mod utils;
-pub mod config;
-pub mod leaderboard;
-pub mod button_states;
-pub mod custom_colors;
 
 #[cfg(feature = "cli")]
 use crate::ui::cli::modes;
@@ -49,7 +48,6 @@ use crate::ui::tui::r#mod as tui_mod;
 
 #[cfg(feature = "gui")]
 use crate::ui::gui::main as gui;
-
 
 #[derive(Parser)]
 #[command(
@@ -144,36 +142,22 @@ pub fn tui_main() {
     }
 }
 
-
 fn main() {
-    #[cfg(any(feature = "cli", feature = "gui"))]
     let args = Cli::parse();
 
-    #[cfg(not(feature = "tui"))]
-    {
-        #[cfg(any(feature = "cli", feature = "gui"))]
-        if args.tui {
-            eprintln!("TUI mode is not available in this build.");
-            std::process::exit(1);
-        }
+    if args.tui && !cfg!(feature = "tui") {
+        eprintln!("TUI mode is not available in this build.");
+        std::process::exit(1);
     }
 
-    #[cfg(not(feature = "gui"))]
-    {
-        #[cfg(any(feature = "cli", feature = "gui"))]
-        if args.gui {
-            eprintln!("GUI mode is not available in this build.");
-            std::process::exit(1);
-        }
+    if args.gui && !cfg!(feature = "gui") {
+        eprintln!("GUI mode is not available in this build.");
+        std::process::exit(1);
     }
 
-    #[cfg(not(feature = "cli"))]
-    {
-        #[cfg(any(feature = "cli", feature = "gui"))]
-        if args.cli {
-            eprintln!("CLI mode is not available in this build.");
-            std::process::exit(1);
-        }
+    if args.cli && !cfg!(feature = "cli") {
+        eprintln!("CLI mode is not available in this build.");
+        std::process::exit(1);
     }
 
     #[cfg(feature = "gui")]
@@ -193,20 +177,7 @@ fn main() {
         ui::tui::r#mod::main().unwrap();
         return;
     }
-
-    #[cfg(all(feature = "gui", not(feature = "tui")))]
-    {
-        gui_main();
-        return;
-    }
-
-    #[cfg(all(feature = "cli", not(any(feature = "tui", feature = "gui"))))]
-    {
-        run_cli(&args);
-        return;
-    }
 }
-
 
 #[cfg(feature = "cli")]
 fn run_cli(args: &Cli) {
