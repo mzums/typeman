@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use paste::paste;
+use serde::{Deserialize, Serialize};
 
 use crate::custom_colors::MyColor;
 
@@ -20,9 +20,11 @@ macro_rules! fw_colors {
     ($($name:ident),*) => {
         paste! {
             $(
+                #[cfg(any(feature = "cli", feature = "tui"))]
                 pub fn [<$name _tui>](&self) -> ratatui::style::Color {
                     self.$name().into()
                 }
+                #[cfg(feature = "gui")]
                 pub fn [<$name _mq>](&self) -> macroquad::color::Color {
                     self.$name().into()
                 }
@@ -69,7 +71,18 @@ impl ColorScheme {
         )
     }
 
-    fw_colors!(border_color, ref_color, bg_color, main_color, dimmer_main, text_color, chart_color, correct_color, corrected_color, incorrect_color);
+    fw_colors!(
+        border_color,
+        ref_color,
+        bg_color,
+        main_color,
+        dimmer_main,
+        text_color,
+        chart_color,
+        correct_color,
+        corrected_color,
+        incorrect_color
+    );
 
     pub fn border_color(&self) -> MyColor {
         match self {
@@ -210,7 +223,6 @@ impl ColorScheme {
             ColorScheme::Pink => MyColor::new(255, 30, 30, 255),
         }
     }
-
 }
 
 impl Default for ColorScheme {

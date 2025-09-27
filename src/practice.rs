@@ -1,13 +1,11 @@
 use rand::prelude::IndexedRandom;
 
-#[cfg(any(feature = "cli", feature = "gui"))]
 use {
     std::io::Write,
     std::path::Path,
     std::fs,
 };
 
-#[cfg(any(feature = "cli", feature = "gui"))]
 pub const WPM_MIN: f64 = 35.0;
 
 pub const TYPING_LEVELS: [(&str, &[char]); 32] = [
@@ -70,7 +68,6 @@ pub fn create_words(chars: &[char], word_number: usize) -> String {
     reference
 }
 
-#[cfg(any(feature = "cli", feature = "gui"))]
 pub fn save_results(time: f64, accuracy: f64, wpm: f64, level:usize) {
     let results_dir = "practice_results";
     fs::create_dir_all(results_dir).ok();
@@ -91,7 +88,6 @@ pub fn save_results(time: f64, accuracy: f64, wpm: f64, level:usize) {
     file.write_all(stats.as_bytes()).unwrap();
 }
 
-#[cfg(any(feature = "cli", feature = "gui"))]
 pub fn get_prev_best_wpm(level: usize) -> f64 {
     let results_path = format!("practice_results/level_{}.txt", level);
     let contents = match fs::read_to_string(&results_path) {
@@ -130,7 +126,6 @@ pub fn check_if_completed(results_path: &str) -> bool {
     false
 }
 
-#[cfg(any(feature = "tui", feature = "gui"))]
 pub fn get_first_not_done() -> usize {
     for i in 0..TYPING_LEVELS.len() {
         let results_path = format!("practice_results/level_{}.txt", i + 1);

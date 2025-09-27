@@ -15,9 +15,9 @@ pub mod ui {
     pub mod gui {
         pub mod config;
         pub mod main;
+        pub mod popup;
         pub mod practice;
         pub mod results;
-        pub mod popup;
     }
 
     #[cfg(feature = "tui")]
@@ -28,23 +28,18 @@ pub mod ui {
     }
 }
 
-#[cfg(feature = "tui")]
+pub mod button_states;
 pub mod color_scheme;
+pub mod config;
+pub mod custom_colors;
 pub mod language;
+pub mod leaderboard;
 pub mod practice;
 pub mod utils;
-pub mod config;
-pub mod leaderboard;
-pub mod button_states;
-pub mod custom_colors;
 
 // Re-export types needed by modules
 #[derive(Parser)]
-#[command(
-    name = "typeman",
-    about = "Welcome to the typeman!",
-    version = "1.0"
-)]
+#[command(name = "typeman", about = "Welcome to the typeman!", version = "1.0")]
 pub struct Cli {
     #[arg(short = 'c', long = "custom", value_name = "FILE", value_hint = ValueHint::FilePath)]
     pub custom_file: Option<PathBuf>,

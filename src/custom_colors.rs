@@ -11,6 +11,7 @@ impl MyColor {
     }
 }
 
+#[cfg(feature = "gui")]
 impl From<MyColor> for macroquad::color::Color {
     fn from(c: MyColor) -> Self {
         macroquad::color::Color {
@@ -22,6 +23,7 @@ impl From<MyColor> for macroquad::color::Color {
     }
 }
 
+#[cfg(any(feature = "cli", feature = "tui"))]
 impl From<MyColor> for ratatui::style::Color {
     fn from(c: MyColor) -> Self {
         ratatui::style::Color::Rgb(c.r, c.g, c.b)

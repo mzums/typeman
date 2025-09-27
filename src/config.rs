@@ -1,8 +1,8 @@
+use crate::color_scheme::ColorScheme;
+use crate::language::Language;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use crate::language::Language;
-use crate::color_scheme::ColorScheme;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AppConfig {
@@ -42,7 +42,7 @@ impl AppConfig {
         let home = std::env::var("HOME")
             .or_else(|_| std::env::var("USERPROFILE"))
             .map_err(|_| "Unable to find home directory")?;
-        
+
         let config_dir = PathBuf::from(home).join(".config").join("typeman");
         fs::create_dir_all(&config_dir)?;
         Ok(config_dir)
@@ -57,12 +57,10 @@ impl AppConfig {
             Ok(path) => {
                 if path.exists() {
                     match fs::read_to_string(&path) {
-                        Ok(content) => {
-                            match serde_json::from_str::<AppConfig>(&content) {
-                                Ok(config) => config,
-                                Err(_) => Self::default(),
-                            }
-                        }
+                        Ok(content) => match serde_json::from_str::<AppConfig>(&content) {
+                            Ok(config) => config,
+                            Err(_) => Self::default(),
+                        },
                         Err(_) => Self::default(),
                     }
                 } else {
