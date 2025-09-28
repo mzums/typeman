@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 
-use crate::language::Language;
 use crate::color_scheme::ColorScheme;
+use crate::language::Language;
 use crate::utils;
 
 pub enum PopupContent {
@@ -66,10 +66,10 @@ impl Popup {
         let x = (screen_w - popup_w) / 2.0;
         let y = (screen_h - popup_h) / 2.0;
 
-        let bg_color = theme.bg_color_mq();
-        let main_color = theme.main_color_mq();
-        let ref_color = theme.ref_color_mq();
-        let border_color = theme.border_color_mq();
+        let bg_color = theme.bg_color();
+        let main_color = theme.main_color();
+        let ref_color = theme.ref_color();
+        let border_color = theme.border_color();
 
         utils::draw_rounded_rect(x, y, popup_w, popup_h, 20.0, bg_color);
         utils::draw_rounded_rect_lines(x, y, popup_w, popup_h, 20.0, 5.0, border_color);
@@ -81,7 +81,10 @@ impl Popup {
             ),
             PopupContent::ColorScheme => (
                 "Select Theme",
-                ColorScheme::all().iter().map(|c| c.name().to_string()).collect(),
+                ColorScheme::all()
+                    .iter()
+                    .map(|c| c.name().to_string())
+                    .collect(),
             ),
         };
 

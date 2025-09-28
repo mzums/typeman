@@ -1,24 +1,30 @@
-use ratatui::{
-    prelude::*,
-    widgets::*,
-    Frame,
-};
-use std::time::Duration;
+use ratatui::{Frame, prelude::*, widgets::*};
 use std::collections::HashMap;
+use std::time::Duration;
 
-use ratatui::widgets::canvas::Canvas;
-use crate::ui::tui::app::{App, GameState};
-use crate::practice::TYPING_LEVELS;
-use crate::practice;
 use crate::color_scheme::ColorScheme;
+use crate::custom_colors::MyColor;
 use crate::language::Language;
+use crate::practice;
+use crate::practice::TYPING_LEVELS;
+use crate::ui::tui::app::{App, GameState};
+use ratatui::widgets::canvas::Canvas;
 
-fn render_instructions(frame: &mut Frame, area: Rect, show: bool, practice_menu: bool, leaderboard_open: bool, color_scheme: ColorScheme) {
+fn render_instructions(
+    frame: &mut Frame,
+    area: Rect,
+    show: bool,
+    practice_menu: bool,
+    leaderboard_open: bool,
+    color_scheme: ColorScheme,
+) {
     let mut lines = Vec::new();
     if leaderboard_open {
         lines.push(Line::from("  ↑/↓ - navigate, Tab + L - close, Esc - exit"));
     } else if show {
-        lines.push(Line::from("  \u{2191} - enter config, \u{2190}/\u{2192} - toggle config, ↵ - apply config"));
+        lines.push(Line::from(
+            "  \u{2191} - enter config, \u{2190}/\u{2192} - toggle config, ↵ - apply config",
+        ));
     } else if practice_menu {
         lines.push(Line::from("  ↑ or ↓ to navigate, ↵ to select"));
         lines.push(Line::from("  q - quit menu"));
@@ -32,13 +38,16 @@ fn render_instructions(frame: &mut Frame, area: Rect, show: bool, practice_menu:
     }
 
     let text = Paragraph::new(lines)
-        .style(Style::default().fg(color_scheme.border_color_tui()).bg(color_scheme.bg_color_tui()))
+        .style(
+            Style::default()
+                .fg(color_scheme.border_color())
+                .bg(color_scheme.bg_color()),
+        )
         .alignment(Alignment::Left);
     frame.render_widget(text, area);
 }
 
 pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
-    
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -50,24 +59,30 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
             },
         ])
         .split(frame.area());
-    
+
     if app.leaderboard_open {
         render_leaderboard(frame, chunks[0], app, app.color_scheme);
     } else if app.game_state == GameState::Results {
         render_results(frame, chunks[0], app, app.color_scheme);
     } else if app.practice_menu {
         render_practice_menu(frame, chunks[0], app, app.color_scheme);
-    }
-    else {
+    } else {
         render_reference_frame(frame, chunks[0], app, timer, app.color_scheme);
     }
-    render_instructions(frame, chunks[1], app.game_state != GameState::Results && !app.practice_menu && !app.leaderboard_open, app.practice_menu, app.leaderboard_open, app.color_scheme);
-    
+    render_instructions(
+        frame,
+        chunks[1],
+        app.game_state != GameState::Results && !app.practice_menu && !app.leaderboard_open,
+        app.practice_menu,
+        app.leaderboard_open,
+        app.color_scheme,
+    );
+
     // Render language popup if open
     if app.language_popup_open {
         render_language_popup(frame, app, frame.area(), app.color_scheme);
     }
-    
+
     // Render theme popup if open
     if app.theme_popup_open {
         render_theme_popup(frame, app, frame.area(), app.color_scheme);
@@ -75,19 +90,11 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
 }
 
 fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorScheme) {
-    let _bg_color = color_scheme.bg_color_tui();
-    let _main_color = color_scheme.main_color_tui();
-    let _ref_color = color_scheme.ref_color();
-    let _border_color = color_scheme.border_color();
-    
     let mut lines: Vec<Line> = Vec::new();
 
     let block = create_reference_block(3, color_scheme);
     let inner_area = block.inner(area);
-    let chunks = Layout::vertical([ 
-        Constraint::Length(2),
-        Constraint::Min(0),
-    ]).split(inner_area);
+    let chunks = Layout::vertical([Constraint::Length(2), Constraint::Min(0)]).split(inner_area);
 
     let to_skip = if chunks[1].height <= app.selected_level as u16 {
         u16::min(chunks[1].height, app.selected_level as u16)
@@ -95,33 +102,53 @@ fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App, color_scheme: 
         0
     };
     for level in TYPING_LEVELS.iter().enumerate().skip(to_skip as usize) {
-        let mut fg_color = color_scheme.text_color_tui();
-        let mut bg_color = color_scheme.dimmer_main_tui();
+        let mut fg_color = color_scheme.text_color();
+        let mut bg_color = color_scheme.dimmer_main();
 
         if app.selected_level == level.0 {
-            fg_color = color_scheme.bg_color_tui();
-            bg_color = color_scheme.dimmer_main_tui();
+            fg_color = color_scheme.bg_color();
+            bg_color = color_scheme.dimmer_main();
         }
 
-        let line = if practice::check_if_completed(&format!("practice_results/level_{}.txt", level.0 + 1)) {
-            Line::from(vec![
-                Span::styled("✔ ", Style::default().fg(Color::Rgb(0, 255, 0)).bg(bg_color)),
-                if level.0 < 9 {
-                    Span::styled(format!("  {}. {} ", level.0 + 1, level.1.0), Style::default().fg(fg_color).bg(bg_color))
-                } else {
-                    Span::styled(format!(" {}. {} ", level.0 + 1, level.1.0), Style::default().fg(fg_color).bg(bg_color))
-                }
-            ])
-        } else {
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(Color::Rgb(0, 255, 0)).bg(bg_color)),
-                if level.0 < 9 {
-                    Span::styled(format!("  {}. {} ", level.0 + 1, level.1.0), Style::default().fg(fg_color).bg(bg_color))
-                } else {
-                    Span::styled(format!(" {}. {} ", level.0 + 1, level.1.0), Style::default().fg(fg_color).bg(bg_color))
-                }
-            ])
-        };
+        let line =
+            if practice::check_if_completed(&format!("practice_results/level_{}.txt", level.0 + 1))
+            {
+                Line::from(vec![
+                    Span::styled(
+                        "✔ ",
+                        Style::default().fg(Color::Rgb(0, 255, 0)).bg(bg_color),
+                    ),
+                    if level.0 < 9 {
+                        Span::styled(
+                            format!("  {}. {} ", level.0 + 1, level.1.0),
+                            Style::default().fg(fg_color).bg(bg_color),
+                        )
+                    } else {
+                        Span::styled(
+                            format!(" {}. {} ", level.0 + 1, level.1.0),
+                            Style::default().fg(fg_color).bg(bg_color),
+                        )
+                    },
+                ])
+            } else {
+                Line::from(vec![
+                    Span::styled(
+                        "  ",
+                        Style::default().fg(Color::Rgb(0, 255, 0)).bg(bg_color),
+                    ),
+                    if level.0 < 9 {
+                        Span::styled(
+                            format!("  {}. {} ", level.0 + 1, level.1.0),
+                            Style::default().fg(fg_color).bg(bg_color),
+                        )
+                    } else {
+                        Span::styled(
+                            format!(" {}. {} ", level.0 + 1, level.1.0),
+                            Style::default().fg(fg_color).bg(bg_color),
+                        )
+                    },
+                ])
+            };
         lines.push(line);
     }
 
@@ -130,7 +157,11 @@ fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App, color_scheme: 
         .alignment(Alignment::Left);
 
     let title = Line::from("Select practice level")
-        .style(Style::default().fg(color_scheme.main_color_tui()).bg(color_scheme.bg_color_tui()))
+        .style(
+            Style::default()
+                .fg(color_scheme.main_color())
+                .bg(color_scheme.bg_color()),
+        )
         .alignment(Alignment::Center);
 
     frame.render_widget(block, area);
@@ -160,9 +191,10 @@ fn smooth(
     };
 
     for i in 0..len - 1 {
-        if (columns_to_delete == 1 && i % 2 == 0) ||
-            (columns_to_delete == 2 && (i % 3 == 0 || i % 3 == 1)) ||
-            (columns_to_delete == 3 && (i % 4 == 0 || i % 4 == 1 || i % 4 == 2)) {
+        if (columns_to_delete == 1 && i % 2 == 0)
+            || (columns_to_delete == 2 && (i % 3 == 0 || i % 3 == 1))
+            || (columns_to_delete == 3 && (i % 4 == 0 || i % 4 == 1 || i % 4 == 2))
+        {
             continue;
         }
         let p0 = get(i as isize - 1);
@@ -174,12 +206,11 @@ fn smooth(
             let t = j as f64 / extra_columns as f64;
             let t2 = t * t;
             let t3 = t2 * t;
-            let interp = 0.5 * (
-                2.0 * p1 +
-                (p2 - p0) * t +
-                (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2 +
-                (3.0 * p1 - p0 - 3.0 * p2 + p3) * t3
-            );
+            let interp = 0.5
+                * (2.0 * p1
+                    + (p2 - p0) * t
+                    + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2
+                    + (3.0 * p1 - p0 - 3.0 * p2 + p3) * t3);
             smoothed.push(interp);
         }
     }
@@ -191,16 +222,20 @@ fn smooth(
 }
 
 fn calc_standard_deviation(values: &[f64], average_word_length: f64) -> f64 {
-    let wpm_values: Vec<f64> = values.iter().map(|&cpm| cpm / average_word_length).collect();
+    let wpm_values: Vec<f64> = values
+        .iter()
+        .map(|&cpm| cpm / average_word_length)
+        .collect();
     let mean = wpm_values.iter().sum::<f64>() / wpm_values.len() as f64;
-    let variance = wpm_values.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / wpm_values.len() as f64;
+    let variance =
+        wpm_values.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / wpm_values.len() as f64;
     variance.sqrt()
 }
 
 fn get_stats(app: &App, color_scheme: ColorScheme) -> (Line<'static>, Line<'static>, bool) {
-    let bg_color = color_scheme.bg_color_tui();
-    let main_color = color_scheme.main_color_tui();
-    let ref_color = color_scheme.ref_color_tui();
+    let bg_color = color_scheme.bg_color();
+    let main_color = color_scheme.main_color();
+    let ref_color = color_scheme.ref_color();
     let wpm = (app.words_done as f32 / app.timer.as_secs_f32()) * 60.0;
     let wpm_str = format!("{}", wpm as i32);
 
@@ -266,40 +301,50 @@ fn get_stats(app: &App, color_scheme: ColorScheme) -> (Line<'static>, Line<'stat
         label_spans = vec![Span::styled("    ", space_style)];
         value_spans = vec![Span::styled("    ", space_style)];
     }
-    label_spans.extend(
-        labels.iter().zip(col_widths.iter()).enumerate().flat_map(|(i, (label, width))| {
+    label_spans.extend(labels.iter().zip(col_widths.iter()).enumerate().flat_map(
+        |(i, (label, width))| {
             let mut spans = Vec::new();
             if i > 0 {
                 spans.push(Span::styled("  ", space_style));
             }
-            spans.push(Span::styled(format!("{:<width$}", label, width = *width), label_style));
+            spans.push(Span::styled(
+                format!("{:<width$}", label, width = *width),
+                label_style,
+            ));
             spans
-        })
-    );
+        },
+    ));
 
-    value_spans.extend(
-        values.iter().zip(col_widths.iter()).enumerate().flat_map(|(i, (val, width))| {
+    value_spans.extend(values.iter().zip(col_widths.iter()).enumerate().flat_map(
+        |(i, (val, width))| {
             let mut spans = Vec::new();
             if i > 0 {
                 spans.push(Span::styled("  ", space_style));
             }
-            spans.push(Span::styled(format!("{:<width$}", val, width = *width), value_style));
+            spans.push(Span::styled(
+                format!("{:<width$}", val, width = *width),
+                value_style,
+            ));
             spans
-        })
-    );
+        },
+    ));
 
     (
         Line::from(label_spans).alignment(Alignment::Center),
         Line::from(value_spans).alignment(Alignment::Center),
-        wpm >= practice::WPM_MIN as f32
+        wpm >= practice::WPM_MIN as f32,
     )
 }
 
-fn get_chart(smoothed_speeds: &[f64], app: &App, step: usize, color_scheme: ColorScheme) -> Chart<'static> {
-    let bg_color = color_scheme.bg_color_tui();
-    let _main_color = color_scheme.main_color_tui();
-    let ref_color = color_scheme.ref_color_tui();
-    let chart_color = color_scheme.chart_color_tui();
+fn get_chart(
+    smoothed_speeds: &[f64],
+    app: &App,
+    step: usize,
+    color_scheme: ColorScheme,
+) -> Chart<'static> {
+    let bg_color = color_scheme.bg_color();
+    let ref_color = color_scheme.ref_color();
+    let chart_color = color_scheme.chart_color();
     let data: Vec<(f64, f64)> = smoothed_speeds
         .iter()
         .enumerate()
@@ -308,8 +353,15 @@ fn get_chart(smoothed_speeds: &[f64], app: &App, step: usize, color_scheme: Colo
 
     let data: &'static [(f64, f64)] = Box::leak(data.into_boxed_slice());
 
-
-    let max_speed: f64 = f64::max(70.0, app.speed_per_second.iter().fold(0.0_f64, |a, &b| a.max(b)).max(1.0) / 6.0 + 30.0);
+    let max_speed: f64 = f64::max(
+        70.0,
+        app.speed_per_second
+            .iter()
+            .fold(0.0_f64, |a, &b| a.max(b))
+            .max(1.0)
+            / 6.0
+            + 30.0,
+    );
     let max_time = app.timer.as_secs_f32().ceil() as f64;
 
     let bar_dataset = Dataset::default()
@@ -317,9 +369,9 @@ fn get_chart(smoothed_speeds: &[f64], app: &App, step: usize, color_scheme: Colo
         .style(Style::default().fg(chart_color).bg(bg_color))
         .marker(symbols::Marker::HalfBlock)
         .data(data);
-    
+
     let chart = Chart::new(vec![bar_dataset])
-    .block(Block::default().style(Style::default().bg(bg_color)))
+        .block(Block::default().style(Style::default().bg(bg_color)))
         .bg(bg_color)
         .style(Style::default().bg(bg_color))
         .x_axis(
@@ -341,7 +393,8 @@ fn get_chart(smoothed_speeds: &[f64], app: &App, step: usize, color_scheme: Colo
                 .bounds([0.0, max_speed * 1.1])
                 .labels(vec![
                     Span::from("0").style(Style::default().fg(ref_color)),
-                    Span::from(format!("{:.0}", max_speed / 2.0)).style(Style::default().fg(ref_color)),
+                    Span::from(format!("{:.0}", max_speed / 2.0))
+                        .style(Style::default().fg(ref_color)),
                     Span::from(format!("{:.0}", max_speed)).style(Style::default().fg(ref_color)),
                 ]),
         );
@@ -349,12 +402,10 @@ fn get_chart(smoothed_speeds: &[f64], app: &App, step: usize, color_scheme: Colo
 }
 
 fn render_results(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorScheme) {
-    let bg_color = color_scheme.bg_color_tui();
-    let _main_color = color_scheme.main_color_tui();
-    let _ref_color = color_scheme.ref_color_tui();
-    let _border_color = color_scheme.border_color();
+    let bg_color = color_scheme.bg_color();
+
     frame.render_widget(
-        Block::default().style(Style::default().bg(color_scheme.bg_color_tui())),
+        Block::default().style(Style::default().bg(color_scheme.bg_color())),
         area,
     );
 
@@ -451,12 +502,7 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorS
         errors_per_second[1] = 0.0;
     }
 
-    let smoothed_speeds = smooth(
-        &speed_per_second,
-        6.0,
-        extra_columns,
-        columns_to_delete,
-    );
+    let smoothed_speeds = smooth(&speed_per_second, 6.0, extra_columns, columns_to_delete);
 
     let chart = get_chart(&smoothed_speeds, app, step, color_scheme);
 
@@ -483,7 +529,8 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorS
         Constraint::Min(3),
         Constraint::Length(1),
         Constraint::Length(1),
-    ]).split(centered_area);
+    ])
+    .split(centered_area);
 
     let max_chart_width: u16 = 2 * smoothed_speeds.len() as u16 + 4;
     let chart_area = {
@@ -514,7 +561,8 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorS
         app.speed_per_second
             .iter()
             .fold(0.0_f64, |a, &b| a.max(b))
-            .max(1.0) / 6.0
+            .max(1.0)
+            / 6.0
             + 30.0,
     );
 
@@ -539,7 +587,12 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorS
                     ctx.print(
                         (i as f64 + 0.8) * (smoothed_speeds.len() as f64 / test_time as f64),
                         1.0,
-                        Span::styled(cross, Style::default().fg(color_scheme.incorrect_color_tui()).bg(bg_color)),
+                        Span::styled(
+                            cross,
+                            Style::default()
+                                .fg(color_scheme.incorrect_color())
+                                .bg(bg_color),
+                        ),
                     );
                 }
             }
@@ -553,19 +606,31 @@ fn render_results(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorS
 
     if app.practice_mode {
         if passed {
-            frame.render_widget(Line::from("Congratulations! You passed this level.").alignment(Alignment::Center), chunks[4]);
+            frame.render_widget(
+                Line::from("Congratulations! You passed this level.").alignment(Alignment::Center),
+                chunks[4],
+            );
         } else {
-            frame.render_widget(Line::from(format!("You need at least {} WPM to pass this level.", practice::WPM_MIN)).alignment(Alignment::Center), chunks[4]);
+            frame.render_widget(
+                Line::from(format!(
+                    "You need at least {} WPM to pass this level.",
+                    practice::WPM_MIN
+                ))
+                .alignment(Alignment::Center),
+                chunks[4],
+            );
         }
     }
 }
 
-fn render_reference_frame(frame: &mut Frame, area: Rect, app: &App, timer: Duration, color_scheme: ColorScheme) {
-    let bg_color = color_scheme.bg_color_tui();
-    let _main_color = color_scheme.main_color_tui();
-    let _ref_color = color_scheme.ref_color_tui();
-    let _border_color = color_scheme.border_color();
-    let _dimmer_main = color_scheme.dimmer_main();
+fn render_reference_frame(
+    frame: &mut Frame,
+    area: Rect,
+    app: &App,
+    timer: Duration,
+    color_scheme: ColorScheme,
+) {
+    let bg_color = color_scheme.bg_color();
     let max_ref_width = calculate_max_ref_width(area);
     let ref_padding = calculate_ref_padding(area, max_ref_width);
 
@@ -584,8 +649,7 @@ fn render_reference_frame(frame: &mut Frame, area: Rect, app: &App, timer: Durat
         horizontal_line,
         time_words,
         colored_lines,
-        empty_space
-        
+        empty_space,
     );
 
     let block = create_reference_block(ref_padding, color_scheme);
@@ -609,19 +673,23 @@ fn calculate_ref_padding(area: Rect, max_ref_width: usize) -> u16 {
 }
 
 fn create_timer(timer: Duration, test_time: f32, color_scheme: ColorScheme) -> Line<'static> {
-    let bg_color = color_scheme.bg_color_tui();
-    let main_color = color_scheme.main_color_tui();
+    let bg_color = color_scheme.bg_color();
+    let main_color = color_scheme.main_color();
     let seconds = test_time - timer.as_secs() as f32;
     let formatted_time = format!("{:?}", seconds as i32);
-    
+
     Line::from(formatted_time)
         .style(Style::default().fg(main_color).bg(bg_color))
         .alignment(Alignment::Left)
 }
 
-fn create_words_count(all_words: usize, typed_words: usize, color_scheme: ColorScheme) -> Line<'static> {
-    let bg_color = color_scheme.bg_color_tui();
-    let main_color = color_scheme.main_color_tui();
+fn create_words_count(
+    all_words: usize,
+    typed_words: usize,
+    color_scheme: ColorScheme,
+) -> Line<'static> {
+    let bg_color = color_scheme.bg_color();
+    let main_color = color_scheme.main_color();
     let words_text = format!("{}/{}", typed_words, all_words);
     Line::from(words_text)
         .style(Style::default().fg(main_color).bg(bg_color))
@@ -629,17 +697,40 @@ fn create_words_count(all_words: usize, typed_words: usize, color_scheme: ColorS
 }
 
 fn create_config_line(app: &App, color_scheme: ColorScheme, area: Rect) -> Line<'static> {
-    let bg_color = color_scheme.bg_color_tui();
-    let main_color = color_scheme.main_color_tui();
-    let ref_color = color_scheme.ref_color_tui();
-    let border_color = color_scheme.border_color_tui();
-    let dimmer_main = color_scheme.dimmer_main_tui();
+    let bg_color = color_scheme.bg_color();
+    let main_color = color_scheme.main_color();
+    let ref_color = color_scheme.ref_color();
+    let border_color = color_scheme.border_color();
+    let dimmer_main = color_scheme.dimmer_main();
     let divider = true;
     let mut button_states = vec![
-        ("punctuation", if area.width > 110 { "! punctuation" } else { "! punct" }, app.punctuation, !app.quote && !app.practice_mode),
-        ("numbers", if area.width > 110 { "# numbers" } else { "# num" }, app.numbers, !app.quote && !app.practice_mode),
+        (
+            "punctuation",
+            if area.width > 110 {
+                "! punctuation"
+            } else {
+                "! punct"
+            },
+            app.punctuation,
+            !app.quote && !app.practice_mode,
+        ),
+        (
+            "numbers",
+            if area.width > 110 {
+                "# numbers"
+            } else {
+                "# num"
+            },
+            app.numbers,
+            !app.quote && !app.practice_mode,
+        ),
         ("divider", "|", divider, true),
-        ("language", if area.width > 110 { "language" } else { "lang" }, false, !app.quote && !app.practice_mode),
+        (
+            "language",
+            if area.width > 110 { "language" } else { "lang" },
+            false,
+            !app.quote && !app.practice_mode,
+        ),
         ("theme", "theme", false, true),
         ("|", "|", divider, app.word_mode || app.time_mode),
         ("time", "time", app.time_mode, true),
@@ -685,20 +776,28 @@ fn create_config_line(app: &App, color_scheme: ColorScheme, area: Rect) -> Line<
 }
 
 fn create_horizontal_line(area: Rect, color_scheme: ColorScheme) -> Line<'static> {
-    let bg_color = color_scheme.bg_color_tui();
-    let border_color = color_scheme.border_color();
-    Line::from("─".repeat(area.width.saturating_sub(15) as usize)
-        .fg(border_color)
-        .bg(bg_color))
+    let bg_color: MyColor = color_scheme.bg_color();
+    let border_color: MyColor = color_scheme.border_color();
+
+    Line::from(
+        "─"
+            .repeat(area.width.saturating_sub(15) as usize)
+            .fg(border_color)
+            .bg(bg_color),
+    )
 }
 
-fn create_colored_lines<'a>(app: &App, max_ref_width: usize, color_scheme: ColorScheme) -> Vec<Line<'a>> {
-    let bg_color = color_scheme.bg_color_tui();
-    let main_color = color_scheme.main_color_tui();
-    let ref_color = color_scheme.ref_color_tui();
-    let correct_color = color_scheme.correct_color_tui();
-    let corrected_color = color_scheme.corrected_color_tui();
-    let incorrect_color = color_scheme.incorrect_color_tui();
+fn create_colored_lines<'a>(
+    app: &App,
+    max_ref_width: usize,
+    color_scheme: ColorScheme,
+) -> Vec<Line<'a>> {
+    let bg_color = color_scheme.bg_color();
+    let main_color = color_scheme.main_color();
+    let ref_color = color_scheme.ref_color();
+    let correct_color = color_scheme.correct_color();
+    let corrected_color = color_scheme.corrected_color();
+    let incorrect_color = color_scheme.incorrect_color();
     let mut fg_colors: Vec<Color> = vec![ref_color; app.reference.chars().count()];
     let mut bg_colors: Vec<Color> = vec![bg_color; app.reference.chars().count()];
 
@@ -706,7 +805,7 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize, color_scheme: Color
         if app.pos1 == i {
             fg_colors[i] = bg_color;
             bg_colors[i] = main_color
-        } else if app.is_correct[i] == 0 || i >= app.pos1{
+        } else if app.is_correct[i] == 0 || i >= app.pos1 {
             fg_colors[i] = ref_color;
         } else if app.is_correct[i] == 2 {
             fg_colors[i] = correct_color;
@@ -722,7 +821,8 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize, color_scheme: Color
     let split = split_lines(&app.reference, max_ref_width);
 
     let mut char_index = 0;
-    split.into_iter()
+    split
+        .into_iter()
         .map(|line| {
             let spans: Vec<Span<'a>> = line
                 .chars()
@@ -740,7 +840,9 @@ fn create_colored_lines<'a>(app: &App, max_ref_width: usize, color_scheme: Color
 
 fn calculate_vertical_padding(area: Rect, content_lines: usize) -> usize {
     let empty_space = area.height.saturating_sub(3) as usize / 2;
-    empty_space.saturating_sub(content_lines / 2).saturating_sub(3)
+    empty_space
+        .saturating_sub(content_lines / 2)
+        .saturating_sub(3)
 }
 
 fn assemble_content<'a>(
@@ -748,7 +850,7 @@ fn assemble_content<'a>(
     horizontal_line: Line<'a>,
     timer: Line<'a>,
     colored_lines: Vec<Line<'a>>,
-    empty_space: usize
+    empty_space: usize,
 ) -> Vec<Line<'a>> {
     let empty_line = Line::from("");
     let mut content = vec![
@@ -757,7 +859,7 @@ fn assemble_content<'a>(
         horizontal_line,
         empty_line.clone(),
     ];
-    
+
     content.extend(vec![empty_line.clone(); empty_space]);
     content.push(timer);
     content.push(empty_line.clone());
@@ -766,10 +868,10 @@ fn assemble_content<'a>(
 }
 
 fn create_reference_block(ref_padding: u16, color_scheme: ColorScheme) -> Block<'static> {
-    let bg_color = color_scheme.bg_color_tui();
-    let main_color = color_scheme.main_color_tui();
-    let border_color = color_scheme.border_color_tui();
-    let dimmer_main = color_scheme.dimmer_main_tui();
+    let bg_color = color_scheme.bg_color();
+    let border_color = color_scheme.border_color();
+    let main_color: MyColor = color_scheme.main_color();
+    let dimmer_main: MyColor = color_scheme.dimmer_main();
 
     let title = if color_scheme == ColorScheme::Light {
         Line::from(vec![
@@ -801,10 +903,10 @@ fn split_lines(text: &str, width: usize) -> Vec<String> {
     text.lines()
         .flat_map(|line| {
             let words = line.split_whitespace();
-            
+
             let mut current_line = String::new();
             let mut lines = Vec::new();
-            
+
             for word in words {
                 if current_line.len() + word.len() + 1 > width {
                     lines.push(current_line.to_string());
@@ -821,16 +923,16 @@ fn split_lines(text: &str, width: usize) -> Vec<String> {
 }
 
 fn render_language_popup(frame: &mut Frame, app: &App, area: Rect, color_scheme: ColorScheme) {
-    let bg_color = color_scheme.bg_color_tui();
-    let main_color = color_scheme.main_color_tui();
-    let ref_color = color_scheme.ref_color_tui();
-    let border_color = color_scheme.border_color_tui();
+    let bg_color = color_scheme.bg_color();
+    let main_color = color_scheme.main_color();
+    let ref_color = color_scheme.ref_color();
+    let border_color = color_scheme.border_color();
     // Create popup area (center of screen)
     let popup_area = centered_rect(30, 30, area);
-    
+
     // Clear the area
     frame.render_widget(ratatui::widgets::Clear, popup_area);
-    
+
     // Create popup content
     let items: Vec<ListItem> = Language::all()
         .iter()
@@ -845,14 +947,13 @@ fn render_language_popup(frame: &mut Frame, app: &App, area: Rect, color_scheme:
         })
         .collect();
 
-    let list = List::new(items)
-        .block(
-            Block::default()
-                .title("Select Language")
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(border_color))
-                .style(Style::default().bg(bg_color))
-        );
+    let list = List::new(items).block(
+        Block::default()
+            .title("Select Language")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(border_color))
+            .style(Style::default().bg(bg_color)),
+    );
 
     frame.render_widget(list, popup_area);
 }
@@ -860,10 +961,10 @@ fn render_language_popup(frame: &mut Frame, app: &App, area: Rect, color_scheme:
 fn render_theme_popup(frame: &mut Frame, app: &App, area: Rect, color_scheme: ColorScheme) {
     // Create popup area (center of screen)
     let popup_area = centered_rect(40, 50, area);
-    
+
     // Clear the area
     frame.render_widget(ratatui::widgets::Clear, popup_area);
-    
+
     // Create popup content
     let themes = ColorScheme::all();
     let items: Vec<ListItem> = themes
@@ -871,21 +972,26 @@ fn render_theme_popup(frame: &mut Frame, app: &App, area: Rect, color_scheme: Co
         .enumerate()
         .map(|(i, theme)| {
             let style = if i == app.theme_popup_selected {
-                Style::default().bg(color_scheme.main_color_tui()).fg(color_scheme.bg_color_tui())
+                Style::default()
+                    .bg(color_scheme.main_color())
+                    .fg(color_scheme.bg_color())
             } else {
-                Style::default().fg(color_scheme.text_color_tui())
+                Style::default().fg(color_scheme.text_color())
             };
             ListItem::new(theme.name()).style(style)
         })
         .collect();
 
-    let list = List::new(items)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title("Select Theme")
-                .style(Style::default().bg(color_scheme.bg_color_tui()).fg(color_scheme.border_color_tui()))
-        );
+    let list = List::new(items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Select Theme")
+            .style(
+                Style::default()
+                    .bg(color_scheme.bg_color())
+                    .fg(color_scheme.border_color()),
+            ),
+    );
 
     frame.render_widget(list, popup_area);
 }
@@ -894,7 +1000,7 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
     // Ensure percentages don't exceed 100 and terminal is large enough
     let safe_percent_x = percent_x.min(95);
     let safe_percent_y = percent_y.min(95);
-    
+
     // Check minimum terminal size requirements
     if r.width < 10 || r.height < 6 {
         // Return a minimal area if terminal is too small
@@ -902,10 +1008,10 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
             r.x + 1,
             r.y + 1,
             (r.width.saturating_sub(2)).max(1),
-            (r.height.saturating_sub(2)).max(1)
+            (r.height.saturating_sub(2)).max(1),
         );
     }
-    
+
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -929,51 +1035,61 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
     let block = Block::default()
         .title("Local Leaderboard")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(color_scheme.border_color_tui()))
-        .title_style(Style::default().fg(color_scheme.main_color_tui()));
+        .border_style(Style::default().fg(color_scheme.border_color()))
+        .title_style(Style::default().fg(color_scheme.main_color()));
 
     let inner_area = block.inner(area);
     frame.render_widget(block, area);
 
     if app.leaderboard_entries.is_empty() {
-        let empty_text = Paragraph::new("No typing test results yet.\nComplete a test to see your scores here!")
-            .style(Style::default().fg(color_scheme.ref_color_tui()))
-            .alignment(Alignment::Center)
-            .wrap(Wrap { trim: true });
+        let empty_text =
+            Paragraph::new("No typing test results yet.\nComplete a test to see your scores here!")
+                .style(Style::default().fg(color_scheme.ref_color()))
+                .alignment(Alignment::Center)
+                .wrap(Wrap { trim: true });
         frame.render_widget(empty_text, inner_area);
         return;
     }
 
     // Create table headers
     let header = Row::new(vec![
-        Cell::from("Rank").style(Style::default().fg(color_scheme.main_color_tui())),
-        Cell::from("Date").style(Style::default().fg(color_scheme.main_color_tui())),
-        Cell::from("Time").style(Style::default().fg(color_scheme.main_color_tui())),
-        Cell::from("Type").style(Style::default().fg(color_scheme.main_color_tui())),
-        Cell::from("WPM").style(Style::default().fg(color_scheme.main_color_tui())),
-        Cell::from("Acc%").style(Style::default().fg(color_scheme.main_color_tui())),
-        Cell::from("Words").style(Style::default().fg(color_scheme.main_color_tui())),
-        Cell::from("Lang").style(Style::default().fg(color_scheme.main_color_tui())),
+        Cell::from("Rank").style(Style::default().fg(color_scheme.main_color())),
+        Cell::from("Date").style(Style::default().fg(color_scheme.main_color())),
+        Cell::from("Time").style(Style::default().fg(color_scheme.main_color())),
+        Cell::from("Type").style(Style::default().fg(color_scheme.main_color())),
+        Cell::from("WPM").style(Style::default().fg(color_scheme.main_color())),
+        Cell::from("Acc%").style(Style::default().fg(color_scheme.main_color())),
+        Cell::from("Words").style(Style::default().fg(color_scheme.main_color())),
+        Cell::from("Lang").style(Style::default().fg(color_scheme.main_color())),
     ]);
 
     // Calculate viewport for scrolling
     let available_height = inner_area.height.saturating_sub(2); // Subtract header and border
     let max_visible_rows = available_height as usize;
-    
+
     // Calculate scroll offset to keep selected item visible
     let scroll_offset = if app.leaderboard_entries.len() <= max_visible_rows {
         0
     } else if app.leaderboard_selected < max_visible_rows / 2 {
         0
-    } else if app.leaderboard_selected >= app.leaderboard_entries.len().saturating_sub(max_visible_rows / 2) {
-        app.leaderboard_entries.len().saturating_sub(max_visible_rows)
+    } else if app.leaderboard_selected
+        >= app
+            .leaderboard_entries
+            .len()
+            .saturating_sub(max_visible_rows / 2)
+    {
+        app.leaderboard_entries
+            .len()
+            .saturating_sub(max_visible_rows)
     } else {
-        app.leaderboard_selected.saturating_sub(max_visible_rows / 2)
+        app.leaderboard_selected
+            .saturating_sub(max_visible_rows / 2)
     };
 
     // Create table rows for visible entries only
     let mut rows = Vec::new();
-    let visible_entries = app.leaderboard_entries
+    let visible_entries = app
+        .leaderboard_entries
         .iter()
         .enumerate()
         .skip(scroll_offset)
@@ -981,7 +1097,7 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
 
     for (i, entry) in visible_entries {
         let rank = (i + 1).to_string();
-        
+
         // Format date (take first 10 chars for YYYY-MM-DD)
         let date = if entry.timestamp.len() >= 10 {
             &entry.timestamp[..10]
@@ -1007,14 +1123,16 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
         // Format language
         let lang = match entry.language {
             Language::English => "EN",
-            Language::Indonesian => "ID", 
+            Language::Indonesian => "ID",
             Language::Italian => "IT",
         };
 
         let row_style = if i == app.leaderboard_selected {
-            Style::default().bg(color_scheme.dimmer_main_tui()).fg(color_scheme.bg_color_tui())
+            Style::default()
+                .bg(color_scheme.dimmer_main())
+                .fg(color_scheme.bg_color())
         } else {
-            Style::default().fg(color_scheme.text_color_tui())
+            Style::default().fg(color_scheme.text_color())
         };
 
         let row = Row::new(vec![
@@ -1026,33 +1144,41 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
             Cell::from(format!("{:.1}", entry.accuracy)),
             Cell::from(entry.word_count.to_string()),
             Cell::from(lang),
-        ]).style(row_style);
+        ])
+        .style(row_style);
 
         rows.push(row);
     }
 
-    let table = Table::new(rows, [
-        Constraint::Length(4),  // Rank
-        Constraint::Length(10), // Date
-        Constraint::Length(8),  // Time (HH:MM AM/PM)
-        Constraint::Length(6),  // Type
-        Constraint::Length(5),  // WPM
-        Constraint::Length(5),  // Acc%
-        Constraint::Length(6),  // Words
-        Constraint::Length(4),  // Lang
-    ])
+    let table = Table::new(
+        rows,
+        [
+            Constraint::Length(4),  // Rank
+            Constraint::Length(10), // Date
+            Constraint::Length(8),  // Time (HH:MM AM/PM)
+            Constraint::Length(6),  // Type
+            Constraint::Length(5),  // WPM
+            Constraint::Length(5),  // Acc%
+            Constraint::Length(6),  // Words
+            Constraint::Length(4),  // Lang
+        ],
+    )
     .header(header)
-    .style(Style::default().fg(color_scheme.text_color_tui()));
+    .style(Style::default().fg(color_scheme.text_color()));
 
     frame.render_widget(table, inner_area);
 
     // Show scroll indicators if there are more entries than visible
     if app.leaderboard_entries.len() > max_visible_rows {
-        let scroll_info = format!("{}/{}", app.leaderboard_selected + 1, app.leaderboard_entries.len());
+        let scroll_info = format!(
+            "{}/{}",
+            app.leaderboard_selected + 1,
+            app.leaderboard_entries.len()
+        );
         let scroll_indicator = Paragraph::new(scroll_info)
-            .style(Style::default().fg(color_scheme.dimmer_main_tui()))
+            .style(Style::default().fg(color_scheme.dimmer_main()))
             .alignment(Alignment::Right);
-        
+
         // Position scroll indicator in bottom-right corner of leaderboard area
         let indicator_area = Rect {
             x: inner_area.x + inner_area.width.saturating_sub(10),

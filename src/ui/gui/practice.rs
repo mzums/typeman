@@ -1,22 +1,21 @@
 use macroquad::prelude::*;
-use miniquad::window::set_mouse_cursor;
 use miniquad::CursorIcon;
+use miniquad::window::set_mouse_cursor;
 use std::collections::VecDeque;
 use std::thread;
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 
-use crate::ui::gui::config;
-use crate::practice::{check_if_completed, TYPING_LEVELS};
-use crate::utils;
 use crate::color_scheme::ColorScheme;
-
+use crate::practice::{TYPING_LEVELS, check_if_completed};
+use crate::ui::gui::config;
+use crate::utils;
 
 pub fn display_practice_menu(
     font: Option<Font>,
     scroll_offset: &mut f32,
     emoji_font: Font,
     selected_level: &mut Option<usize>,
-    practice_menu: &mut bool, 
+    practice_menu: &mut bool,
     time_mode: &mut bool,
     pressed_vec: &mut Vec<char>,
     is_correct: &mut VecDeque<i32>,
@@ -40,10 +39,12 @@ pub fn display_practice_menu(
     } else {
         15
     };
-    let tick_offset = if screen_width() > 1900.0 { 
-        (screen_width() - measure_text(TYPING_LEVELS[20].0, font.as_ref(), font_size, 1.0).width) / 2.0 - 50.0
-    } else { 
-        60.0 
+    let tick_offset = if screen_width() > 1900.0 {
+        (screen_width() - measure_text(TYPING_LEVELS[20].0, font.as_ref(), font_size, 1.0).width)
+            / 2.0
+            - 50.0
+    } else {
+        60.0
     };
     let mouse_pos = mouse_position();
 
@@ -52,10 +53,12 @@ pub fn display_practice_menu(
 
     let total_height = TYPING_LEVELS.len() as f32 * 60.0;
     let visible_height = screen_height() - 100.0;
-    let max_scroll = f32::max((TYPING_LEVELS.len() + 5) as f32 * (20.0 + font_size as f32) - screen_height(), 0.0);
+    let max_scroll = f32::max(
+        (TYPING_LEVELS.len() + 5) as f32 * (20.0 + font_size as f32) - screen_height(),
+        0.0,
+    );
 
     *scroll_offset = scroll_offset.clamp(0.0, max_scroll);
-
 
     if *scroll_offset < 20.0 {
         draw_text_ex(
@@ -65,13 +68,13 @@ pub fn display_practice_menu(
             TextParams {
                 font: font.as_ref(),
                 font_size: if screen_height() > 2000.0 && screen_width() > 1900.0 {
-                        40
-                    } else if screen_height() > 1000.0 && screen_width() > 800.0{
-                        30
-                    } else {
-                        25
-                    },
-                color: color_scheme.main_color_mq(),
+                    40
+                } else if screen_height() > 1000.0 && screen_width() > 800.0 {
+                    30
+                } else {
+                    25
+                },
+                color: color_scheme.main_color(),
                 ..Default::default()
             },
         );
@@ -82,7 +85,12 @@ pub fn display_practice_menu(
 
     let mut any_hovered = false;
     let mut y: f32 = screen_height() / 10.0 + 2.0 * font_size as f32;
-    for (i, (level_name, _)) in TYPING_LEVELS.iter().enumerate().take(end_index).skip(start_index) {
+    for (i, (level_name, _)) in TYPING_LEVELS
+        .iter()
+        .enumerate()
+        .take(end_index)
+        .skip(start_index)
+    {
         let mut text = format!("{}. {}", i + 1, level_name);
         if i + 1 < 10 {
             text = format!("{}.  {}", i + 1, level_name);
@@ -103,7 +111,12 @@ pub fn display_practice_menu(
     }
     let mut y: f32 = screen_height() / 10.0 + 2.0 * font_size as f32;
 
-    for (i, _) in TYPING_LEVELS.iter().enumerate().take(end_index).skip(start_index) {
+    for (i, _) in TYPING_LEVELS
+        .iter()
+        .enumerate()
+        .take(end_index)
+        .skip(start_index)
+    {
         let (level_name, _) = &TYPING_LEVELS[i];
         let mut text = format!("{}. {}", i + 1, level_name);
         if i + 1 < 10 {
@@ -154,9 +167,9 @@ pub fn display_practice_menu(
         }
 
         let text_color = if is_hovered {
-            color_scheme.main_color_mq()
+            color_scheme.main_color()
         } else {
-            color_scheme.text_color_mq()
+            color_scheme.text_color()
         };
 
         if show_tick {
@@ -172,7 +185,7 @@ pub fn display_practice_menu(
                 },
             );
         }
-        
+
         draw_text_ex(
             &text,
             60.0 + tick_offset,
@@ -211,13 +224,16 @@ pub fn display_practice_menu(
                         if down_key_held_start.is_none() {
                             down_key_held_start = Some(now);
                             last_down_scroll = Some(now);
-                            *scroll_offset = (*scroll_offset + 20.0 + font_size as f32).min(max_scroll);
+                            *scroll_offset =
+                                (*scroll_offset + 20.0 + font_size as f32).min(max_scroll);
                             *selected_level = if let Some(level) = *selected_level {
                                 Some((level + 1).min(TYPING_LEVELS.len() - 1))
                             } else {
                                 Some(0)
                             };
-                        } else if let (Some(start), Some(last)) = (down_key_held_start, last_down_scroll) {
+                        } else if let (Some(start), Some(last)) =
+                            (down_key_held_start, last_down_scroll)
+                        {
                             let held_duration = now.duration_since(start).as_millis();
                             let interval = if held_duration < 500 {
                                 200
@@ -227,7 +243,8 @@ pub fn display_practice_menu(
                                 30
                             };
                             if now.duration_since(last).as_millis() >= interval {
-                                *scroll_offset = (*scroll_offset + 20.0 + font_size as f32).min(max_scroll);
+                                *scroll_offset =
+                                    (*scroll_offset + 20.0 + font_size as f32).min(max_scroll);
                                 *selected_level = if let Some(level) = *selected_level {
                                     Some((level + 1).min(TYPING_LEVELS.len() - 1))
                                 } else {
@@ -252,7 +269,9 @@ pub fn display_practice_menu(
                             } else {
                                 Some(TYPING_LEVELS.len() - 1)
                             };
-                        } else if let (Some(start), Some(last)) = (up_key_held_start, last_up_scroll) {
+                        } else if let (Some(start), Some(last)) =
+                            (up_key_held_start, last_up_scroll)
+                        {
                             let held_duration = now.duration_since(start).as_millis();
                             let interval = if held_duration < 500 {
                                 200
@@ -262,7 +281,8 @@ pub fn display_practice_menu(
                                 30
                             };
                             if now.duration_since(last).as_millis() >= interval {
-                                *scroll_offset = (*scroll_offset - 20.0 - font_size as f32).max(0.0);
+                                *scroll_offset =
+                                    (*scroll_offset - 20.0 - font_size as f32).max(0.0);
                                 *selected_level = if let Some(level) = *selected_level {
                                     Some((level as isize - 1).max(0) as usize)
                                 } else {
@@ -311,7 +331,7 @@ pub fn display_practice_menu(
             );
             thread::sleep(Duration::from_millis(200));
             pressed_vec.clear();
-            return None
+            return None;
         }
     } else {
         let _pressed = get_char_pressed();
@@ -319,13 +339,16 @@ pub fn display_practice_menu(
 
     if max_scroll > 0.0 {
         let scroll_area_height = screen_height() - 100.0;
-        let thumb_height = f32::min(scroll_area_height * (visible_height / total_height), screen_height() - 200.0);
+        let thumb_height = f32::min(
+            scroll_area_height * (visible_height / total_height),
+            screen_height() - 200.0,
+        );
         let thumb_position = if max_scroll > 0.0 {
             100.0 + (*scroll_offset / max_scroll) * (scroll_area_height - thumb_height)
         } else {
             100.0
         };
-        
+
         utils::draw_rounded_rect(
             screen_width() - 20.0,
             thumb_position,
