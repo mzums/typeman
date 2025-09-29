@@ -1,13 +1,12 @@
 use core::time;
-use std::collections::VecDeque;
 use macroquad::prelude::*;
-use std::time::{Instant, Duration};
+use std::collections::VecDeque;
+use std::time::{Duration, Instant};
 
-use crate::ui::gui::main;
-use crate::{practice, utils};
 use crate::language::Language;
+use crate::ui::gui::main;
 use crate::ui::gui::popup::Popup;
-
+use crate::{practice, utils};
 
 fn draw_toggle_button(
     x: f32,
@@ -25,7 +24,7 @@ fn draw_toggle_button(
         return (false, false, 0.0);
     }
     let padding = font_size as f32 * 0.5;
-        
+
     let text_dims = measure_text(display_name, Some(font.as_ref().unwrap()), font_size, 1.0);
     let btn_width = text_dims.width + btn_padding * 2.0;
     let btn_height = measure_text("t", font.as_ref(), font_size, 1.0).height + padding * 2.0;
@@ -35,14 +34,18 @@ fn draw_toggle_button(
     let hovered = rect.contains(vec2(mx, my));
     let clicked = hovered && is_mouse_button_pressed(MouseButton::Left);
 
-    let mut text_color = if is_active { color_scheme.main_color_mq() } else { color_scheme.ref_color_mq() };
+    let mut text_color = if is_active {
+        color_scheme.main_color()
+    } else {
+        color_scheme.ref_color()
+    };
     let mut bg_color = Color::from_rgba(255, 0, 0, 0);
     if selected && is_active {
         text_color = macroquad::color::BLACK;
-        bg_color = color_scheme.dimmer_main_mq();
+        bg_color = color_scheme.dimmer_main();
     } else if selected {
         text_color = macroquad::color::BLACK;
-        bg_color = color_scheme.border_color_mq();
+        bg_color = color_scheme.border_color();
     }
 
     let font_size: u16 = if display_name == "|" {
@@ -50,7 +53,7 @@ fn draw_toggle_button(
     } else {
         font_size
     };
-    
+
     let corner_radius: f32 = font_size as f32 / 3.0;
     let btn_x = x;
     utils::draw_rounded_rect(btn_x, y, btn_width, btn_height, corner_radius, bg_color);
@@ -86,11 +89,24 @@ pub fn update_game_state(
     practice_mode: &mut bool,
     practice_menu: bool,
 ) {
-    if !*game_started && main::handle_input(reference, pressed_vec, is_correct, pos1, words_done, errors_this_second, &mut false, &mut vec![false; reference.chars().count()], *practice_mode, practice_menu) {
+    if !*game_started
+        && main::handle_input(
+            reference,
+            pressed_vec,
+            is_correct,
+            pos1,
+            words_done,
+            errors_this_second,
+            &mut false,
+            &mut vec![false; reference.chars().count()],
+            *practice_mode,
+            practice_menu,
+        )
+    {
         *game_started = true;
         *start_time = Instant::now();
     }
-    
+
     if *game_started && !*game_over {
         *timer = start_time.elapsed();
         if (timer.as_secs_f32() >= test_time && time_mode) || *pos1 >= reference.chars().count() {
@@ -112,7 +128,7 @@ pub fn reset_game_state(
     words_done: &mut usize,
     errors_per_second: &mut Vec<f64>,
     saved_results: &mut bool,
-    error_positions: &mut Vec<bool>
+    error_positions: &mut Vec<bool>,
 ) {
     *is_correct = VecDeque::from(vec![0; is_correct.len()]);
     pressed_vec.clear();
@@ -177,10 +193,37 @@ pub fn handle_settings_buttons(
     let mut total_width = 0.0;
 
     let mut button_states = vec![
-        ("punctuation", if screen_width() > screen_height() && screen_width() > 1500.0 { "! punctuation" } else { "! punct" }, *punctuation, !*quote && !*practice_mode),
-        ("numbers", if screen_width() > screen_height() && screen_width() > 1500.0 { "# numbers" } else { "# num" }, *numbers, !*quote && !*practice_mode),
+        (
+            "punctuation",
+            if screen_width() > screen_height() && screen_width() > 1500.0 {
+                "! punctuation"
+            } else {
+                "! punct"
+            },
+            *punctuation,
+            !*quote && !*practice_mode,
+        ),
+        (
+            "numbers",
+            if screen_width() > screen_height() && screen_width() > 1500.0 {
+                "# numbers"
+            } else {
+                "# num"
+            },
+            *numbers,
+            !*quote && !*practice_mode,
+        ),
         ("|", "|", divider, true),
-        ("language", if screen_width() > screen_height() && screen_width() > 1500.0 { "language" } else { "lang" }, lang_popup.visible, true),
+        (
+            "language",
+            if screen_width() > screen_height() && screen_width() > 1500.0 {
+                "language"
+            } else {
+                "lang"
+            },
+            lang_popup.visible,
+            true,
+        ),
         ("theme", "theme", theme_popup.visible, true),
         ("|", "|", divider, true),
         ("time", "time", *time_mode, true),
@@ -212,55 +255,74 @@ pub fn handle_settings_buttons(
 
         for (i, (label, _display_name, _state_val, visible)) in button_states.iter().enumerate() {
             if *visible && *selected_config == *label {
-            let mut j = if i == 0 {
-                button_states.len() - 1
-            } else {
-                i - 1
-            };
-
-            while j != i {
-                if button_states[j].3 && button_states[j].0 != "|" {
-                    *selected_config = button_states[j].0.to_string();
-                    break;
-                }
-                j = if j == 0 {
+                let mut j = if i == 0 {
                     button_states.len() - 1
                 } else {
-                    j - 1
+                    i - 1
                 };
-            }
-            break;
+
+                while j != i {
+                    if button_states[j].3 && button_states[j].0 != "|" {
+                        *selected_config = button_states[j].0.to_string();
+                        break;
+                    }
+                    j = if j == 0 {
+                        button_states.len() - 1
+                    } else {
+                        j - 1
+                    };
+                }
+                break;
             }
         }
-        } else if is_key_pressed(KeyCode::Right) {
+    } else if is_key_pressed(KeyCode::Right) {
         if !*config_opened {
             return false;
         }
 
         for (i, (label, _display_name, _state_val, visible)) in button_states.iter().enumerate() {
             if *visible && *selected_config == *label {
-            let mut next = if i == button_states.len() - 1 {
-                0
-            } else {
-                i + 1
-            };
-
-            while next != i {
-                if button_states[next].3 && button_states[next].0 != "|" {
-                    *selected_config = button_states[next].0.to_string();
-                    break;
-                }
-                next = if next == button_states.len() - 1 {
-                0
+                let mut next = if i == button_states.len() - 1 {
+                    0
                 } else {
-                    next + 1
+                    i + 1
                 };
-            }
-            break;
+
+                while next != i {
+                    if button_states[next].3 && button_states[next].0 != "|" {
+                        *selected_config = button_states[next].0.to_string();
+                        break;
+                    }
+                    next = if next == button_states.len() - 1 {
+                        0
+                    } else {
+                        next + 1
+                    };
+                }
+                break;
             }
         }
-    } else if is_key_pressed(KeyCode::Enter) && *config_opened && !lang_popup.visible && !theme_popup.visible {
-        update_config(&selected_config, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, lang_popup, theme_popup);
+    } else if is_key_pressed(KeyCode::Enter)
+        && *config_opened
+        && !lang_popup.visible
+        && !theme_popup.visible
+    {
+        update_config(
+            &selected_config,
+            punctuation,
+            numbers,
+            time_mode,
+            word_mode,
+            quote,
+            test_time,
+            batch_size,
+            practice_menu,
+            selected_practice_level,
+            practice_mode,
+            language,
+            lang_popup,
+            theme_popup,
+        );
 
         if *quote {
             *reference = utils::get_random_quote();
@@ -271,12 +333,27 @@ pub fn handle_settings_buttons(
             );
         } else if *selected_config != "language" && *selected_config != "theme" {
             let updated_word_list = utils::read_first_n_words(500, *language);
-            *reference = utils::get_reference(*punctuation, *numbers, &updated_word_list, *batch_size);
+            *reference =
+                utils::get_reference(*punctuation, *numbers, &updated_word_list, *batch_size);
         }
         if selected_config != "language" && selected_config != "theme" {
             *is_correct = VecDeque::from(vec![0; reference.len()]);
             *error_positions = vec![false; is_correct.len()];
-            reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, saved_results, &mut vec![false; reference.chars().count()]);
+            reset_game_state(
+                pressed_vec,
+                is_correct,
+                pos1,
+                timer,
+                start_time,
+                game_started,
+                game_over,
+                speed_per_second,
+                last_recorded_time,
+                words_done,
+                errors_per_second,
+                saved_results,
+                &mut vec![false; reference.chars().count()],
+            );
         }
     }
 
@@ -285,44 +362,88 @@ pub fn handle_settings_buttons(
     for (label, display_name, state_val, visible) in button_states.iter_mut() {
         let x = start_x + total_width;
         let is_active = *state_val;
-        
+
         let (clicked, hovered, btni_width) = draw_toggle_button(
-            x, 
+            x,
             btn_y,
             btn_padding,
             display_name,
-            font, 
-            is_active, 
+            font,
+            is_active,
             *visible,
             font_size,
             selected_config == label && *config_opened,
-            color_scheme
+            color_scheme,
         );
         total_width += btni_width;
-        
+
         if hovered && *label != "|" {
             any_button_hovered = true;
         }
-        
+
         if clicked && *label != "|" && *label != "language" {
             println!("Clicked button: {}", label);
 
-            update_config(label, punctuation, numbers, time_mode, word_mode, quote, test_time, batch_size, practice_menu, selected_practice_level, practice_mode, language, lang_popup, theme_popup);
+            update_config(
+                label,
+                punctuation,
+                numbers,
+                time_mode,
+                word_mode,
+                quote,
+                test_time,
+                batch_size,
+                practice_menu,
+                selected_practice_level,
+                practice_mode,
+                language,
+                lang_popup,
+                theme_popup,
+            );
             if *quote {
                 *reference = utils::get_random_quote();
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
                 *error_positions = vec![false; is_correct.len()];
                 *punctuation = false;
                 *numbers = false;
-                reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, saved_results, error_positions);
+                reset_game_state(
+                    pressed_vec,
+                    is_correct,
+                    pos1,
+                    timer,
+                    start_time,
+                    game_started,
+                    game_over,
+                    speed_per_second,
+                    last_recorded_time,
+                    words_done,
+                    errors_per_second,
+                    saved_results,
+                    error_positions,
+                );
             } else if *practice_menu {
                 *practice_menu = true;
             } else {
                 let updated_word_list = utils::read_first_n_words(500, *language);
-                *reference = utils::get_reference(*punctuation, *numbers, &updated_word_list, *batch_size);
+                *reference =
+                    utils::get_reference(*punctuation, *numbers, &updated_word_list, *batch_size);
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
                 *error_positions = vec![false; is_correct.len()];
-                reset_game_state(pressed_vec, is_correct, pos1, timer, start_time, game_started, game_over, speed_per_second, last_recorded_time, words_done, errors_per_second, saved_results, error_positions);
+                reset_game_state(
+                    pressed_vec,
+                    is_correct,
+                    pos1,
+                    timer,
+                    start_time,
+                    game_started,
+                    game_over,
+                    speed_per_second,
+                    last_recorded_time,
+                    words_done,
+                    errors_per_second,
+                    saved_results,
+                    error_positions,
+                );
             }
         }
     }
@@ -335,28 +456,43 @@ pub fn handle_settings_buttons(
     any_button_hovered
 }
 
-fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_mode: &mut bool, word_mode: &mut bool, quote: &mut bool, test_time: &mut f32, batch_size: &mut usize, practice_menu: &mut bool, selected_practice_level: &mut Option<usize>, practice_mode: &mut bool, language: &mut Language, lang_popup: &mut Popup, theme_popup: &mut Popup) {
+fn update_config(
+    label: &str,
+    punctuation: &mut bool,
+    numbers: &mut bool,
+    time_mode: &mut bool,
+    word_mode: &mut bool,
+    quote: &mut bool,
+    test_time: &mut f32,
+    batch_size: &mut usize,
+    practice_menu: &mut bool,
+    selected_practice_level: &mut Option<usize>,
+    practice_mode: &mut bool,
+    language: &mut Language,
+    lang_popup: &mut Popup,
+    theme_popup: &mut Popup,
+) {
     match label {
         "punctuation" => {
             *punctuation = !*punctuation;
             *quote = false;
-        },
+        }
         "numbers" => {
             *numbers = !*numbers;
             *quote = false;
-        },
+        }
         "time" => {
             *time_mode = true;
             *word_mode = false;
             *quote = false;
             *practice_mode = false;
-        },
+        }
         "words" => {
             *word_mode = true;
             *time_mode = false;
             *quote = false;
             *practice_mode = false;
-        },
+        }
         "quote" => {
             *quote = true;
             *punctuation = false;
@@ -364,7 +500,7 @@ fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_m
             *time_mode = false;
             *word_mode = false;
             *practice_mode = false;
-        },
+        }
         "practice" => {
             *quote = false;
             *punctuation = false;
@@ -373,40 +509,40 @@ fn update_config(label: &str, punctuation: &mut bool, numbers: &mut bool, time_m
             *word_mode = false;
             *practice_menu = true;
             *selected_practice_level = Some(practice::get_first_not_done());
-        },
+        }
         "15" => {
             *test_time = 15.0;
-        },
+        }
         "30" => {
             *test_time = 30.0;
-        },
+        }
         "60" => {
             *test_time = 60.0;
-        },
+        }
         "120" => {
             *test_time = 120.0;
-        },
+        }
         "25" => {
             *batch_size = 25;
-        },
+        }
         "50" => {
             *batch_size = 50;
-        },
+        }
         "100" => {
             *batch_size = 100;
-        },
+        }
         "english" => {
             *language = Language::English;
-        },
+        }
         "indonesian" => {
             *language = Language::Indonesian;
-        },
+        }
         "language" => {
             lang_popup.show();
-        },
+        }
         "theme" => {
             theme_popup.show();
-        },
+        }
         _ => {}
     }
 }

@@ -1,4 +1,3 @@
-use paste::paste;
 use serde::{Deserialize, Serialize};
 
 use crate::custom_colors::MyColor;
@@ -14,23 +13,6 @@ pub enum ColorScheme {
     Forest,
     ForestDark,
     Pink,
-}
-
-macro_rules! fw_colors {
-    ($($name:ident),*) => {
-        paste! {
-            $(
-                #[cfg(any(feature = "cli", feature = "tui"))]
-                pub fn [<$name _tui>](&self) -> ratatui::style::Color {
-                    self.$name().into()
-                }
-                #[cfg(feature = "gui")]
-                pub fn [<$name _mq>](&self) -> macroquad::color::Color {
-                    self.$name().into()
-                }
-            )*
-        }
-    };
 }
 
 impl ColorScheme {
@@ -71,20 +53,7 @@ impl ColorScheme {
         )
     }
 
-    fw_colors!(
-        border_color,
-        ref_color,
-        bg_color,
-        main_color,
-        dimmer_main,
-        text_color,
-        chart_color,
-        correct_color,
-        corrected_color,
-        incorrect_color
-    );
-
-    pub fn border_color(&self) -> MyColor {
+    pub fn border_color<C: From<MyColor>>(&self) -> C {
         match self {
             ColorScheme::Default => MyColor::new(100, 60, 0, 255),
             ColorScheme::Dark => MyColor::new(60, 60, 60, 255),
@@ -96,9 +65,10 @@ impl ColorScheme {
             ColorScheme::ForestDark => MyColor::new(60, 120, 60, 255),
             ColorScheme::Pink => MyColor::new(100, 20, 70, 255),
         }
+        .into()
     }
 
-    pub fn ref_color(&self) -> MyColor {
+    pub fn ref_color<C: From<MyColor>>(&self) -> C {
         match self {
             ColorScheme::Default => MyColor::new(100, 100, 100, 255),
             ColorScheme::Dark => MyColor::new(80, 80, 80, 255),
@@ -110,9 +80,10 @@ impl ColorScheme {
             ColorScheme::ForestDark => MyColor::new(70, 80, 70, 255),
             ColorScheme::Pink => MyColor::new(80, 70, 70, 255),
         }
+        .into()
     }
 
-    pub fn bg_color(&self) -> MyColor {
+    pub fn bg_color<C: From<MyColor>>(&self) -> C {
         match self {
             ColorScheme::Default => MyColor::new(10, 10, 10, 255),
             ColorScheme::Dark => MyColor::new(10, 10, 10, 255),
@@ -124,9 +95,10 @@ impl ColorScheme {
             ColorScheme::ForestDark => MyColor::new(10, 10, 10, 255),
             ColorScheme::Pink => MyColor::new(7, 0, 2, 255),
         }
+        .into()
     }
 
-    pub fn main_color(&self) -> MyColor {
+    pub fn main_color<C: From<MyColor>>(&self) -> C {
         match self {
             ColorScheme::Default => MyColor::new(255, 155, 0, 255),
             ColorScheme::Dark => MyColor::new(180, 180, 180, 255),
@@ -138,9 +110,10 @@ impl ColorScheme {
             ColorScheme::ForestDark => MyColor::new(100, 200, 100, 255),
             ColorScheme::Pink => MyColor::new(255, 20, 147, 255),
         }
+        .into()
     }
 
-    pub fn dimmer_main(&self) -> MyColor {
+    pub fn dimmer_main<C: From<MyColor>>(&self) -> C {
         match self {
             ColorScheme::Default => MyColor::new(180, 100, 0, 255),
             ColorScheme::Dark => MyColor::new(120, 120, 120, 255),
@@ -152,9 +125,10 @@ impl ColorScheme {
             ColorScheme::ForestDark => MyColor::new(150, 230, 100, 255),
             ColorScheme::Pink => MyColor::new(200, 10, 120, 255),
         }
+        .into()
     }
 
-    pub fn text_color(&self) -> MyColor {
+    pub fn text_color<C: From<MyColor>>(&self) -> C {
         match self {
             ColorScheme::Default => MyColor::new(200, 200, 200, 255),
             ColorScheme::Dark => MyColor::new(200, 200, 200, 255),
@@ -166,9 +140,10 @@ impl ColorScheme {
             ColorScheme::ForestDark => MyColor::new(180, 255, 180, 255),
             ColorScheme::Pink => MyColor::new(200, 200, 200, 255),
         }
+        .into()
     }
 
-    pub fn chart_color(&self) -> MyColor {
+    pub fn chart_color<C: From<MyColor>>(&self) -> C {
         match self {
             ColorScheme::Default => MyColor::new(150, 80, 0, 255),
             ColorScheme::Dark => MyColor::new(180, 180, 180, 255),
@@ -180,9 +155,10 @@ impl ColorScheme {
             ColorScheme::ForestDark => MyColor::new(100, 200, 100, 255),
             ColorScheme::Pink => MyColor::new(100, 20, 70, 255),
         }
+        .into()
     }
 
-    pub fn correct_color(&self) -> MyColor {
+    pub fn correct_color<C: From<MyColor>>(&self) -> C {
         match self {
             ColorScheme::Default => MyColor::new(200, 255, 255, 255),
             ColorScheme::Dark => MyColor::new(200, 255, 255, 255),
@@ -194,9 +170,10 @@ impl ColorScheme {
             ColorScheme::ForestDark => MyColor::new(200, 255, 255, 255),
             ColorScheme::Pink => MyColor::new(200, 255, 255, 255),
         }
+        .into()
     }
 
-    pub fn corrected_color(&self) -> MyColor {
+    pub fn corrected_color<C: From<MyColor>>(&self) -> C {
         match self {
             ColorScheme::Default => MyColor::new(255, 155, 0, 255),
             ColorScheme::Dark => MyColor::new(100, 60, 0, 255),
@@ -208,9 +185,10 @@ impl ColorScheme {
             ColorScheme::ForestDark => MyColor::new(180, 100, 0, 255),
             ColorScheme::Pink => MyColor::new(255, 100, 100, 255),
         }
+        .into()
     }
 
-    pub fn incorrect_color(&self) -> MyColor {
+    pub fn incorrect_color<C: From<MyColor>>(&self) -> C {
         match self {
             ColorScheme::Default => MyColor::new(200, 30, 30, 255),
             ColorScheme::Dark => MyColor::new(200, 30, 30, 255),
@@ -222,6 +200,7 @@ impl ColorScheme {
             ColorScheme::ForestDark => MyColor::new(150, 30, 30, 255),
             ColorScheme::Pink => MyColor::new(255, 30, 30, 255),
         }
+        .into()
     }
 }
 

@@ -6,15 +6,14 @@ use std::collections::VecDeque;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crate::utils;
-use crate::ui::gui::results;
-use crate::ui::gui::config::{self, reset_game_state};
 use crate::color_scheme::ColorScheme;
-use crate::ui::gui::practice as gui_practice;
-use crate::practice::{self, TYPING_LEVELS};
-use crate::ui::gui::popup::{Popup, PopupContent};
 use crate::config::AppConfig;
-
+use crate::practice::{self, TYPING_LEVELS};
+use crate::ui::gui::config::{self, reset_game_state};
+use crate::ui::gui::popup::{Popup, PopupContent};
+use crate::ui::gui::practice as gui_practice;
+use crate::ui::gui::results;
+use crate::utils;
 
 pub const MAIN_COLOR: macroquad::color::Color =
     macroquad::color::Color::from_rgba(255, 155, 0, 255);
@@ -97,7 +96,7 @@ pub async fn gui_main_async() {
     };
 
     loop {
-        clear_background(color_scheme.bg_color_mq());
+        clear_background(color_scheme.bg_color());
         let mut max_width = f32::min(
             if screen_height() > screen_width() {
                 screen_width() * 0.9
@@ -140,8 +139,8 @@ pub async fn gui_main_async() {
             start_time = Instant::now();
             pos1 = 0;
         }
-        
-        if !game_over && !practice_menu {                    
+
+        if !game_over && !practice_menu {
             let total_height = lines.len() as f32 * font_size * 1.2;
             let start_y = screen_height() / 2.0 - total_height / 2.0 + font_size;
             let start_x = screen_width() / 2.0 - max_width / 2.0 + 20.0;
@@ -156,7 +155,7 @@ pub async fn gui_main_async() {
                 start_x,
                 start_y,
                 lang_popup.visible,
-                &color_scheme
+                &color_scheme,
             );
 
             let any_button_hovered = config::handle_settings_buttons(
@@ -210,7 +209,21 @@ pub async fn gui_main_async() {
                     utils::get_reference(punctuation, numbers, &updated_word_list, batch_size)
                 };
                 lang_popup_recently_closed = false;
-                reset_game_state(&mut pressed_vec, &mut is_correct, &mut pos1, &mut timer, &mut start_time, &mut game_started, &mut game_over, &mut speed_per_second, &mut last_recorded_time, &mut words_done, &mut errors_per_second, &mut saved_results, &mut error_positions);
+                reset_game_state(
+                    &mut pressed_vec,
+                    &mut is_correct,
+                    &mut pos1,
+                    &mut timer,
+                    &mut start_time,
+                    &mut game_started,
+                    &mut game_over,
+                    &mut speed_per_second,
+                    &mut last_recorded_time,
+                    &mut words_done,
+                    &mut errors_per_second,
+                    &mut saved_results,
+                    &mut error_positions,
+                );
             }
 
             set_mouse_cursor(if any_button_hovered {
@@ -260,7 +273,7 @@ pub async fn gui_main_async() {
                 {
                     game_over = true;
                 }
-            }            
+            }
 
             write_title(
                 Some(title_font.clone()),
@@ -329,16 +342,31 @@ pub async fn gui_main_async() {
                 );
             }
 
-            
             let (calc_pos_x, calc_pos_y) = calc_pos(&chars_in_line, pos1);
             if !game_started {
                 let blink_interval = 0.5;
                 let show_cursor = ((get_time() / blink_interval) as i32) % 2 == 0;
                 if show_cursor && !game_over && !config_opened {
-                    draw_cursor(calc_pos_x, calc_pos_y, start_x, start_y, line_h, char_w, &color_scheme);
+                    draw_cursor(
+                        calc_pos_x,
+                        calc_pos_y,
+                        start_x,
+                        start_y,
+                        line_h,
+                        char_w,
+                        &color_scheme,
+                    );
                 }
             } else {
-                draw_cursor(calc_pos_x, calc_pos_y, start_x, start_y, line_h, char_w, &color_scheme);
+                draw_cursor(
+                    calc_pos_x,
+                    calc_pos_y,
+                    start_x,
+                    start_y,
+                    line_h,
+                    char_w,
+                    &color_scheme,
+                );
             }
 
             let now = Instant::now();
@@ -568,12 +596,12 @@ fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32, color_scheme:
     let type_width = measure_text(type_text, font.as_ref(), font_size as u16, 1.0).width;
 
     let type_color = if color_scheme == ColorScheme::Light {
-        color_scheme.dimmer_main_mq()
+        color_scheme.dimmer_main()
     } else {
-        color_scheme.main_color_mq()
+        color_scheme.main_color()
     };
     let man_color = if color_scheme == ColorScheme::Light {
-        color_scheme.border_color_mq()
+        color_scheme.border_color()
     } else {
         Color::from_rgba(255, 255, 255, 220)
     };
@@ -585,12 +613,12 @@ fn write_title(font: Option<Font>, font_size: f32, x: f32, y: f32, color_scheme:
         draw_text_ex(
             text,
             x + dx,
-                y,
-                TextParams {
-                    font: font.as_ref(),
-                    font_size: font_size as u16,
-                    color,
-                    ..Default::default()
+            y,
+            TextParams {
+                font: font.as_ref(),
+                font_size: font_size as u16,
+                color,
+                ..Default::default()
             },
         );
     }
@@ -664,7 +692,7 @@ fn draw_shortcut_info(
                     TextParams {
                         font: Some(&emoji_font),
                         font_size: font_size as u16,
-                        color: color_scheme.ref_color_mq(),
+                        color: color_scheme.ref_color(),
                         ..Default::default()
                     },
                 );
@@ -687,7 +715,7 @@ fn draw_shortcut_info(
                     TextParams {
                         font,
                         font_size: font_size as u16,
-                        color: color_scheme.ref_color_mq(),
+                        color: color_scheme.ref_color(),
                         ..Default::default()
                     },
                 );
@@ -703,7 +731,7 @@ fn draw_shortcut_info(
         TextParams {
             font,
             font_size: font_size as u16,
-            color: color_scheme.ref_color_mq(),
+            color: color_scheme.ref_color(),
             ..Default::default()
         },
     );
@@ -846,8 +874,8 @@ pub fn handle_input(
 }
 
 fn draw_timer(
-    font: Option<&Font>, 
-    font_size: f32, 
+    font: Option<&Font>,
+    font_size: f32,
     start_x: f32,
     start_y: f32,
     timer: time::Duration,
@@ -862,7 +890,7 @@ fn draw_timer(
         TextParams {
             font,
             font_size: font_size as u16,
-            color: color_scheme.main_color_mq(),
+            color: color_scheme.main_color(),
             ..Default::default()
         },
     );
@@ -875,7 +903,7 @@ fn draw_word_count(
     start_y: f32,
     words_done: &mut usize,
     total_words: usize,
-    color_scheme: &ColorScheme
+    color_scheme: &ColorScheme,
 ) {
     let timer_str = format!("{}/{}", words_done, total_words);
     draw_text_ex(
@@ -885,7 +913,7 @@ fn draw_word_count(
         TextParams {
             font,
             font_size: font_size as u16,
-            color: color_scheme.main_color_mq(),
+            color: color_scheme.main_color(),
             ..Default::default()
         },
     );
@@ -910,20 +938,19 @@ fn draw_reference_text(
         for char in line.chars() {
             let mut curr_char = char;
             let color = if pos + 1 > pressed_vec.len() || is_correct[pos] == 0 {
-                color_scheme.ref_color_mq()
+                color_scheme.ref_color()
             } else if is_correct.get(pos).is_some() && is_correct[pos] == 2 {
-                color_scheme.text_color_mq()
+                color_scheme.text_color()
             } else if is_correct.get(pos).is_some() && is_correct[pos] == 1 {
                 if char == ' ' {
                     curr_char = '_';
                 }
-                color_scheme.corrected_color_mq()
-
+                color_scheme.corrected_color()
             } else {
                 if char == ' ' {
                     curr_char = '_';
                 }
-                color_scheme.incorrect_color_mq()
+                color_scheme.incorrect_color()
             };
             draw_text_ex(
                 &curr_char.to_string(),
@@ -963,7 +990,7 @@ fn draw_cursor(
         cursor_x,
         cursor_y + line_h * 0.3,
         2.0,
-        color_scheme.main_color_mq(),
+        color_scheme.main_color(),
     );
 }
 
