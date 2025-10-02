@@ -58,6 +58,7 @@ pub struct App {
     pub leaderboard_open: bool,
     pub leaderboard_entries: Vec<crate::leaderboard::LeaderboardEntry>,
     pub leaderboard_selected: usize,
+    pub button_states: ButtonStates,
 }
 
 impl App {
@@ -107,6 +108,7 @@ impl App {
             leaderboard_open: false,
             leaderboard_entries: crate::leaderboard::load_entries().unwrap_or_default(),
             leaderboard_selected: 0,
+            button_states: ButtonStates::new(),
         }
     }
 
@@ -125,11 +127,33 @@ impl App {
         let mut last_recorded_time = Instant::now();
         
         while !self.exit {
+            self.button_states = ButtonStates {
+                punctuation: ButtonState::new("punctuation", "punctuation", "punct", self.punctuation, !self.quote && !self.practice_mode),
+                numbers: ButtonState::new("numbers", "numbers", "num", self.numbers, !self.quote && !self.practice_mode),
+                divider1: ButtonState::new("|", "|", "|", true, self.time_mode || self.word_mode),
+                language: ButtonState::new("language", "language", "lang", false, !self.quote && !self.practice_mode),
+                theme: ButtonState::new("theme", "theme", "theme", false, true),
+                divider2: ButtonState::new("|", "|", "|", true, true),
+                time: ButtonState::new("time", "time", "time", self.time_mode, true),
+                words: ButtonState::new("words", "words", "words", self.word_mode, true),
+                quote: ButtonState::new("quote", "quote", "quote", self.quote, true),
+                practice: ButtonState::new("practice", "practice", "practice", self.practice_mode, true),
+                divider3: ButtonState::new("|", "|", "|", true, self.time_mode || self.word_mode),
+                time_15: ButtonState::new("15", "15", "15", self.test_time == 15.0, self.time_mode),
+                time_30: ButtonState::new("30", "30", "30", self.test_time == 30.0, self.time_mode),
+                time_60: ButtonState::new("60", "60", "60", self.test_time == 60.0, self.time_mode),
+                time_120: ButtonState::new("120", "120", "120", self.test_time == 120.0, self.time_mode),
+                batch_25: ButtonState::new("25", "25", "25", self.batch_size == 25, self.word_mode),
+                batch_50: ButtonState::new("50", "50", "50", self.batch_size == 50, self.word_mode),
+                batch_100: ButtonState::new("100", "100", "100", self.batch_size == 100, self.word_mode),
+            };
+
             if self.game_state != GameState::Started {
                 last_recorded_time = Instant::now();
             }
             if event::poll(Duration::from_millis(16))? {
                 if let CEvent::Key(key) = event::read()? {
+                    // Pass mutable reference to button_states
                     self.handle_key_event(key, self.reference.clone())?;
                 }
             }
@@ -197,7 +221,7 @@ impl App {
                 self.errors_this_second = 0.0;
                 last_recorded_time += Duration::from_secs(1);
             }
-            terminal.draw(|frame| render_app(frame, self, self.timer))?;
+            terminal.draw(|frame| render_app(frame, self, self.timer, &self.button_states))?;
         }
         Ok(())
     }
@@ -208,27 +232,6 @@ impl App {
         reference: String,
     ) -> io::Result<()> {
         use crossterm::event::KeyCode;
-
-        let button_states = ButtonStates {
-            punctuation: ButtonState::new("punctuation", "punctuation", "punct", self.punctuation, !self.quote && !self.practice_mode),
-            numbers: ButtonState::new("numbers", "numbers", "num", self.numbers, !self.quote && !self.practice_mode),
-            divider1: ButtonState::new("|", "|", "|", true, true),
-            language: ButtonState::new("language", "language", "lang", false, !self.quote && !self.practice_mode),
-            theme: ButtonState::new("theme", "theme", "theme", false, true),
-            divider2: ButtonState::new("|", "|", "|", true, true),
-            time: ButtonState::new("time", "time", "time", self.time_mode, true),
-            words: ButtonState::new("words", "words", "words", self.word_mode, true),
-            quote: ButtonState::new("quote", "quote", "quote", self.quote, true),
-            practice: ButtonState::new("practice", "practice", "practice", self.practice_mode, true),
-            divider3: ButtonState::new("|", "|", "|", true, true),
-            time_15: ButtonState::new("15", "15", "15", self.test_time == 15.0, self.time_mode),
-            time_30: ButtonState::new("30", "30", "30", self.test_time == 30.0, self.time_mode),
-            time_60: ButtonState::new("60", "60", "60", self.test_time == 60.0, self.time_mode),
-            time_120: ButtonState::new("120", "120", "120", self.test_time == 120.0, self.time_mode),
-            batch_25: ButtonState::new("25", "25", "25", self.batch_size == 25, self.word_mode),
-            batch_50: ButtonState::new("50", "50", "50", self.batch_size == 50, self.word_mode),
-            batch_100: ButtonState::new("100", "100", "100", self.batch_size == 100, self.word_mode),
-        };
 
         let reference_chars: Vec<char> = reference.chars().collect();
 
@@ -527,7 +530,7 @@ impl App {
                     if !self.config {
                         return Ok(());
                     }
-                    let buttons = button_states.as_vec();
+                    let buttons = self.button_states.as_vec();
                     for (i, btn) in buttons.iter().enumerate() {
                         if btn.visible && self.selected_config == btn.label {
                             let start_index = i;
@@ -555,7 +558,7 @@ impl App {
                     if !self.config {
                         return Ok(());
                     }
-                    let buttons = button_states.as_vec();
+                    let buttons = self.button_states.as_vec();
                     for (i, btn) in buttons.iter().enumerate() {
                         if btn.visible && self.selected_config == btn.label {
                             let start_index = i;
@@ -594,6 +597,9 @@ impl App {
                     
                     if self.practice_menu && ch == 'q' {
                         self.practice_menu = false;
+                        self.practice_mode = false;
+                        self.time_mode = true;
+                        self.selected_config = "time".into();
                         return Ok(());
                     }
                     if self.is_correct[0] == 0 && ch == ' ' {

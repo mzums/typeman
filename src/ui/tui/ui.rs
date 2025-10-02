@@ -9,6 +9,7 @@ use crate::practice;
 use crate::practice::TYPING_LEVELS;
 use crate::ui::tui::app::{App, GameState};
 use ratatui::widgets::canvas::Canvas;
+use crate::button_states::ButtonStates;
 
 fn render_instructions(
     frame: &mut Frame,
@@ -47,7 +48,7 @@ fn render_instructions(
     frame.render_widget(text, area);
 }
 
-pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
+pub fn render_app(frame: &mut Frame, app: &App, timer: Duration, button_states: &ButtonStates,) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -67,7 +68,7 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration) {
     } else if app.practice_menu {
         render_practice_menu(frame, chunks[0], app, app.color_scheme);
     } else {
-        render_reference_frame(frame, chunks[0], app, timer, app.color_scheme);
+        render_reference_frame(frame, chunks[0], app, timer, app.color_scheme, button_states);
     }
     render_instructions(
         frame,
@@ -103,7 +104,7 @@ fn render_practice_menu(frame: &mut Frame, area: Rect, app: &App, color_scheme: 
     };
     for level in TYPING_LEVELS.iter().enumerate().skip(to_skip as usize) {
         let mut fg_color = color_scheme.text_color();
-        let mut bg_color = color_scheme.dimmer_main();
+        let mut bg_color = color_scheme.bg_color();
 
         if app.selected_level == level.0 {
             fg_color = color_scheme.bg_color();
@@ -629,12 +630,13 @@ fn render_reference_frame(
     app: &App,
     timer: Duration,
     color_scheme: ColorScheme,
+    button_states: &ButtonStates
 ) {
     let bg_color = color_scheme.bg_color();
     let max_ref_width = calculate_max_ref_width(area);
     let ref_padding = calculate_ref_padding(area, max_ref_width);
 
-    let instruction_line = create_config_line(app, color_scheme, area);
+    let instruction_line = create_config_line(app, color_scheme, &button_states);
     let horizontal_line = create_horizontal_line(area, color_scheme);
     let time_words = if app.time_mode {
         create_timer(timer, app.test_time, color_scheme)
@@ -696,78 +698,34 @@ fn create_words_count(
         .alignment(Alignment::Left)
 }
 
-fn create_config_line(app: &App, color_scheme: ColorScheme, area: Rect) -> Line<'static> {
+fn create_config_line(app: &App, color_scheme: ColorScheme, button_states: &ButtonStates) -> Line<'static> {
     let bg_color = color_scheme.bg_color();
     let main_color = color_scheme.main_color();
     let ref_color = color_scheme.ref_color();
     let border_color = color_scheme.border_color();
     let dimmer_main = color_scheme.dimmer_main();
-    let divider = true;
-    let mut button_states = vec![
-        (
-            "punctuation",
-            if area.width > 110 {
-                "! punctuation"
-            } else {
-                "! punct"
-            },
-            app.punctuation,
-            !app.quote && !app.practice_mode,
-        ),
-        (
-            "numbers",
-            if area.width > 110 {
-                "# numbers"
-            } else {
-                "# num"
-            },
-            app.numbers,
-            !app.quote && !app.practice_mode,
-        ),
-        ("divider", "|", divider, true),
-        (
-            "language",
-            if area.width > 110 { "language" } else { "lang" },
-            false,
-            !app.quote && !app.practice_mode,
-        ),
-        ("theme", "theme", false, true),
-        ("|", "|", divider, app.word_mode || app.time_mode),
-        ("time", "time", app.time_mode, true),
-        ("words", "words", app.word_mode, true),
-        ("quote", "quote", app.quote, true),
-        ("practice", "practice", app.practice_mode, true),
-        ("|", "|", divider, app.word_mode || app.time_mode),
-        ("15", "15", app.test_time == 15.0, app.time_mode),
-        ("30", "30", app.test_time == 30.0, app.time_mode),
-        ("60", "60", app.test_time == 60.0, app.time_mode),
-        ("120", "120", app.test_time == 120.0, app.time_mode),
-        ("25", "25", app.batch_size == 25, app.word_mode),
-        ("50", "50", app.batch_size == 50, app.word_mode),
-        ("100", "100", app.batch_size == 100, app.word_mode),
-    ];
 
     let mut spans: Vec<Span<'static>> = vec![];
 
-    let mut fg_colors = vec![ref_color; button_states.len()];
-    let mut bg_colors = vec![bg_color; button_states.len()];
-    for (i, (label, display_name, state_val, visible)) in button_states.iter_mut().enumerate() {
-        if !*visible {
+    let mut fg_colors = vec![ref_color; button_states.as_vec().len()];
+    let mut bg_colors = vec![bg_color; button_states.as_vec().len()];
+    for (i, button_state) in button_states.as_vec().iter_mut().enumerate() {
+        if !button_state.visible {
             continue;
         }
-        if *state_val && *label != "|" && app.selected_config == *label && app.config {
+        if button_state.state_val && button_state.label != "|" && app.selected_config == button_state.label && app.config {
             bg_colors[i] = dimmer_main;
             fg_colors[i] = bg_color;
-        } else if app.selected_config == *label && app.config && *label != "|" {
+        } else if app.selected_config == button_state.label && app.config && button_state.label != "|" {
             bg_colors[i] = border_color;
             fg_colors[i] = bg_color;
-        } else if *state_val {
+        } else if button_state.state_val {
             fg_colors[i] = main_color;
-        } else {
-            fg_colors[i] = ref_color;
+            } else {
+                fg_colors[i] = ref_color;
         }
         spans.push(Span::styled(
-            format!(" {} ", display_name),
+            format!(" {} ", button_state.display_name),
             Style::default().fg(fg_colors[i]).bg(bg_colors[i]),
         ));
     }
