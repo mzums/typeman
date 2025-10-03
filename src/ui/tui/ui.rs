@@ -1,7 +1,7 @@
 use ratatui::{Frame, prelude::*, widgets::*};
-use ratatui::widgets::canvas::Canvas;
 use std::collections::HashMap;
 use std::time::Duration;
+use crate::utils;
 
 use crate::color_scheme::ColorScheme;
 use crate::custom_colors::MyColor;
@@ -9,9 +9,10 @@ use crate::language::Language;
 use crate::practice;
 use crate::practice::TYPING_LEVELS;
 use crate::ui::tui::app::{App, GameState};
+use ratatui::widgets::canvas::Canvas;
 use crate::button_states::ButtonStates;
 use crate::ui::tui::popup::*;
-use crate::utils;
+
 
 fn render_instructions(
     frame: &mut Frame,
