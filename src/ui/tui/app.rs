@@ -2,6 +2,7 @@ use std::io;
 use crossterm::event::{self, Event as CEvent, KeyEvent};
 use ratatui::DefaultTerminal;
 use std::time::{Duration, Instant};
+use std::collections::HashMap;
 
 use crate::ui::tui::ui::render_app;
 use crate::{practice, utils};
@@ -59,6 +60,7 @@ pub struct App {
     pub leaderboard_entries: Vec<crate::leaderboard::LeaderboardEntry>,
     pub leaderboard_selected: usize,
     pub button_states: ButtonStates,
+    pub menu_buttons_times: HashMap<String, Instant>,
 }
 
 impl App {
@@ -109,6 +111,23 @@ impl App {
             leaderboard_entries: crate::leaderboard::load_entries().unwrap_or_default(),
             leaderboard_selected: 0,
             button_states: ButtonStates::new(),
+            menu_buttons_times: HashMap::from([
+                ("time".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("words".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("quote".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("practice".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("punctuation".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("numbers".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("language".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("theme".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("15".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("30".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("60".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("120".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("25".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("50".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("100".to_string(), Instant::now() - Duration::from_secs(5)),
+            ]),
         }
     }
 
@@ -128,15 +147,15 @@ impl App {
         
         while !self.exit {
             self.button_states = ButtonStates {
-                punctuation: ButtonState::new("punctuation", "punctuation", "punct", self.punctuation, !self.quote && !self.practice_mode),
-                numbers: ButtonState::new("numbers", "numbers", "num", self.numbers, !self.quote && !self.practice_mode),
+                punctuation: ButtonState::new("punctuation", "! punctuation", "! punct", self.punctuation, !self.quote && !self.practice_mode),
+                numbers: ButtonState::new("numbers", "# numbers", "# num", self.numbers, !self.quote && !self.practice_mode),
                 divider1: ButtonState::new("|", "|", "|", true, self.time_mode || self.word_mode),
                 language: ButtonState::new("language", "language", "lang", false, !self.quote && !self.practice_mode),
                 theme: ButtonState::new("theme", "theme", "theme", false, true),
                 divider2: ButtonState::new("|", "|", "|", true, true),
-                time: ButtonState::new("time", "time", "time", self.time_mode, true),
-                words: ButtonState::new("words", "words", "words", self.word_mode, true),
-                quote: ButtonState::new("quote", "quote", "quote", self.quote, true),
+                time: ButtonState::new("time", "⌄ time", "⌄ time", self.time_mode, true),
+                words: ButtonState::new("words", "⌄ words", "⌄ words", self.word_mode, true),
+                quote: ButtonState::new("quote", "⌄ quote", "⌄ quote", self.quote, true),
                 practice: ButtonState::new("practice", "practice", "practice", self.practice_mode, true),
                 divider3: ButtonState::new("|", "|", "|", true, self.time_mode || self.word_mode),
                 time_15: ButtonState::new("15", "15", "15", self.test_time == 15.0, self.time_mode),
@@ -434,12 +453,18 @@ impl App {
                     if self.config {
                         match self.selected_config.as_str() {
                             "time" => {
+                                if self.menu_buttons_times.get("time").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
+                                    //open popup
+                                }
                                 self.time_mode = true;
                                 self.word_mode = false;
                                 self.quote = false;
                                 self.practice_mode = false;
                                 self.batch_size = 50;
                                 self.practice_mode = false;
+                                if let Some(time) = self.menu_buttons_times.get_mut("time") {
+                                    *time = Instant::now();
+                                }
                             }
                             "words" => {
                                 if !self.word_mode {
@@ -522,7 +547,7 @@ impl App {
                         self.tab_pressed = Instant::now() - Duration::from_secs(5);
                         self.correct_count = 0;
                         self.error_count = 0;
-                        self.config = false;
+                        //self.config = false;
                         self.save_config();
                     }
                 }
@@ -598,8 +623,8 @@ impl App {
                     if self.practice_menu && ch == 'q' {
                         self.practice_menu = false;
                         self.practice_mode = false;
-                        self.time_mode = true;
-                        self.selected_config = "time".into();
+                        //self.time_mode = true;
+                        //self.selected_config = "time".into();
                         return Ok(());
                     }
                     if self.is_correct[0] == 0 && ch == ' ' {

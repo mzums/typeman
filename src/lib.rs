@@ -36,6 +36,7 @@ pub mod language;
 pub mod leaderboard;
 pub mod practice;
 pub mod utils;
+pub mod time_selection;
 
 // Re-export types needed by modules
 #[derive(Parser)]

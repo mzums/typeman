@@ -32,6 +32,7 @@ fn render_instructions(
     }
     if !practice_menu && !leaderboard_open {
         lines.push(Line::from("  Tab + Enter - restart"));
+        lines.push(Line::from("  ⌄ - double Enter to view more options"));
         lines.push(Line::from("  Tab + L - local leaderboard"));
     }
     if !leaderboard_open {
@@ -53,10 +54,12 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration, button_states: 
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Min(0),
-            if app.game_state == GameState::Results {
+            if app.leaderboard_open {
+                Constraint::Length(1)
+            } else if app.game_state == GameState::Results {
                 Constraint::Length(2)
             } else {
-                Constraint::Length(3)
+                Constraint::Length(4)
             },
         ])
         .split(frame.area());
@@ -636,7 +639,7 @@ fn render_reference_frame(
     let max_ref_width = calculate_max_ref_width(area);
     let ref_padding = calculate_ref_padding(area, max_ref_width);
 
-    let instruction_line = create_config_line(app, color_scheme, &button_states);
+    let instruction_line = create_config_line(app, color_scheme, &button_states, area);
     let horizontal_line = create_horizontal_line(area, color_scheme);
     let time_words = if app.time_mode {
         create_timer(timer, app.test_time, color_scheme)
@@ -698,7 +701,7 @@ fn create_words_count(
         .alignment(Alignment::Left)
 }
 
-fn create_config_line(app: &App, color_scheme: ColorScheme, button_states: &ButtonStates) -> Line<'static> {
+fn create_config_line(app: &App, color_scheme: ColorScheme, button_states: &ButtonStates, area: Rect) -> Line<'static> {
     let bg_color = color_scheme.bg_color();
     let main_color = color_scheme.main_color();
     let ref_color = color_scheme.ref_color();
@@ -725,7 +728,11 @@ fn create_config_line(app: &App, color_scheme: ColorScheme, button_states: &Butt
                 fg_colors[i] = ref_color;
         }
         spans.push(Span::styled(
-            format!(" {} ", button_state.display_name),
+            if area.width < 120 {
+                format!(" {} ", button_state.short_name)
+            } else {
+                format!(" {} ", button_state.display_name)
+            },
             Style::default().fg(fg_colors[i]).bg(bg_colors[i]),
         ));
     }
