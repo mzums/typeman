@@ -10,6 +10,8 @@ use crate::practice::TYPING_LEVELS;
 use crate::ui::tui::app::{App, GameState};
 use ratatui::widgets::canvas::Canvas;
 use crate::button_states::ButtonStates;
+use crate::ui::tui::popup::*;
+
 
 fn render_instructions(
     frame: &mut Frame,
@@ -49,7 +51,7 @@ fn render_instructions(
     frame.render_widget(text, area);
 }
 
-pub fn render_app(frame: &mut Frame, app: &App, timer: Duration, button_states: &ButtonStates,) {
+pub fn render_app(frame: &mut Frame, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -71,7 +73,7 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration, button_states: 
     } else if app.practice_menu {
         render_practice_menu(frame, chunks[0], app, app.color_scheme);
     } else {
-        render_reference_frame(frame, chunks[0], app, timer, app.color_scheme, button_states);
+        render_reference_frame(frame, chunks[0], app, app.timer, app.color_scheme, &app.button_states);
     }
     render_instructions(
         frame,
@@ -83,13 +85,21 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration, button_states: 
     );
 
     // Render language popup if open
-    if app.language_popup_open {
-        render_language_popup(frame, app, frame.area(), app.color_scheme);
+    if app.popup_states.language.open {
+        render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::Language);
     }
 
     // Render theme popup if open
-    if app.theme_popup_open {
-        render_theme_popup(frame, app, frame.area(), app.color_scheme);
+    if app.popup_states.color_scheme.open {
+        render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::ColorScheme);
+    }
+
+    if app.popup_states.time_selection.open {
+        render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::TimeSelection);
+    }
+
+    if app.popup_states.word_number_selection.open {
+        render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::WordNumberSelection);
     }
 }
 
@@ -885,115 +895,6 @@ fn split_lines(text: &str, width: usize) -> Vec<String> {
             lines
         })
         .collect()
-}
-
-fn render_language_popup(frame: &mut Frame, app: &App, area: Rect, color_scheme: ColorScheme) {
-    let bg_color = color_scheme.bg_color();
-    let main_color = color_scheme.main_color();
-    let ref_color = color_scheme.ref_color();
-    let border_color = color_scheme.border_color();
-    // Create popup area (center of screen)
-    let popup_area = centered_rect(30, 30, area);
-
-    // Clear the area
-    frame.render_widget(ratatui::widgets::Clear, popup_area);
-
-    // Create popup content
-    let items: Vec<ListItem> = Language::all()
-        .iter()
-        .enumerate()
-        .map(|(i, lang)| {
-            let style = if i == app.language_popup_selected {
-                Style::default().fg(bg_color).bg(main_color)
-            } else {
-                Style::default().fg(ref_color)
-            };
-            ListItem::new(lang.to_string()).style(style)
-        })
-        .collect();
-
-    let list = List::new(items).block(
-        Block::default()
-            .title("Select Language")
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(border_color))
-            .style(Style::default().bg(bg_color)),
-    );
-
-    frame.render_widget(list, popup_area);
-}
-
-fn render_theme_popup(frame: &mut Frame, app: &App, area: Rect, color_scheme: ColorScheme) {
-    // Create popup area (center of screen)
-    let popup_area = centered_rect(40, 50, area);
-
-    // Clear the area
-    frame.render_widget(ratatui::widgets::Clear, popup_area);
-
-    // Create popup content
-    let themes = ColorScheme::all();
-    let items: Vec<ListItem> = themes
-        .iter()
-        .enumerate()
-        .map(|(i, theme)| {
-            let style = if i == app.theme_popup_selected {
-                Style::default()
-                    .bg(color_scheme.main_color())
-                    .fg(color_scheme.bg_color())
-            } else {
-                Style::default().fg(color_scheme.text_color())
-            };
-            ListItem::new(theme.name()).style(style)
-        })
-        .collect();
-
-    let list = List::new(items).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title("Select Theme")
-            .style(
-                Style::default()
-                    .bg(color_scheme.bg_color())
-                    .fg(color_scheme.border_color()),
-            ),
-    );
-
-    frame.render_widget(list, popup_area);
-}
-
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    // Ensure percentages don't exceed 100 and terminal is large enough
-    let safe_percent_x = percent_x.min(95);
-    let safe_percent_y = percent_y.min(95);
-
-    // Check minimum terminal size requirements
-    if r.width < 10 || r.height < 6 {
-        // Return a minimal area if terminal is too small
-        return Rect::new(
-            r.x + 1,
-            r.y + 1,
-            (r.width.saturating_sub(2)).max(1),
-            (r.height.saturating_sub(2)).max(1),
-        );
-    }
-
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage((100 - safe_percent_y) / 2),
-            Constraint::Percentage(safe_percent_y),
-            Constraint::Percentage((100 - safe_percent_y) / 2),
-        ])
-        .split(r);
-
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - safe_percent_x) / 2),
-            Constraint::Percentage(safe_percent_x),
-            Constraint::Percentage((100 - safe_percent_x) / 2),
-        ])
-        .split(popup_layout[1])[1]
 }
 
 fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorScheme) {

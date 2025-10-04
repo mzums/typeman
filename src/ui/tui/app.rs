@@ -1,5 +1,5 @@
 use std::io;
-use crossterm::event::{self, Event as CEvent, KeyEvent};
+use crossterm::event::{self, Event as CEvent, KeyEvent, KeyCode};
 use ratatui::DefaultTerminal;
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
@@ -11,6 +11,9 @@ use crate::language::Language;
 use crate::color_scheme::ColorScheme;
 use crate::config::AppConfig;
 use crate::button_states::{ButtonStates, ButtonState};
+use crate::ui::tui::popup::{PopupStates, PopupState, PopupContent};
+use crate::time_selection::TimeSelection;
+use crate::word_number_selection::WordNumberSelection;
 
 
 #[derive(PartialEq, Eq)]
@@ -50,16 +53,14 @@ pub struct App {
     pub selected_level: usize,
     pub timer: Duration,
     pub language: Language,
-    pub language_popup_open: bool,
-    pub language_popup_selected: usize,
     pub color_scheme: ColorScheme,
-    pub theme_popup_open: bool,
-    pub theme_popup_selected: usize,
     pub app_config: AppConfig,
     pub leaderboard_open: bool,
     pub leaderboard_entries: Vec<crate::leaderboard::LeaderboardEntry>,
     pub leaderboard_selected: usize,
     pub button_states: ButtonStates,
+    pub popup_states: PopupStates,
+    pub popup_content: Option<PopupContent>,
     pub menu_buttons_times: HashMap<String, Instant>,
 }
 
@@ -101,16 +102,19 @@ impl App {
             selected_level: app_config.selected_level,
             timer: Duration::from_secs(0),
             language: app_config.language,
-            language_popup_open: false,
-            language_popup_selected: 0,
             color_scheme: app_config.color_scheme,
-            theme_popup_open: false,
-            theme_popup_selected: 0,
             app_config,
             leaderboard_open: false,
             leaderboard_entries: crate::leaderboard::load_entries().unwrap_or_default(),
             leaderboard_selected: 0,
             button_states: ButtonStates::new(),
+            popup_states: PopupStates {
+                language: PopupState { open: false, selected: 0 },
+                color_scheme: PopupState { open: false, selected: 0 },
+                time_selection: PopupState { open: false, selected: 0 },
+                word_number_selection: PopupState { open: false, selected: 0 },
+            },
+            popup_content: None,
             menu_buttons_times: HashMap::from([
                 ("time".to_string(), Instant::now() - Duration::from_secs(5)),
                 ("words".to_string(), Instant::now() - Duration::from_secs(5)),
@@ -240,7 +244,7 @@ impl App {
                 self.errors_this_second = 0.0;
                 last_recorded_time += Duration::from_secs(1);
             }
-            terminal.draw(|frame| render_app(frame, self, self.timer, &self.button_states))?;
+            terminal.draw(|frame| render_app(frame, self))?;
         }
         Ok(())
     }
@@ -250,37 +254,137 @@ impl App {
         key_event: KeyEvent,
         reference: String,
     ) -> io::Result<()> {
-        use crossterm::event::KeyCode;
-
         let reference_chars: Vec<char> = reference.chars().collect();
 
         if key_event.kind == crossterm::event::KeyEventKind::Press {
-            // Handle theme popup first if it's open
-            if self.theme_popup_open {
+            if self.popup_states.color_scheme.open {
                 match key_event.code {
                     KeyCode::Esc => {
-                        self.theme_popup_open = false;
+                        self.popup_states.color_scheme.open = false;
                         return Ok(());
                     }
                     KeyCode::Up => {
-                        if self.theme_popup_selected > 0 {
-                            self.theme_popup_selected -= 1;
+                        if self.popup_states.color_scheme.selected > 0 {
+                            self.popup_states.color_scheme.selected -= 1;
                         }
                         return Ok(());
                     }
                     KeyCode::Down => {
                         let schemes = ColorScheme::all();
-                        if self.theme_popup_selected < schemes.len() - 1 {
-                            self.theme_popup_selected += 1;
+                        if self.popup_states.color_scheme.selected < schemes.len() - 1 {
+                            self.popup_states.color_scheme.selected += 1;
                         }
                         return Ok(());
                     }
                     KeyCode::Enter => {
                         let schemes = ColorScheme::all();
-                        if self.theme_popup_selected < schemes.len() {
-                            self.color_scheme = schemes[self.theme_popup_selected];
+                        if self.popup_states.color_scheme.selected < schemes.len() {
+                            self.color_scheme = schemes[self.popup_states.color_scheme.selected];
                         }
-                        self.theme_popup_open = false;
+                        self.popup_states.color_scheme.open = false;
+                        self.save_config();
+                        return Ok(());
+                    }
+                    _ => return Ok(()),
+                }
+            }
+
+            if self.popup_states.time_selection.open {
+                match key_event.code {
+                    KeyCode::Esc => {
+                        self.popup_states.time_selection.open = false;
+                        return Ok(());
+                    }
+                    KeyCode::Up => {
+                        if self.popup_states.time_selection.selected > 0 {
+                            self.popup_states.time_selection.selected -= 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Down => {
+                        let schemes = TimeSelection::all();
+                        if self.popup_states.time_selection.selected < schemes.len() - 1 {
+                            self.popup_states.time_selection.selected += 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Enter => {
+                        let schemes = TimeSelection::all();
+                        if self.popup_states.time_selection.selected < schemes.len() {
+                            self.test_time = schemes[self.popup_states.time_selection.selected].to_seconds() as f32;
+                        }
+                        self.popup_states.time_selection.open = false;
+                        self.save_config();
+                        return Ok(());
+                    }
+                    _ => return Ok(()),
+                }
+            }
+
+            if self.popup_states.language.open {
+                match key_event.code {
+                    KeyCode::Esc => {
+                        self.popup_states.language.open = false;
+                        return Ok(());
+                    }
+                    KeyCode::Up => {
+                        if self.popup_states.language.selected > 0 {
+                            self.popup_states.language.selected -= 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Down => {
+                        if self.popup_states.language.selected < Language::count() - 1 {
+                            self.popup_states.language.selected += 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Enter => {
+                        self.language = match self.popup_states.language.selected {
+                            0 => Language::English,
+                            1 => Language::Indonesian,
+                            2 => Language::Italian,
+                            _ => Language::English,
+                        };
+                        self.popup_states.language.open = false;
+                        if self.word_mode || self.time_mode {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                            self.is_correct = vec![0; self.reference.chars().count()];
+                            self.pressed_vec.clear();
+                            self.pos1 = 0;
+                            self.words_done = 0;
+                        }
+                        self.save_config();
+                        return Ok(());
+                    }
+                    _ => return Ok(()),
+                }
+            }
+
+            if self.popup_states.word_number_selection.open {
+                match key_event.code {
+                    KeyCode::Esc => {
+                        self.popup_states.word_number_selection.open = false;
+                        return Ok(());
+                    }
+                    KeyCode::Up => {
+                        if self.popup_states.word_number_selection.selected > 0 {
+                            self.popup_states.word_number_selection.selected -= 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Down => {
+                        if self.popup_states.word_number_selection.selected < WordNumberSelection::count() - 1 {
+                            self.popup_states.word_number_selection.selected += 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Enter => {
+                        let schemes = WordNumberSelection::all();
+                        if self.popup_states.word_number_selection.selected < schemes.len() {
+                            self.batch_size = schemes[self.popup_states.word_number_selection.selected].to_words() as usize;
+                        }
+                        self.popup_states.word_number_selection.open = false;
                         self.save_config();
                         return Ok(());
                     }
@@ -316,48 +420,6 @@ impl App {
                             self.leaderboard_open = false;
                             self.tab_pressed = Instant::now() - Duration::from_secs(5);
                         }
-                        return Ok(());
-                    }
-                    _ => return Ok(()),
-                }
-            }
-
-            // Handle language popup if it's open
-            if self.language_popup_open {
-                match key_event.code {
-                    KeyCode::Esc => {
-                        self.language_popup_open = false;
-                        return Ok(());
-                    }
-                    KeyCode::Up => {
-                        if self.language_popup_selected > 0 {
-                            self.language_popup_selected -= 1;
-                        }
-                        return Ok(());
-                    }
-                    KeyCode::Down => {
-                        if self.language_popup_selected < Language::count() - 1 { 
-                            self.language_popup_selected += 1;
-                        }
-                        return Ok(());
-                    }
-                    KeyCode::Enter => {
-                        self.language = match self.language_popup_selected {
-                            0 => Language::English,
-                            1 => Language::Indonesian,
-                            2 => Language::Italian,
-                            _ => Language::English,
-                        };
-                        self.language_popup_open = false;
-                        // Update reference text with new language
-                        if self.word_mode || self.time_mode {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
-                            self.is_correct = vec![0; self.reference.chars().count()];
-                            self.pressed_vec.clear();
-                            self.pos1 = 0;
-                            self.words_done = 0;
-                        }
-                        self.save_config();
                         return Ok(());
                     }
                     _ => return Ok(()),
@@ -454,7 +516,7 @@ impl App {
                         match self.selected_config.as_str() {
                             "time" => {
                                 if self.menu_buttons_times.get("time").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
-                                    //open popup
+                                    self.popup_states.time_selection.open = true;
                                 }
                                 self.time_mode = true;
                                 self.word_mode = false;
@@ -467,6 +529,9 @@ impl App {
                                 }
                             }
                             "words" => {
+                                if self.menu_buttons_times.get("words").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
+                                    self.popup_states.word_number_selection.open = true;
+                                }
                                 if !self.word_mode {
                                     self.batch_size = 50;
                                 }
@@ -474,6 +539,9 @@ impl App {
                                 self.word_mode = true;
                                 self.quote = false;
                                 self.practice_mode = false;
+                                 if let Some(time) = self.menu_buttons_times.get_mut("words") {
+                                    *time = Instant::now();
+                                }
                             }
                             "quote" => {
                                 self.quote = true;
@@ -492,17 +560,17 @@ impl App {
                                 self.numbers = !self.numbers;
                             }
                             "language" => {
-                                self.language_popup_open = true;
-                                self.language_popup_selected = match self.language {
+                                self.popup_states.language.open = true;
+                                self.popup_states.language.selected = match self.language {
                                     Language::English => 0,
                                     Language::Indonesian => 1,
                                     Language::Italian=> 2,
                                 };
                             }
                             "theme" => {
-                                self.theme_popup_open = true;
+                                self.popup_states.color_scheme.open = true;
                                 let schemes = ColorScheme::all();
-                                self.theme_popup_selected = schemes.iter().position(|&s| s == self.color_scheme).unwrap_or(0);
+                                self.popup_states.color_scheme.selected = schemes.iter().position(|&s| s == self.color_scheme).unwrap_or(0);
                             }
                             "15" => {
                                 self.test_time = 15.0;

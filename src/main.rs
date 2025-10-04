@@ -28,6 +28,7 @@ pub mod ui {
         pub mod app;
         pub mod r#mod;
         pub mod ui;
+        pub mod popup;
     }
 }
 
@@ -40,6 +41,7 @@ pub mod leaderboard;
 pub mod practice;
 pub mod utils;
 pub mod time_selection;
+pub mod word_number_selection;
 
 #[cfg(feature = "cli")]
 use crate::ui::cli::modes;
