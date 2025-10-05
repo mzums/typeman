@@ -3,6 +3,7 @@ use crossterm::event::{self, Event as CEvent, KeyEvent, KeyCode};
 use ratatui::DefaultTerminal;
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
+use chrono;
 
 use crate::ui::tui::ui::render_app;
 use crate::{practice, utils};
@@ -208,7 +209,8 @@ impl App {
                 self.speed_per_second.push(cpm);
                 self.game_state = GameState::Results;
 
-                let wpm = (self.words_done as f32 / self.timer.as_secs_f32()) * 60.0;
+                let (correct_words, _, _) = utils::count_correct_words(&self.reference, &std::collections::VecDeque::from(self.is_correct.clone()));
+                let wpm = (correct_words as f32 / self.timer.as_secs_f32()) * 60.0;
 
                 let accuracy = if self.words_done > 0 {
                     (self.correct_count as f32 / self.pressed_vec.len() as f32) * 100.0
@@ -744,7 +746,7 @@ impl App {
                         }
                         
                         // Only generate new reference if we haven't reached target word count yet
-                        if self.words_done < self.batch_size && (self.word_mode || self.quote) {
+                        if self.time_mode {
                             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
                             self.is_correct = vec![0; self.reference.chars().count()];
                             self.pos1 = 0;
@@ -781,11 +783,9 @@ impl App {
             let total_chars = self.pressed_vec.len();
             
             // Calculate WPM (words per minute) - using original formula: words_done / time
-            let wpm = if elapsed > 0.0 {
-                (self.words_done as f64 / elapsed) * 60.0
-            } else {
-                0.0
-            };
+
+            let (correct_words, _, _) = utils::count_correct_words(&self.reference, &std::collections::VecDeque::from(self.is_correct.clone()));
+            let wpm = (correct_words as f32 / self.timer.as_secs_f32()) * 60.0;
             
             // Calculate accuracy
             let correct_chars = self.correct_count;
@@ -810,7 +810,7 @@ impl App {
             
             // Create leaderboard entry
             let entry = crate::leaderboard::LeaderboardEntry {
-                wpm,
+                wpm: wpm as f64,
                 accuracy,
                 test_type,
                 test_mode: if self.practice_mode { "practice".to_string() }
