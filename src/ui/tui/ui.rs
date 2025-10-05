@@ -1,4 +1,5 @@
 use ratatui::{Frame, prelude::*, widgets::*};
+use ratatui::widgets::canvas::Canvas;
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -8,8 +9,8 @@ use crate::language::Language;
 use crate::practice;
 use crate::practice::TYPING_LEVELS;
 use crate::ui::tui::app::{App, GameState};
-use ratatui::widgets::canvas::Canvas;
 use crate::button_states::ButtonStates;
+use crate::utils;
 
 fn render_instructions(
     frame: &mut Frame,
@@ -237,7 +238,8 @@ fn get_stats(app: &App, color_scheme: ColorScheme) -> (Line<'static>, Line<'stat
     let bg_color = color_scheme.bg_color();
     let main_color = color_scheme.main_color();
     let ref_color = color_scheme.ref_color();
-    let wpm = (app.words_done as f32 / app.timer.as_secs_f32()) * 60.0;
+    let (correct_words, _, _) = utils::count_correct_words(&app.reference, &std::collections::VecDeque::from(app.is_correct.clone()));
+    let wpm = (correct_words as f32 / app.timer.as_secs_f32()) * 60.0;
     let wpm_str = format!("{}", wpm as i32);
 
     let accuracy = if app.words_done > 0 {
