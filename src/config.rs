@@ -17,6 +17,7 @@ pub struct AppConfig {
     pub selected_level: usize,
     pub language: Language,
     pub color_scheme: ColorScheme,
+    pub word_number: usize,
 }
 
 impl Default for AppConfig {
@@ -33,6 +34,7 @@ impl Default for AppConfig {
             selected_level: 0,
             language: Language::default(),
             color_scheme: ColorScheme::default(),
+            word_number: 50,
         }
     }
 }

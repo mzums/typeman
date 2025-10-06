@@ -656,7 +656,16 @@ fn render_reference_frame(
     let time_words = if app.time_mode {
         create_timer(timer, app.test_time, color_scheme)
     } else {
-        create_words_count(app.batch_size, app.words_done, color_scheme)
+        let all_words = if app.word_mode {
+            app.word_number
+        } else if app.quote {
+            app.reference.split_whitespace().count()
+        } else if app.practice_mode {
+            50
+        } else {
+            app.batch_size
+        };
+        create_words_count(all_words, app.words_done, color_scheme)
     };
     let colored_lines = create_colored_lines(app, max_ref_width, color_scheme);
     let empty_space = calculate_vertical_padding(area, colored_lines.len());

@@ -63,6 +63,7 @@ pub struct App {
     pub popup_states: PopupStates,
     pub popup_content: Option<PopupContent>,
     pub menu_buttons_times: HashMap<String, Instant>,
+    pub word_number: usize,
 }
 
 impl App {
@@ -86,7 +87,7 @@ impl App {
             time_mode: app_config.time_mode,
             word_mode: app_config.word_mode,
             quote: app_config.quote,
-            batch_size: app_config.batch_size,
+            batch_size: 25,
             selected_config: if app_config.time_mode { "time".into() }
                 else if app_config.word_mode { "words".into() }
                 else if app_config.quote { "quote".into() }
@@ -125,14 +126,8 @@ impl App {
                 ("numbers".to_string(), Instant::now() - Duration::from_secs(5)),
                 ("language".to_string(), Instant::now() - Duration::from_secs(5)),
                 ("theme".to_string(), Instant::now() - Duration::from_secs(5)),
-                ("15".to_string(), Instant::now() - Duration::from_secs(5)),
-                ("30".to_string(), Instant::now() - Duration::from_secs(5)),
-                ("60".to_string(), Instant::now() - Duration::from_secs(5)),
-                ("120".to_string(), Instant::now() - Duration::from_secs(5)),
-                ("25".to_string(), Instant::now() - Duration::from_secs(5)),
-                ("50".to_string(), Instant::now() - Duration::from_secs(5)),
-                ("100".to_string(), Instant::now() - Duration::from_secs(5)),
             ]),
+            word_number: 50,
         }
     }
 
@@ -162,14 +157,6 @@ impl App {
                 words: ButtonState::new("words", "⌄ words", "⌄ words", self.word_mode, true),
                 quote: ButtonState::new("quote", "⌄ quote", "⌄ quote", self.quote, true),
                 practice: ButtonState::new("practice", "practice", "practice", self.practice_mode, true),
-                divider3: ButtonState::new("|", "|", "|", true, self.time_mode || self.word_mode),
-                time_15: ButtonState::new("15", "15", "15", self.test_time == 15.0, self.time_mode),
-                time_30: ButtonState::new("30", "30", "30", self.test_time == 30.0, self.time_mode),
-                time_60: ButtonState::new("60", "60", "60", self.test_time == 60.0, self.time_mode),
-                time_120: ButtonState::new("120", "120", "120", self.test_time == 120.0, self.time_mode),
-                batch_25: ButtonState::new("25", "25", "25", self.batch_size == 25, self.word_mode),
-                batch_50: ButtonState::new("50", "50", "50", self.batch_size == 50, self.word_mode),
-                batch_100: ButtonState::new("100", "100", "100", self.batch_size == 100, self.word_mode),
             };
 
             if self.game_state != GameState::Started {
@@ -193,13 +180,14 @@ impl App {
                 Duration::from_secs(0)
             };
 
-            if (self.test_time - self.timer.as_secs_f32() < 0.0 
+            if  self.game_state != GameState::Results && ((self.test_time - self.timer.as_secs_f32() < 0.0 
                 && self.game_state == GameState::Started 
-                && self.time_mode) 
-                || (self.words_done >= self.batch_size 
-                    && (self.word_mode || self.quote) 
+                && self.time_mode)
+                || (self.words_done >= self.word_number && self.word_mode)
+                || (self.words_done >= self.word_number 
+                    && self.quote
                     && self.game_state != GameState::Results)
-                || ((self.words_done >= 50 || self.pos1 >= self.reference.chars().count()) && self.practice_mode && self.game_state != GameState::Results)
+                || ((self.words_done >= 50 || self.pos1 >= self.reference.chars().count()) && self.practice_mode && self.game_state != GameState::Results))
 
             {
                 self.errors_per_second.push(self.errors_this_second);
@@ -350,7 +338,7 @@ impl App {
                         };
                         self.popup_states.language.open = false;
                         if self.word_mode || self.time_mode {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
                             self.is_correct = vec![0; self.reference.chars().count()];
                             self.pressed_vec.clear();
                             self.pos1 = 0;
@@ -384,7 +372,7 @@ impl App {
                     KeyCode::Enter => {
                         let schemes = WordNumberSelection::all();
                         if self.popup_states.word_number_selection.selected < schemes.len() {
-                            self.batch_size = schemes[self.popup_states.word_number_selection.selected].to_words() as usize;
+                            self.word_number = schemes[self.popup_states.word_number_selection.selected].to_words() as usize;
                         }
                         self.popup_states.word_number_selection.open = false;
                         self.save_config();
@@ -473,7 +461,7 @@ impl App {
                             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
                         } else if self.quote {
                             self.reference = utils::get_random_quote();
-                            self.batch_size = self.reference.split_whitespace().count();
+                            //self.word_number = self.reference.split_whitespace().count();
                         } else if self.practice_mode {
                             self.reference = practice::create_words(TYPING_LEVELS[self.selected_level].1, 50);
                         }
@@ -497,7 +485,7 @@ impl App {
                         self.time_mode = false;
                         self.word_mode = false;
                         self.quote = false;
-                        self.batch_size = 50;
+                        //self.batch_size = 50;
                         self.pressed_vec.clear();
                         self.pos1 = 0;
                         self.words_done = 0;
@@ -524,7 +512,7 @@ impl App {
                                 self.word_mode = false;
                                 self.quote = false;
                                 self.practice_mode = false;
-                                self.batch_size = 50;
+                                //self.batch_size = 50;
                                 self.practice_mode = false;
                                 if let Some(time) = self.menu_buttons_times.get_mut("time") {
                                     *time = Instant::now();
@@ -534,9 +522,9 @@ impl App {
                                 if self.menu_buttons_times.get("words").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
                                     self.popup_states.word_number_selection.open = true;
                                 }
-                                if !self.word_mode {
+                                /*if !self.word_mode {
                                     self.batch_size = 50;
-                                }
+                                }*/
                                 self.time_mode = false;
                                 self.word_mode = true;
                                 self.quote = false;
@@ -587,19 +575,19 @@ impl App {
                                 self.test_time = 120.0;
                             }
                             "25" => {
-                                self.batch_size = 25;
+                                self.word_number = 25;
                             }
                             "50" => {
-                                self.batch_size = 50;
+                                self.word_number = 50;
                             }
                             "100" => {
-                                self.batch_size = 100;
+                                self.word_number = 100;
                             }
                             _ => {}
                         }
                         if self.selected_config == "quote" {
                             self.reference = utils::get_random_quote();
-                            self.batch_size = self.reference.split_whitespace().count();
+                            //self.word_number = self.reference.split_whitespace().count();
                         }
                         else {
                             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
@@ -746,7 +734,7 @@ impl App {
                         }
                         
                         // Only generate new reference if we haven't reached target word count yet
-                        if self.time_mode {
+                        if self.time_mode || self.word_mode {
                             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
                             self.is_correct = vec![0; self.reference.chars().count()];
                             self.pos1 = 0;
@@ -772,6 +760,7 @@ impl App {
             selected_level: self.selected_level,
             language: self.language,
             color_scheme: self.color_scheme,
+            word_number: self.word_number,
         };
         
         let _ = self.app_config.save();
@@ -801,7 +790,7 @@ impl App {
             } else if self.time_mode {
                 crate::leaderboard::TestType::Time(self.test_time as u32)
             } else if self.word_mode {
-                crate::leaderboard::TestType::Word(self.batch_size)
+                crate::leaderboard::TestType::Word(self.word_number)
             } else if self.quote {
                 crate::leaderboard::TestType::Quote
             } else {
