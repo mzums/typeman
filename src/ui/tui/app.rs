@@ -1,7 +1,8 @@
 use std::io;
-use crossterm::event::{self, Event as CEvent, KeyEvent};
+use crossterm::event::{self, Event as CEvent, KeyEvent, KeyCode};
 use ratatui::DefaultTerminal;
 use std::time::{Duration, Instant};
+use std::collections::HashMap;
 use chrono;
 
 use crate::ui::tui::ui::render_app;
@@ -11,6 +12,9 @@ use crate::language::Language;
 use crate::color_scheme::ColorScheme;
 use crate::config::AppConfig;
 use crate::button_states::{ButtonStates, ButtonState};
+use crate::ui::tui::popup::{PopupStates, PopupState, PopupContent};
+use crate::time_selection::TimeSelection;
+use crate::word_number_selection::WordNumberSelection;
 
 
 #[derive(PartialEq, Eq)]
@@ -50,16 +54,16 @@ pub struct App {
     pub selected_level: usize,
     pub timer: Duration,
     pub language: Language,
-    pub language_popup_open: bool,
-    pub language_popup_selected: usize,
     pub color_scheme: ColorScheme,
-    pub theme_popup_open: bool,
-    pub theme_popup_selected: usize,
+    pub word_number: usize,
     pub app_config: AppConfig,
     pub leaderboard_open: bool,
     pub leaderboard_entries: Vec<crate::leaderboard::LeaderboardEntry>,
     pub leaderboard_selected: usize,
     pub button_states: ButtonStates,
+    pub popup_states: PopupStates,
+    pub popup_content: Option<PopupContent>,
+    pub menu_buttons_times: HashMap<String, Instant>,
 }
 
 impl App {
@@ -83,7 +87,7 @@ impl App {
             time_mode: app_config.time_mode,
             word_mode: app_config.word_mode,
             quote: app_config.quote,
-            batch_size: app_config.batch_size,
+            batch_size: 50,
             selected_config: if app_config.time_mode { "time".into() }
                 else if app_config.word_mode { "words".into() }
                 else if app_config.quote { "quote".into() }
@@ -100,16 +104,30 @@ impl App {
             selected_level: app_config.selected_level,
             timer: Duration::from_secs(0),
             language: app_config.language,
-            language_popup_open: false,
-            language_popup_selected: 0,
             color_scheme: app_config.color_scheme,
-            theme_popup_open: false,
-            theme_popup_selected: 0,
+            word_number: app_config.word_number,
             app_config,
             leaderboard_open: false,
             leaderboard_entries: crate::leaderboard::load_entries().unwrap_or_default(),
             leaderboard_selected: 0,
             button_states: ButtonStates::new(),
+            popup_states: PopupStates {
+                language: PopupState { open: false, selected: 0 },
+                color_scheme: PopupState { open: false, selected: 0 },
+                time_selection: PopupState { open: false, selected: 0 },
+                word_number_selection: PopupState { open: false, selected: 0 },
+            },
+            popup_content: None,
+            menu_buttons_times: HashMap::from([
+                ("time".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("words".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("quote".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("practice".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("punctuation".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("numbers".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("language".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("theme".to_string(), Instant::now() - Duration::from_secs(5)),
+            ]),
         }
     }
 
@@ -120,8 +138,10 @@ impl App {
         } else if self.practice_mode {
             let level = practice::get_first_not_done();
             self.reference = practice::create_words(TYPING_LEVELS[level].1, 50);
-        } else {
+        } else if self.time_mode {
             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+        } else {
+            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
         }
    
         self.is_correct = vec![0; self.reference.chars().count()];
@@ -129,24 +149,16 @@ impl App {
         
         while !self.exit {
             self.button_states = ButtonStates {
-                punctuation: ButtonState::new("punctuation", "punctuation", "punct", self.punctuation, !self.quote && !self.practice_mode),
-                numbers: ButtonState::new("numbers", "numbers", "num", self.numbers, !self.quote && !self.practice_mode),
+                punctuation: ButtonState::new("punctuation", "! punctuation", "! punct", self.punctuation, !self.quote && !self.practice_mode),
+                numbers: ButtonState::new("numbers", "# numbers", "# num", self.numbers, !self.quote && !self.practice_mode),
                 divider1: ButtonState::new("|", "|", "|", true, self.time_mode || self.word_mode),
                 language: ButtonState::new("language", "language", "lang", false, !self.quote && !self.practice_mode),
                 theme: ButtonState::new("theme", "theme", "theme", false, true),
                 divider2: ButtonState::new("|", "|", "|", true, true),
-                time: ButtonState::new("time", "time", "time", self.time_mode, true),
-                words: ButtonState::new("words", "words", "words", self.word_mode, true),
+                time: ButtonState::new("time", "⌄ time", "⌄ time", self.time_mode, true),
+                words: ButtonState::new("words", "⌄ words", "⌄ words", self.word_mode, true),
                 quote: ButtonState::new("quote", "quote", "quote", self.quote, true),
                 practice: ButtonState::new("practice", "practice", "practice", self.practice_mode, true),
-                divider3: ButtonState::new("|", "|", "|", true, self.time_mode || self.word_mode),
-                time_15: ButtonState::new("15", "15", "15", self.test_time == 15.0, self.time_mode),
-                time_30: ButtonState::new("30", "30", "30", self.test_time == 30.0, self.time_mode),
-                time_60: ButtonState::new("60", "60", "60", self.test_time == 60.0, self.time_mode),
-                time_120: ButtonState::new("120", "120", "120", self.test_time == 120.0, self.time_mode),
-                batch_25: ButtonState::new("25", "25", "25", self.batch_size == 25, self.word_mode),
-                batch_50: ButtonState::new("50", "50", "50", self.batch_size == 50, self.word_mode),
-                batch_100: ButtonState::new("100", "100", "100", self.batch_size == 100, self.word_mode),
             };
 
             if self.game_state != GameState::Started {
@@ -170,13 +182,14 @@ impl App {
                 Duration::from_secs(0)
             };
 
-            if (self.test_time - self.timer.as_secs_f32() < 0.0 
+            if  self.game_state != GameState::Results && ((self.test_time - self.timer.as_secs_f32() < 0.0 
                 && self.game_state == GameState::Started 
-                && self.time_mode) 
-                || (self.words_done >= self.batch_size 
-                    && (self.word_mode || self.quote) 
+                && self.time_mode)
+                || (self.words_done >= self.word_number && self.word_mode)
+                || (self.words_done >= self.word_number 
+                    && self.quote
                     && self.game_state != GameState::Results)
-                || ((self.words_done >= 50 || self.pos1 >= self.reference.chars().count()) && self.practice_mode && self.game_state != GameState::Results)
+                || ((self.words_done >= 50 || self.pos1 >= self.reference.chars().count()) && self.practice_mode && self.game_state != GameState::Results))
 
             {
                 self.errors_per_second.push(self.errors_this_second);
@@ -223,7 +236,7 @@ impl App {
                 self.errors_this_second = 0.0;
                 last_recorded_time += Duration::from_secs(1);
             }
-            terminal.draw(|frame| render_app(frame, self, self.timer, &self.button_states))?;
+            terminal.draw(|frame| render_app(frame, self))?;
         }
         Ok(())
     }
@@ -233,37 +246,149 @@ impl App {
         key_event: KeyEvent,
         reference: String,
     ) -> io::Result<()> {
-        use crossterm::event::KeyCode;
-
         let reference_chars: Vec<char> = reference.chars().collect();
 
         if key_event.kind == crossterm::event::KeyEventKind::Press {
-            // Handle theme popup first if it's open
-            if self.theme_popup_open {
+            let schemes = ColorScheme::all();
+            if self.popup_states.color_scheme.open {
                 match key_event.code {
                     KeyCode::Esc => {
-                        self.theme_popup_open = false;
+                        self.popup_states.color_scheme.open = false;
                         return Ok(());
                     }
                     KeyCode::Up => {
-                        if self.theme_popup_selected > 0 {
-                            self.theme_popup_selected -= 1;
+                        if self.popup_states.color_scheme.selected > 0 {
+                            self.popup_states.color_scheme.selected -= 1;
                         }
                         return Ok(());
                     }
                     KeyCode::Down => {
-                        let schemes = ColorScheme::all();
-                        if self.theme_popup_selected < schemes.len() - 1 {
-                            self.theme_popup_selected += 1;
+                        if self.popup_states.color_scheme.selected < schemes.len() - 1 {
+                            self.popup_states.color_scheme.selected += 1;
                         }
                         return Ok(());
                     }
                     KeyCode::Enter => {
-                        let schemes = ColorScheme::all();
-                        if self.theme_popup_selected < schemes.len() {
-                            self.color_scheme = schemes[self.theme_popup_selected];
+                        if self.popup_states.color_scheme.selected < schemes.len() {
+                            self.color_scheme = schemes[self.popup_states.color_scheme.selected];
                         }
-                        self.theme_popup_open = false;
+                        self.popup_states.color_scheme.open = false;
+                        self.save_config();
+                        return Ok(());
+                    }
+                    _ => return Ok(()),
+                }
+            }
+
+            if self.popup_states.time_selection.open {
+                let schemes = TimeSelection::all();
+                match key_event.code {
+                    KeyCode::Esc => {
+                        self.popup_states.time_selection.open = false;
+                        return Ok(());
+                    }
+                    KeyCode::Up => {
+                        if self.popup_states.time_selection.selected > 0 {
+                            self.popup_states.time_selection.selected -= 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Down => {
+                        if self.popup_states.time_selection.selected < schemes.len() - 1 {
+                            self.popup_states.time_selection.selected += 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Enter => {
+                        if self.popup_states.time_selection.selected < schemes.len() {
+                            self.test_time = schemes[self.popup_states.time_selection.selected].to_seconds() as f32;
+                        }
+                        self.popup_states.time_selection.open = false;
+                        self.save_config();
+                        return Ok(());
+                    }
+                    _ => return Ok(()),
+                }
+            }
+
+            if self.popup_states.language.open {
+                let schemes = Language::all();
+                match key_event.code {
+                    KeyCode::Esc => {
+                        self.popup_states.language.open = false;
+                        return Ok(());
+                    }
+                    KeyCode::Up => {
+                        if self.popup_states.language.selected > 0 {
+                            self.popup_states.language.selected -= 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Down => {
+                        if self.popup_states.language.selected < schemes.len() - 1 {
+                            self.popup_states.language.selected += 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Enter => {
+                        self.language = match self.popup_states.language.selected {
+                            0 => Language::English,
+                            1 => Language::Indonesian,
+                            2 => Language::Italian,
+                            _ => Language::English,
+                        };
+                        self.popup_states.language.open = false;
+                        if self.word_mode || self.time_mode {
+                            if self.time_mode {
+                                self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                            } else if self.word_mode {
+                                self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+                            }
+                            self.is_correct = vec![0; self.reference.chars().count()];
+                            self.pressed_vec.clear();
+                            self.pos1 = 0;
+                            self.words_done = 0;
+                        }
+                        self.save_config();
+                        return Ok(());
+                    }
+                    _ => return Ok(()),
+                }
+            }
+
+            if self.popup_states.word_number_selection.open {
+                let schemes = WordNumberSelection::all();
+                match key_event.code {
+                    KeyCode::Esc => {
+                        self.popup_states.word_number_selection.open = false;
+                        return Ok(());
+                    }
+                    KeyCode::Up => {
+                        if self.popup_states.word_number_selection.selected > 0 {
+                            self.popup_states.word_number_selection.selected -= 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Down => {
+                        if self.popup_states.word_number_selection.selected < WordNumberSelection::count() - 1 {
+                            self.popup_states.word_number_selection.selected += 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Enter => {
+                        if self.popup_states.word_number_selection.selected < schemes.len() {
+                            self.word_number = schemes[self.popup_states.word_number_selection.selected].to_words() as usize;
+                        }
+                        if self.time_mode {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                        } else if self.word_mode {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+                        }
+                        self.is_correct = vec![0; self.reference.chars().count()];
+                        self.pressed_vec.clear();
+                        self.pos1 = 0;
+                        self.words_done = 0;
+                        self.popup_states.word_number_selection.open = false;
                         self.save_config();
                         return Ok(());
                     }
@@ -299,48 +424,6 @@ impl App {
                             self.leaderboard_open = false;
                             self.tab_pressed = Instant::now() - Duration::from_secs(5);
                         }
-                        return Ok(());
-                    }
-                    _ => return Ok(()),
-                }
-            }
-
-            // Handle language popup if it's open
-            if self.language_popup_open {
-                match key_event.code {
-                    KeyCode::Esc => {
-                        self.language_popup_open = false;
-                        return Ok(());
-                    }
-                    KeyCode::Up => {
-                        if self.language_popup_selected > 0 {
-                            self.language_popup_selected -= 1;
-                        }
-                        return Ok(());
-                    }
-                    KeyCode::Down => {
-                        if self.language_popup_selected < Language::count() - 1 { 
-                            self.language_popup_selected += 1;
-                        }
-                        return Ok(());
-                    }
-                    KeyCode::Enter => {
-                        self.language = match self.language_popup_selected {
-                            0 => Language::English,
-                            1 => Language::Indonesian,
-                            2 => Language::Italian,
-                            _ => Language::English,
-                        };
-                        self.language_popup_open = false;
-                        // Update reference text with new language
-                        if self.word_mode || self.time_mode {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
-                            self.is_correct = vec![0; self.reference.chars().count()];
-                            self.pressed_vec.clear();
-                            self.pos1 = 0;
-                            self.words_done = 0;
-                        }
-                        self.save_config();
                         return Ok(());
                     }
                     _ => return Ok(()),
@@ -388,11 +471,13 @@ impl App {
                 },
                 KeyCode::Enter => {
                     if self.tab_pressed.elapsed() < Duration::from_secs(1) {
-                        if self.word_mode || self.time_mode {
+                        if self.word_mode {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+                        } else if self.time_mode {
                             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
                         } else if self.quote {
                             self.reference = utils::get_random_quote();
-                            self.batch_size = self.reference.split_whitespace().count();
+                            //self.word_number = self.reference.split_whitespace().count();
                         } else if self.practice_mode {
                             self.reference = practice::create_words(TYPING_LEVELS[self.selected_level].1, 50);
                         }
@@ -416,7 +501,7 @@ impl App {
                         self.time_mode = false;
                         self.word_mode = false;
                         self.quote = false;
-                        self.batch_size = 50;
+                        //self.batch_size = 50;
                         self.pressed_vec.clear();
                         self.pos1 = 0;
                         self.words_done = 0;
@@ -436,21 +521,33 @@ impl App {
                     if self.config {
                         match self.selected_config.as_str() {
                             "time" => {
+                                if self.menu_buttons_times.get("time").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
+                                    self.popup_states.time_selection.open = true;
+                                }
                                 self.time_mode = true;
                                 self.word_mode = false;
                                 self.quote = false;
                                 self.practice_mode = false;
-                                self.batch_size = 50;
+                                //self.batch_size = 50;
                                 self.practice_mode = false;
+                                if let Some(time) = self.menu_buttons_times.get_mut("time") {
+                                    *time = Instant::now();
+                                }
                             }
                             "words" => {
-                                if !self.word_mode {
-                                    self.batch_size = 50;
+                                if self.menu_buttons_times.get("words").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
+                                    self.popup_states.word_number_selection.open = true;
                                 }
+                                /*if !self.word_mode {
+                                    self.batch_size = 50;
+                                }*/
                                 self.time_mode = false;
                                 self.word_mode = true;
                                 self.quote = false;
                                 self.practice_mode = false;
+                                 if let Some(time) = self.menu_buttons_times.get_mut("words") {
+                                    *time = Instant::now();
+                                }
                             }
                             "quote" => {
                                 self.quote = true;
@@ -469,17 +566,17 @@ impl App {
                                 self.numbers = !self.numbers;
                             }
                             "language" => {
-                                self.language_popup_open = true;
-                                self.language_popup_selected = match self.language {
+                                self.popup_states.language.open = true;
+                                self.popup_states.language.selected = match self.language {
                                     Language::English => 0,
                                     Language::Indonesian => 1,
                                     Language::Italian=> 2,
                                 };
                             }
                             "theme" => {
-                                self.theme_popup_open = true;
+                                self.popup_states.color_scheme.open = true;
                                 let schemes = ColorScheme::all();
-                                self.theme_popup_selected = schemes.iter().position(|&s| s == self.color_scheme).unwrap_or(0);
+                                self.popup_states.color_scheme.selected = schemes.iter().position(|&s| s == self.color_scheme).unwrap_or(0);
                             }
                             "15" => {
                                 self.test_time = 15.0;
@@ -494,22 +591,24 @@ impl App {
                                 self.test_time = 120.0;
                             }
                             "25" => {
-                                self.batch_size = 25;
+                                self.word_number = 25;
                             }
                             "50" => {
-                                self.batch_size = 50;
+                                self.word_number = 50;
                             }
                             "100" => {
-                                self.batch_size = 100;
+                                self.word_number = 100;
                             }
                             _ => {}
                         }
                         if self.selected_config == "quote" {
                             self.reference = utils::get_random_quote();
-                            self.batch_size = self.reference.split_whitespace().count();
-                        }
-                        else {
+                            //self.word_number = self.reference.split_whitespace().count();
+                        } else if self.time_mode {
                             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                        } 
+                        else {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
                         }
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pressed_vec.clear();
@@ -524,7 +623,7 @@ impl App {
                         self.tab_pressed = Instant::now() - Duration::from_secs(5);
                         self.correct_count = 0;
                         self.error_count = 0;
-                        self.config = false;
+                        //self.config = false;
                         self.save_config();
                     }
                 }
@@ -600,8 +699,8 @@ impl App {
                     if self.practice_menu && ch == 'q' {
                         self.practice_menu = false;
                         self.practice_mode = false;
-                        self.time_mode = true;
-                        self.selected_config = "time".into();
+                        //self.time_mode = true;
+                        //self.selected_config = "time".into();
                         return Ok(());
                     }
                     if self.is_correct[0] == 0 && ch == ' ' {
@@ -653,8 +752,12 @@ impl App {
                         }
                         
                         // Only generate new reference if we haven't reached target word count yet
-                        if self.time_mode {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                        if self.time_mode || self.word_mode {
+                            if self.time_mode {
+                                self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                            } else if self.word_mode {
+                                self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+                            }
                             self.is_correct = vec![0; self.reference.chars().count()];
                             self.pos1 = 0;
                         }
@@ -679,6 +782,7 @@ impl App {
             selected_level: self.selected_level,
             language: self.language,
             color_scheme: self.color_scheme,
+            word_number: self.word_number,
         };
         
         let _ = self.app_config.save();
@@ -708,7 +812,7 @@ impl App {
             } else if self.time_mode {
                 crate::leaderboard::TestType::Time(self.test_time as u32)
             } else if self.word_mode {
-                crate::leaderboard::TestType::Word(self.batch_size)
+                crate::leaderboard::TestType::Word(self.word_number)
             } else if self.quote {
                 crate::leaderboard::TestType::Quote
             } else {

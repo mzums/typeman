@@ -32,14 +32,6 @@ pub struct ButtonStates {
     pub words: ButtonState,
     pub quote: ButtonState,
     pub practice: ButtonState,
-    pub divider3: ButtonState,
-    pub time_15: ButtonState,
-    pub time_30: ButtonState,
-    pub time_60: ButtonState,
-    pub time_120: ButtonState,
-    pub batch_25: ButtonState,
-    pub batch_50: ButtonState,
-    pub batch_100: ButtonState,
 }
 
 impl ButtonStates {
@@ -64,14 +56,6 @@ impl ButtonStates {
             divider2: btn("|", "|", "|"),
             time: btn("time", "time", "time"),
             words: btn("words", "words", "words"),
-            divider3: btn("|", "|", "|"),
-            time_15: btn("15", "15", "15"),
-            time_30: btn("30", "30", "30"),
-            time_60: btn("60", "60", "60"),
-            time_120: btn("120", "120", "120"),
-            batch_25: btn("25", "25", "25"),
-            batch_50: btn("50", "50", "50"),
-            batch_100: btn("100", "100", "100"),
         }
     }
 }
@@ -93,14 +77,6 @@ impl ButtonStates {
             &self.words,
             &self.quote,
             &self.practice,
-            &self.divider3,
-            &self.time_15,
-            &self.time_30,
-            &self.time_60,
-            &self.time_120,
-            &self.batch_25,
-            &self.batch_50,
-            &self.batch_100,
         ]
     }
 }

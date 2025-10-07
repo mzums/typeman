@@ -2,6 +2,7 @@ use ratatui::{Frame, prelude::*, widgets::*};
 use ratatui::widgets::canvas::Canvas;
 use std::collections::HashMap;
 use std::time::Duration;
+use crate::utils;
 
 use crate::color_scheme::ColorScheme;
 use crate::custom_colors::MyColor;
@@ -10,7 +11,7 @@ use crate::practice;
 use crate::practice::TYPING_LEVELS;
 use crate::ui::tui::app::{App, GameState};
 use crate::button_states::ButtonStates;
-use crate::utils;
+use crate::ui::tui::popup::*;
 
 fn render_instructions(
     frame: &mut Frame,
@@ -33,6 +34,7 @@ fn render_instructions(
     }
     if !practice_menu && !leaderboard_open {
         lines.push(Line::from("  Tab + Enter - restart"));
+        lines.push(Line::from("  ⌄ - double Enter to view more options"));
         lines.push(Line::from("  Tab + L - local leaderboard"));
     }
     if !leaderboard_open {
@@ -49,15 +51,17 @@ fn render_instructions(
     frame.render_widget(text, area);
 }
 
-pub fn render_app(frame: &mut Frame, app: &App, timer: Duration, button_states: &ButtonStates,) {
+pub fn render_app(frame: &mut Frame, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Min(0),
-            if app.game_state == GameState::Results {
+            if app.leaderboard_open {
+                Constraint::Length(1)
+            } else if app.game_state == GameState::Results {
                 Constraint::Length(2)
             } else {
-                Constraint::Length(3)
+                Constraint::Length(4)
             },
         ])
         .split(frame.area());
@@ -69,7 +73,7 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration, button_states: 
     } else if app.practice_menu {
         render_practice_menu(frame, chunks[0], app, app.color_scheme);
     } else {
-        render_reference_frame(frame, chunks[0], app, timer, app.color_scheme, button_states);
+        render_reference_frame(frame, chunks[0], app, app.timer, app.color_scheme, &app.button_states);
     }
     render_instructions(
         frame,
@@ -81,13 +85,21 @@ pub fn render_app(frame: &mut Frame, app: &App, timer: Duration, button_states: 
     );
 
     // Render language popup if open
-    if app.language_popup_open {
-        render_language_popup(frame, app, frame.area(), app.color_scheme);
+    if app.popup_states.language.open {
+        render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::Language);
     }
 
     // Render theme popup if open
-    if app.theme_popup_open {
-        render_theme_popup(frame, app, frame.area(), app.color_scheme);
+    if app.popup_states.color_scheme.open {
+        render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::ColorScheme);
+    }
+
+    if app.popup_states.time_selection.open {
+        render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::TimeSelection);
+    }
+
+    if app.popup_states.word_number_selection.open {
+        render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::WordNumberSelection);
     }
 }
 
@@ -638,12 +650,21 @@ fn render_reference_frame(
     let max_ref_width = calculate_max_ref_width(area);
     let ref_padding = calculate_ref_padding(area, max_ref_width);
 
-    let instruction_line = create_config_line(app, color_scheme, &button_states);
+    let instruction_line = create_config_line(app, color_scheme, &button_states, area);
     let horizontal_line = create_horizontal_line(area, color_scheme);
     let time_words = if app.time_mode {
         create_timer(timer, app.test_time, color_scheme)
     } else {
-        create_words_count(app.batch_size, app.words_done, color_scheme)
+        let all_words = if app.word_mode {
+            app.word_number
+        } else if app.quote {
+            app.reference.split_whitespace().count()
+        } else if app.practice_mode {
+            50
+        } else {
+            app.batch_size
+        };
+        create_words_count(all_words, app.words_done, color_scheme)
     };
     let colored_lines = create_colored_lines(app, max_ref_width, color_scheme);
     let empty_space = calculate_vertical_padding(area, colored_lines.len());
@@ -700,7 +721,7 @@ fn create_words_count(
         .alignment(Alignment::Left)
 }
 
-fn create_config_line(app: &App, color_scheme: ColorScheme, button_states: &ButtonStates) -> Line<'static> {
+fn create_config_line(app: &App, color_scheme: ColorScheme, button_states: &ButtonStates, area: Rect) -> Line<'static> {
     let bg_color = color_scheme.bg_color();
     let main_color = color_scheme.main_color();
     let ref_color = color_scheme.ref_color();
@@ -727,7 +748,11 @@ fn create_config_line(app: &App, color_scheme: ColorScheme, button_states: &Butt
                 fg_colors[i] = ref_color;
         }
         spans.push(Span::styled(
-            format!(" {} ", button_state.display_name),
+            if area.width < 120 {
+                format!(" {} ", button_state.short_name)
+            } else {
+                format!(" {} ", button_state.display_name)
+            },
             Style::default().fg(fg_colors[i]).bg(bg_colors[i]),
         ));
     }
@@ -880,115 +905,6 @@ fn split_lines(text: &str, width: usize) -> Vec<String> {
             lines
         })
         .collect()
-}
-
-fn render_language_popup(frame: &mut Frame, app: &App, area: Rect, color_scheme: ColorScheme) {
-    let bg_color = color_scheme.bg_color();
-    let main_color = color_scheme.main_color();
-    let ref_color = color_scheme.ref_color();
-    let border_color = color_scheme.border_color();
-    // Create popup area (center of screen)
-    let popup_area = centered_rect(30, 30, area);
-
-    // Clear the area
-    frame.render_widget(ratatui::widgets::Clear, popup_area);
-
-    // Create popup content
-    let items: Vec<ListItem> = Language::all()
-        .iter()
-        .enumerate()
-        .map(|(i, lang)| {
-            let style = if i == app.language_popup_selected {
-                Style::default().fg(bg_color).bg(main_color)
-            } else {
-                Style::default().fg(ref_color)
-            };
-            ListItem::new(lang.to_string()).style(style)
-        })
-        .collect();
-
-    let list = List::new(items).block(
-        Block::default()
-            .title("Select Language")
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(border_color))
-            .style(Style::default().bg(bg_color)),
-    );
-
-    frame.render_widget(list, popup_area);
-}
-
-fn render_theme_popup(frame: &mut Frame, app: &App, area: Rect, color_scheme: ColorScheme) {
-    // Create popup area (center of screen)
-    let popup_area = centered_rect(40, 50, area);
-
-    // Clear the area
-    frame.render_widget(ratatui::widgets::Clear, popup_area);
-
-    // Create popup content
-    let themes = ColorScheme::all();
-    let items: Vec<ListItem> = themes
-        .iter()
-        .enumerate()
-        .map(|(i, theme)| {
-            let style = if i == app.theme_popup_selected {
-                Style::default()
-                    .bg(color_scheme.main_color())
-                    .fg(color_scheme.bg_color())
-            } else {
-                Style::default().fg(color_scheme.text_color())
-            };
-            ListItem::new(theme.name()).style(style)
-        })
-        .collect();
-
-    let list = List::new(items).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title("Select Theme")
-            .style(
-                Style::default()
-                    .bg(color_scheme.bg_color())
-                    .fg(color_scheme.border_color()),
-            ),
-    );
-
-    frame.render_widget(list, popup_area);
-}
-
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    // Ensure percentages don't exceed 100 and terminal is large enough
-    let safe_percent_x = percent_x.min(95);
-    let safe_percent_y = percent_y.min(95);
-
-    // Check minimum terminal size requirements
-    if r.width < 10 || r.height < 6 {
-        // Return a minimal area if terminal is too small
-        return Rect::new(
-            r.x + 1,
-            r.y + 1,
-            (r.width.saturating_sub(2)).max(1),
-            (r.height.saturating_sub(2)).max(1),
-        );
-    }
-
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage((100 - safe_percent_y) / 2),
-            Constraint::Percentage(safe_percent_y),
-            Constraint::Percentage((100 - safe_percent_y) / 2),
-        ])
-        .split(r);
-
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - safe_percent_x) / 2),
-            Constraint::Percentage(safe_percent_x),
-            Constraint::Percentage((100 - safe_percent_x) / 2),
-        ])
-        .split(popup_layout[1])[1]
 }
 
 fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: ColorScheme) {

@@ -523,6 +523,7 @@ pub async fn gui_main_async() {
                     selected_level: selected_practice_level.unwrap_or(0),
                     language: language,
                     color_scheme: color_scheme,
+                    word_number: app_config.word_number,
                 };
                 let _ = app_config.save();
 
