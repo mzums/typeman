@@ -178,7 +178,6 @@ pub fn get_random_quote() -> String {
     format!("\"{}\" - {}", random_quote.text, random_quote.author)
 }
 
-#[cfg(any(feature = "cli", feature = "gui"))]
 pub fn count_correct_words(reference: &str, is_correct: &VecDeque<i32>) -> (usize, usize, usize) {
     let mut correct_words = 0;
     let mut no_corrected_words = 0;
