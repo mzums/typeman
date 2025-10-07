@@ -55,6 +55,7 @@ pub struct App {
     pub timer: Duration,
     pub language: Language,
     pub color_scheme: ColorScheme,
+    pub word_number: usize,
     pub app_config: AppConfig,
     pub leaderboard_open: bool,
     pub leaderboard_entries: Vec<crate::leaderboard::LeaderboardEntry>,
@@ -63,7 +64,6 @@ pub struct App {
     pub popup_states: PopupStates,
     pub popup_content: Option<PopupContent>,
     pub menu_buttons_times: HashMap<String, Instant>,
-    pub word_number: usize,
 }
 
 impl App {
@@ -87,7 +87,7 @@ impl App {
             time_mode: app_config.time_mode,
             word_mode: app_config.word_mode,
             quote: app_config.quote,
-            batch_size: 25,
+            batch_size: 50,
             selected_config: if app_config.time_mode { "time".into() }
                 else if app_config.word_mode { "words".into() }
                 else if app_config.quote { "quote".into() }
@@ -105,6 +105,7 @@ impl App {
             timer: Duration::from_secs(0),
             language: app_config.language,
             color_scheme: app_config.color_scheme,
+            word_number: app_config.word_number,
             app_config,
             leaderboard_open: false,
             leaderboard_entries: crate::leaderboard::load_entries().unwrap_or_default(),
@@ -127,7 +128,6 @@ impl App {
                 ("language".to_string(), Instant::now() - Duration::from_secs(5)),
                 ("theme".to_string(), Instant::now() - Duration::from_secs(5)),
             ]),
-            word_number: 50,
         }
     }
 
@@ -138,8 +138,10 @@ impl App {
         } else if self.practice_mode {
             let level = practice::get_first_not_done();
             self.reference = practice::create_words(TYPING_LEVELS[level].1, 50);
-        } else {
+        } else if self.time_mode {
             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+        } else {
+            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
         }
    
         self.is_correct = vec![0; self.reference.chars().count()];
@@ -155,7 +157,7 @@ impl App {
                 divider2: ButtonState::new("|", "|", "|", true, true),
                 time: ButtonState::new("time", "⌄ time", "⌄ time", self.time_mode, true),
                 words: ButtonState::new("words", "⌄ words", "⌄ words", self.word_mode, true),
-                quote: ButtonState::new("quote", "⌄ quote", "⌄ quote", self.quote, true),
+                quote: ButtonState::new("quote", "quote", "quote", self.quote, true),
                 practice: ButtonState::new("practice", "practice", "practice", self.practice_mode, true),
             };
 
@@ -247,6 +249,7 @@ impl App {
         let reference_chars: Vec<char> = reference.chars().collect();
 
         if key_event.kind == crossterm::event::KeyEventKind::Press {
+            let schemes = ColorScheme::all();
             if self.popup_states.color_scheme.open {
                 match key_event.code {
                     KeyCode::Esc => {
@@ -260,14 +263,12 @@ impl App {
                         return Ok(());
                     }
                     KeyCode::Down => {
-                        let schemes = ColorScheme::all();
                         if self.popup_states.color_scheme.selected < schemes.len() - 1 {
                             self.popup_states.color_scheme.selected += 1;
                         }
                         return Ok(());
                     }
                     KeyCode::Enter => {
-                        let schemes = ColorScheme::all();
                         if self.popup_states.color_scheme.selected < schemes.len() {
                             self.color_scheme = schemes[self.popup_states.color_scheme.selected];
                         }
@@ -280,6 +281,7 @@ impl App {
             }
 
             if self.popup_states.time_selection.open {
+                let schemes = TimeSelection::all();
                 match key_event.code {
                     KeyCode::Esc => {
                         self.popup_states.time_selection.open = false;
@@ -292,14 +294,12 @@ impl App {
                         return Ok(());
                     }
                     KeyCode::Down => {
-                        let schemes = TimeSelection::all();
                         if self.popup_states.time_selection.selected < schemes.len() - 1 {
                             self.popup_states.time_selection.selected += 1;
                         }
                         return Ok(());
                     }
                     KeyCode::Enter => {
-                        let schemes = TimeSelection::all();
                         if self.popup_states.time_selection.selected < schemes.len() {
                             self.test_time = schemes[self.popup_states.time_selection.selected].to_seconds() as f32;
                         }
@@ -312,6 +312,7 @@ impl App {
             }
 
             if self.popup_states.language.open {
+                let schemes = Language::all();
                 match key_event.code {
                     KeyCode::Esc => {
                         self.popup_states.language.open = false;
@@ -324,7 +325,7 @@ impl App {
                         return Ok(());
                     }
                     KeyCode::Down => {
-                        if self.popup_states.language.selected < Language::count() - 1 {
+                        if self.popup_states.language.selected < schemes.len() - 1 {
                             self.popup_states.language.selected += 1;
                         }
                         return Ok(());
@@ -338,7 +339,11 @@ impl App {
                         };
                         self.popup_states.language.open = false;
                         if self.word_mode || self.time_mode {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+                            if self.time_mode {
+                                self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                            } else if self.word_mode {
+                                self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+                            }
                             self.is_correct = vec![0; self.reference.chars().count()];
                             self.pressed_vec.clear();
                             self.pos1 = 0;
@@ -352,6 +357,7 @@ impl App {
             }
 
             if self.popup_states.word_number_selection.open {
+                let schemes = WordNumberSelection::all();
                 match key_event.code {
                     KeyCode::Esc => {
                         self.popup_states.word_number_selection.open = false;
@@ -370,10 +376,18 @@ impl App {
                         return Ok(());
                     }
                     KeyCode::Enter => {
-                        let schemes = WordNumberSelection::all();
                         if self.popup_states.word_number_selection.selected < schemes.len() {
                             self.word_number = schemes[self.popup_states.word_number_selection.selected].to_words() as usize;
                         }
+                        if self.time_mode {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                        } else if self.word_mode {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+                        }
+                        self.is_correct = vec![0; self.reference.chars().count()];
+                        self.pressed_vec.clear();
+                        self.pos1 = 0;
+                        self.words_done = 0;
                         self.popup_states.word_number_selection.open = false;
                         self.save_config();
                         return Ok(());
@@ -457,7 +471,9 @@ impl App {
                 },
                 KeyCode::Enter => {
                     if self.tab_pressed.elapsed() < Duration::from_secs(1) {
-                        if self.word_mode || self.time_mode {
+                        if self.word_mode {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+                        } else if self.time_mode {
                             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
                         } else if self.quote {
                             self.reference = utils::get_random_quote();
@@ -588,9 +604,11 @@ impl App {
                         if self.selected_config == "quote" {
                             self.reference = utils::get_random_quote();
                             //self.word_number = self.reference.split_whitespace().count();
-                        }
-                        else {
+                        } else if self.time_mode {
                             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                        } 
+                        else {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
                         }
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pressed_vec.clear();
@@ -735,7 +753,11 @@ impl App {
                         
                         // Only generate new reference if we haven't reached target word count yet
                         if self.time_mode || self.word_mode {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                            if self.time_mode {
+                                self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                            } else if self.word_mode {
+                                self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+                            }
                             self.is_correct = vec![0; self.reference.chars().count()];
                             self.pos1 = 0;
                         }
