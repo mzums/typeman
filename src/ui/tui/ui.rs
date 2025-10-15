@@ -657,7 +657,7 @@ fn render_reference_frame(
     } else {
         let all_words = if app.word_mode {
             app.word_number
-        } else if app.quote {
+        } else if app.quote || app.wiki_mode {
             app.reference.split_whitespace().count()
         } else if app.practice_mode {
             50

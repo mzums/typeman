@@ -41,6 +41,7 @@ pub struct App {
     pub time_mode: bool,
     pub word_mode: bool,
     pub quote: bool,
+    pub wiki_mode: bool,
     pub batch_size: usize,
     pub selected_config: String,
     pub speed_per_second: Vec<f64>,
@@ -87,6 +88,7 @@ impl App {
             time_mode: app_config.time_mode,
             word_mode: app_config.word_mode,
             quote: app_config.quote,
+            wiki_mode: app_config.wiki_mode,
             batch_size: 50,
             selected_config: if app_config.time_mode { "time".into() }
                 else if app_config.word_mode { "words".into() }
@@ -140,6 +142,8 @@ impl App {
             self.reference = practice::create_words(TYPING_LEVELS[level].1, 50);
         } else if self.time_mode {
             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+        } else if self.wiki_mode {
+            self.reference = utils::get_wiki_summary();
         } else {
             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
         }
@@ -158,6 +162,7 @@ impl App {
                 time: ButtonState::new("time", "⌄ time", "⌄ time", self.time_mode, true),
                 words: ButtonState::new("words", "⌄ words", "⌄ words", self.word_mode, true),
                 quote: ButtonState::new("quote", "quote", "quote", self.quote, true),
+                wiki_mode: ButtonState::new("wiki", "wikipedia", "wiki", self.wiki_mode, true),
                 practice: ButtonState::new("practice", "practice", "practice", self.practice_mode, true),
             };
 
@@ -186,8 +191,10 @@ impl App {
                 && self.game_state == GameState::Started 
                 && self.time_mode)
                 || (self.words_done >= self.word_number && self.word_mode)
+                || (self.words_done >= self.reference.split_whitespace().count() && (self.quote || self.wiki_mode) && self.game_state != GameState::Results)
                 || (self.words_done >= self.word_number 
-                    && self.quote
+                    && !self.quote
+                    && !self.wiki_mode
                     && self.game_state != GameState::Results)
                 || ((self.words_done >= 50 || self.pos1 >= self.reference.chars().count()) && self.practice_mode && self.game_state != GameState::Results))
 
@@ -480,6 +487,8 @@ impl App {
                             //self.word_number = self.reference.split_whitespace().count();
                         } else if self.practice_mode {
                             self.reference = practice::create_words(TYPING_LEVELS[self.selected_level].1, 50);
+                        } else if self.wiki_mode {
+                            self.reference = utils::get_wiki_summary();
                         }
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pressed_vec.clear();
@@ -528,6 +537,7 @@ impl App {
                                 self.word_mode = false;
                                 self.quote = false;
                                 self.practice_mode = false;
+                                self.wiki_mode = false;
                                 //self.batch_size = 50;
                                 self.practice_mode = false;
                                 if let Some(time) = self.menu_buttons_times.get_mut("time") {
@@ -543,6 +553,7 @@ impl App {
                                 }*/
                                 self.time_mode = false;
                                 self.word_mode = true;
+                                self.wiki_mode = false;
                                 self.quote = false;
                                 self.practice_mode = false;
                                  if let Some(time) = self.menu_buttons_times.get_mut("words") {
@@ -552,6 +563,7 @@ impl App {
                             "quote" => {
                                 self.quote = true;
                                 self.time_mode = false;
+                                self.wiki_mode = false;
                                 self.word_mode = false;
                                 self.practice_mode = false;
                             }
@@ -564,6 +576,12 @@ impl App {
                             }
                             "numbers" => {
                                 self.numbers = !self.numbers;
+                            }
+                            "wiki" => {
+                                self.quote = false;
+                                self.time_mode = false;
+                                self.word_mode = false;
+                                self.wiki_mode = !self.wiki_mode;
                             }
                             "language" => {
                                 self.popup_states.language.open = true;
@@ -606,8 +624,9 @@ impl App {
                             //self.word_number = self.reference.split_whitespace().count();
                         } else if self.time_mode {
                             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
-                        } 
-                        else {
+                        } else if self.wiki_mode {
+                            self.reference = utils::get_wiki_summary();
+                        } else {
                             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
                         }
                         self.is_correct = vec![0; self.reference.chars().count()];
@@ -735,7 +754,7 @@ impl App {
                         }
                         
                         self.pressed_vec.push(ch);
-                        if (reference_chars.get(self.pos1) == Some(&' ') && !self.practice_mode) || (reference_chars.get(self.pos1) == Some(&' ') && self.is_correct[self.pos1] != -1) {
+                        if (reference_chars.get(self.pos1) == Some(&' ') && !self.practice_mode) || (reference_chars.get(self.pos1) == Some(&' ') && self.is_correct[self.pos1] != -1 || self.pos1 == reference_chars.len()) {
                             self.words_done += 1;
                         }
                     }
@@ -777,6 +796,7 @@ impl App {
             word_mode: self.word_mode,
             quote: self.quote,
             practice_mode: self.practice_mode,
+            wiki_mode: self.wiki_mode,
             batch_size: self.batch_size,
             test_time: self.test_time,
             selected_level: self.selected_level,

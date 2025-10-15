@@ -32,6 +32,7 @@ pub struct ButtonStates {
     pub words: ButtonState,
     pub quote: ButtonState,
     pub practice: ButtonState,
+    pub wiki_mode: ButtonState,
 }
 
 impl ButtonStates {
@@ -53,6 +54,7 @@ impl ButtonStates {
             theme: btn("theme", "theme", "theme"),
             quote: btn("quote", "quote", "quote"),
             practice: btn("practice", "practice", "practice"),
+            wiki_mode: btn("wiki", "wikipedia", "wiki"),
             divider2: btn("|", "|", "|"),
             time: btn("time", "time", "time"),
             words: btn("words", "words", "words"),
@@ -77,6 +79,7 @@ impl ButtonStates {
             &self.words,
             &self.quote,
             &self.practice,
+            &self.wiki_mode,
         ]
     }
 }

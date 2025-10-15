@@ -176,6 +176,27 @@ pub fn get_random_quote() -> String {
     format!("\"{}\" - {}", random_quote.text, random_quote.author)
 }
 
+pub fn get_wiki_summary() -> String {
+    const SUMMARIES: &str = include_str!("../assets/featured_summaries.json");
+    #[derive(serde::Deserialize)]
+    #[derive(Clone)]
+    struct WikiSummary {
+        title: String,
+        summary: String,
+    }
+    let summaries: Vec<WikiSummary> = serde_json::from_str(SUMMARIES).unwrap_or_default();
+    let mut rng = ::rand::rng();
+    let summary = summaries
+        .choose(&mut rng)
+        .cloned()
+        .unwrap_or_else(|| WikiSummary {
+            title: "Wikipedia".to_string(),
+            summary: "No summary available.".to_string(),
+        });
+    
+    return format!("{} - {}", summary.title, summary.summary);
+}
+
 pub fn count_correct_words(reference: &str, is_correct: &VecDeque<i32>) -> (usize, usize, usize) {
     let mut correct_words = 0;
     let mut no_corrected_words = 0;

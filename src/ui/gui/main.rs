@@ -518,6 +518,7 @@ pub async fn gui_main_async() {
                     word_mode: word_mode,
                     quote: quote,
                     practice_mode: practice_mode,
+                    wiki_mode: app_config.wiki_mode,
                     batch_size: batch_size,
                     test_time: test_time,
                     selected_level: selected_practice_level.unwrap_or(0),
