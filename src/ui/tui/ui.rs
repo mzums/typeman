@@ -93,6 +93,8 @@ pub fn render_app(frame: &mut Frame, app: &App) {
         render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::TimeSelection);
     } else if app.popup_states.word_number_selection.open {
         render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::WordNumberSelection);
+    } else if app.popup_states.batch_size_selection.open {
+        render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::BatchSizeSelection);
     } else if app.popup_states.settings.open {
         render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::Settings);
     }

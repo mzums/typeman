@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub enum Settings {
     ColorScheme,
     Language,
+    BatchSize,
 }
 
 impl Settings {
@@ -12,6 +13,7 @@ impl Settings {
         &[
             Settings::ColorScheme,
             Settings::Language,
+            Settings::BatchSize,
         ]
     }
 
@@ -25,6 +27,7 @@ impl Display for Settings {
         match self {
             Settings::ColorScheme => write!(f, "Color Scheme"),
             Settings::Language => write!(f, "Language"),
+            Settings::BatchSize => write!(f, "Batch Size"),
         }
     }
 }

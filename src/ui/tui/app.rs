@@ -5,6 +5,7 @@ use std::time::{Duration, Instant};
 use std::collections::HashMap;
 use chrono;
 
+use crate::batch_size_selection::BatchSizeSelection;
 use crate::ui::tui::ui::render_app;
 use crate::{practice, utils};
 use crate::practice::TYPING_LEVELS;
@@ -120,6 +121,7 @@ impl App {
                 time_selection: PopupState { open: false, selected: 0 },
                 word_number_selection: PopupState { open: false, selected: 0 },
                 settings: PopupState { open: false, selected: 0 },
+                batch_size_selection: PopupState { open: false, selected: 0 },
             },
             popup_content: None,
             menu_buttons_times: HashMap::from([
@@ -188,14 +190,11 @@ impl App {
                 Duration::from_secs(0)
             };
 
-            if  self.game_state != GameState::Results && ((self.test_time - self.timer.as_secs_f32() < 0.0 
-                && self.game_state == GameState::Started 
-                && self.time_mode)
+            if self.game_state != GameState::Results && ((self.test_time - self.timer.as_secs_f32() < 0.0 && self.game_state == GameState::Started && self.time_mode)
                 || (self.words_done >= self.word_number && self.word_mode)
                 || (self.words_done >= self.reference.split_whitespace().count() && (self.quote || self.wiki_mode) && self.game_state != GameState::Results)
                 || (self.words_done >= self.word_number 
-                    && !self.quote
-                    && !self.wiki_mode
+                    && (self.word_mode|| self.practice_mode)
                     && self.game_state != GameState::Results)
                 || ((self.words_done >= 50 || self.pos1 >= self.reference.chars().count()) && self.practice_mode && self.game_state != GameState::Results))
 
@@ -403,6 +402,46 @@ impl App {
                     _ => return Ok(()),
                 }
             }
+            
+            if self.popup_states.batch_size_selection.open {
+                let schemes = BatchSizeSelection::all();
+                match key_event.code {
+                    KeyCode::Esc => {
+                        self.popup_states.batch_size_selection.open = false;
+                        return Ok(());
+                    }
+                    KeyCode::Up => {
+                        self.popup_states.batch_size_selection.selected -= 1;
+                        if self.popup_states.batch_size_selection.selected > 0 {
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Down => {
+                        self.popup_states.batch_size_selection.selected += 1;
+                        if self.popup_states.batch_size_selection.selected < BatchSizeSelection::count() - 1 {
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Enter => {
+                        if self.popup_states.batch_size_selection.selected < schemes.len() {
+                            self.batch_size = schemes[self.popup_states.batch_size_selection.selected].to_words() as usize;
+                        }
+                        if self.time_mode {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                        } else if self.word_mode {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+                        }
+                        self.is_correct = vec![0; self.reference.chars().count()];
+                        self.pressed_vec.clear();
+                        self.pos1 = 0;
+                        self.words_done = 0;
+                        self.popup_states.batch_size_selection.open = false;
+                        self.save_config();
+                        return Ok(());
+                    }
+                    _ => return Ok(()),
+                }
+            }
 
             if self.popup_states.settings.open {
                 match key_event.code {
@@ -434,6 +473,8 @@ impl App {
                                 Language::Indonesian => 1,
                                 Language::Italian=> 2,
                             };
+                        } else if self.popup_states.settings.selected == 2 {
+                            self.popup_states.batch_size_selection.open = true;
                         }
                     }
                     _ => return Ok(()),
@@ -593,7 +634,7 @@ impl App {
                                 self.wiki_mode = false;
                                 self.quote = false;
                                 self.practice_mode = false;
-                                 if let Some(time) = self.menu_buttons_times.get_mut("words") {
+                                if let Some(time) = self.menu_buttons_times.get_mut("words") {
                                     *time = Instant::now();
                                 }
                             }
@@ -618,7 +659,7 @@ impl App {
                                 self.quote = false;
                                 self.time_mode = false;
                                 self.word_mode = false;
-                                self.wiki_mode = !self.wiki_mode;
+                                self.wiki_mode = true;
                             }
                             "language" => {
                                 self.popup_states.language.open = true;
@@ -806,7 +847,7 @@ impl App {
                             // Check if we just completed a word (not already counted)
                             let previous_char = reference_chars.get(self.pos1 - 1);
                             if previous_char.is_some() && previous_char != Some(&' ') {
-                                self.words_done += 1;
+                                //self.words_done += 1;
                             }
                         }
                         

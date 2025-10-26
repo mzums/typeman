@@ -17,6 +17,7 @@ pub enum PopupContent {
     TimeSelection,
     WordNumberSelection,
     Settings,
+    BatchSizeSelection
 }
 
 pub struct PopupState {
@@ -30,6 +31,7 @@ pub struct PopupStates {
     pub time_selection: PopupState,
     pub word_number_selection: PopupState,
     pub settings: PopupState,
+    pub batch_size_selection: PopupState,
 }
 
 pub trait PopupData {
@@ -46,6 +48,7 @@ impl PopupData for PopupContent {
             PopupContent::TimeSelection => "Select Time",
             PopupContent::WordNumberSelection => "Select Number of Words",
             PopupContent::Settings => "Select Setting",
+            PopupContent::BatchSizeSelection => "Select Batch Size",
         }
     }
 
@@ -56,6 +59,7 @@ impl PopupData for PopupContent {
             PopupContent::TimeSelection => TimeSelection::all().iter().map(|x| x.to_string()).collect(),
             PopupContent::WordNumberSelection => vec!["25".to_string(), "50".to_string(), "100".to_string(), "200".to_string(), "500".to_string()],
             PopupContent::Settings => Settings::all().iter().map(|x| x.to_string()).collect(),
+            PopupContent::BatchSizeSelection => vec!["10".to_string(), "25".to_string(), "50".to_string(), "100".to_string(), "200".to_string()],
         }
     }
 
@@ -66,6 +70,7 @@ impl PopupData for PopupContent {
             PopupContent::TimeSelection => &app.popup_states.time_selection.selected,
             PopupContent::WordNumberSelection => &app.popup_states.word_number_selection.selected,
             PopupContent::Settings => &app.popup_states.settings.selected,
+            PopupContent::BatchSizeSelection => &app.popup_states.batch_size_selection.selected,
         }
     }
 }

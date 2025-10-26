@@ -43,6 +43,7 @@ pub mod utils;
 pub mod time_selection;
 pub mod word_number_selection;
 pub mod settings;
+pub mod batch_size_selection;
 
 #[cfg(feature = "cli")]
 use crate::ui::cli::modes;
