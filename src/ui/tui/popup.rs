@@ -8,6 +8,7 @@ use ratatui::{
 use crate::color_scheme::ColorScheme;
 use crate::language::Language;
 use crate::time_selection::TimeSelection;
+use crate::settings::Settings;
 use crate::ui::tui::app::App;
 
 pub enum PopupContent {
@@ -15,6 +16,7 @@ pub enum PopupContent {
     ColorScheme,
     TimeSelection,
     WordNumberSelection,
+    Settings,
 }
 
 pub struct PopupState {
@@ -27,6 +29,7 @@ pub struct PopupStates {
     pub color_scheme: PopupState,
     pub time_selection: PopupState,
     pub word_number_selection: PopupState,
+    pub settings: PopupState,
 }
 
 pub trait PopupData {
@@ -42,6 +45,7 @@ impl PopupData for PopupContent {
             PopupContent::ColorScheme => "Select Color Scheme",
             PopupContent::TimeSelection => "Select Time",
             PopupContent::WordNumberSelection => "Select Number of Words",
+            PopupContent::Settings => "Select Setting",
         }
     }
 
@@ -51,6 +55,7 @@ impl PopupData for PopupContent {
             PopupContent::ColorScheme => ColorScheme::all().iter().map(|x| x.name().to_string()).collect(),
             PopupContent::TimeSelection => TimeSelection::all().iter().map(|x| x.to_string()).collect(),
             PopupContent::WordNumberSelection => vec!["25".to_string(), "50".to_string(), "100".to_string(), "200".to_string(), "500".to_string()],
+            PopupContent::Settings => Settings::all().iter().map(|x| x.to_string()).collect(),
         }
     }
 
@@ -60,6 +65,7 @@ impl PopupData for PopupContent {
             PopupContent::ColorScheme => &app.popup_states.color_scheme.selected,
             PopupContent::TimeSelection => &app.popup_states.time_selection.selected,
             PopupContent::WordNumberSelection => &app.popup_states.word_number_selection.selected,
+            PopupContent::Settings => &app.popup_states.settings.selected,
         }
     }
 }

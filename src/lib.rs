@@ -39,6 +39,7 @@ pub mod practice;
 pub mod utils;
 pub mod time_selection;
 pub mod word_number_selection;
+pub mod settings;
 
 // Re-export types needed by modules
 #[derive(Parser)]

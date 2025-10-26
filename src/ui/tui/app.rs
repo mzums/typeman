@@ -15,6 +15,7 @@ use crate::button_states::{ButtonStates, ButtonState};
 use crate::ui::tui::popup::{PopupStates, PopupState, PopupContent};
 use crate::time_selection::TimeSelection;
 use crate::word_number_selection::WordNumberSelection;
+use crate::settings::Settings;
 
 
 #[derive(PartialEq, Eq)]
@@ -118,17 +119,18 @@ impl App {
                 color_scheme: PopupState { open: false, selected: 0 },
                 time_selection: PopupState { open: false, selected: 0 },
                 word_number_selection: PopupState { open: false, selected: 0 },
+                settings: PopupState { open: false, selected: 0 },
             },
             popup_content: None,
             menu_buttons_times: HashMap::from([
+                ("settings".to_string(), Instant::now() - Duration::from_secs(5)),
                 ("time".to_string(), Instant::now() - Duration::from_secs(5)),
                 ("words".to_string(), Instant::now() - Duration::from_secs(5)),
                 ("quote".to_string(), Instant::now() - Duration::from_secs(5)),
                 ("practice".to_string(), Instant::now() - Duration::from_secs(5)),
                 ("punctuation".to_string(), Instant::now() - Duration::from_secs(5)),
                 ("numbers".to_string(), Instant::now() - Duration::from_secs(5)),
-                ("language".to_string(), Instant::now() - Duration::from_secs(5)),
-                ("theme".to_string(), Instant::now() - Duration::from_secs(5)),
+                ("wiki".to_string(), Instant::now() - Duration::from_secs(5)),
             ]),
         }
     }
@@ -153,12 +155,11 @@ impl App {
         
         while !self.exit {
             self.button_states = ButtonStates {
+                settings: ButtonState::new("settings", "settings", "⚙", false, true),
+                divider0: ButtonState::new("|", "|", "|", true, true),
                 punctuation: ButtonState::new("punctuation", "! punctuation", "! punct", self.punctuation, !self.quote && !self.practice_mode),
                 numbers: ButtonState::new("numbers", "# numbers", "# num", self.numbers, !self.quote && !self.practice_mode),
                 divider1: ButtonState::new("|", "|", "|", true, self.time_mode || self.word_mode),
-                language: ButtonState::new("language", "language", "lang", false, !self.quote && !self.practice_mode),
-                theme: ButtonState::new("theme", "theme", "theme", false, true),
-                divider2: ButtonState::new("|", "|", "|", true, true),
                 time: ButtonState::new("time", "⌄ time", "⌄ time", self.time_mode, true),
                 words: ButtonState::new("words", "⌄ words", "⌄ words", self.word_mode, true),
                 quote: ButtonState::new("quote", "quote", "quote", self.quote, true),
@@ -403,6 +404,42 @@ impl App {
                 }
             }
 
+            if self.popup_states.settings.open {
+                match key_event.code {
+                    KeyCode::Esc => {
+                        self.popup_states.settings.open = false;
+                        return Ok(());
+                    }
+                    KeyCode::Up => {
+                        if self.popup_states.settings.selected > 0 {
+                            self.popup_states.settings.selected -= 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Down => {
+                        if self.popup_states.settings.selected < Settings::all().len() - 1 {
+                            self.popup_states.settings.selected += 1;
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Enter => {
+                        if self.popup_states.settings.selected == 0 {
+                            self.popup_states.color_scheme.open = true;
+                            let schemes = ColorScheme::all();
+                            self.popup_states.color_scheme.selected = schemes.iter().position(|&s| s == self.color_scheme).unwrap_or(0);
+                        } else if self.popup_states.settings.selected == 1 {
+                            self.popup_states.language.open = true;
+                            self.popup_states.language.selected = match self.language {
+                                Language::English => 0,
+                                Language::Indonesian => 1,
+                                Language::Italian=> 2,
+                            };
+                        }
+                    }
+                    _ => return Ok(()),
+                }
+            }
+
             // Handle leaderboard if it's open
             if self.leaderboard_open {
                 match key_event.code {
@@ -595,6 +632,9 @@ impl App {
                                 self.popup_states.color_scheme.open = true;
                                 let schemes = ColorScheme::all();
                                 self.popup_states.color_scheme.selected = schemes.iter().position(|&s| s == self.color_scheme).unwrap_or(0);
+                            }
+                            "settings" => {
+                                self.popup_states.settings.open = true;
                             }
                             "15" => {
                                 self.test_time = 15.0;

@@ -22,12 +22,11 @@ impl ButtonState {
 }
 
 pub struct ButtonStates {
+    pub settings: ButtonState,
+    pub divider0: ButtonState,
     pub punctuation: ButtonState,
     pub numbers: ButtonState,
     pub divider1: ButtonState,
-    pub language: ButtonState,
-    pub theme: ButtonState,
-    pub divider2: ButtonState,
     pub time: ButtonState,
     pub words: ButtonState,
     pub quote: ButtonState,
@@ -47,15 +46,14 @@ impl ButtonStates {
             }
         }
         Self {
+            settings: btn("settings", "settings", "⚙"),
+            divider0: btn("|", "|", "|"),
             punctuation: btn("punctuation", "punctuation", "punct"),
             numbers: btn("numbers", "numbers", "num"),
             divider1: btn("|", "|", "|"),
-            language: btn("language", "language", "lang"),
-            theme: btn("theme", "theme", "theme"),
             quote: btn("quote", "quote", "quote"),
             practice: btn("practice", "practice", "practice"),
             wiki_mode: btn("wiki", "wikipedia", "wiki"),
-            divider2: btn("|", "|", "|"),
             time: btn("time", "time", "time"),
             words: btn("words", "words", "words"),
         }
@@ -69,12 +67,11 @@ impl ButtonStates {
 
     pub fn as_vec(&self) -> Vec<&ButtonState> {
         vec![
+            &self.settings,
+            &self.divider0,
             &self.punctuation,
             &self.numbers,
             &self.divider1,
-            &self.language,
-            &self.theme,
-            &self.divider2,
             &self.time,
             &self.words,
             &self.quote,

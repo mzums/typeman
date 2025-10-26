@@ -42,6 +42,7 @@ pub mod practice;
 pub mod utils;
 pub mod time_selection;
 pub mod word_number_selection;
+pub mod settings;
 
 #[cfg(feature = "cli")]
 use crate::ui::cli::modes;

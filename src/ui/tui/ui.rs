@@ -87,19 +87,14 @@ pub fn render_app(frame: &mut Frame, app: &App) {
     // Render language popup if open
     if app.popup_states.language.open {
         render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::Language);
-    }
-
-    // Render theme popup if open
-    if app.popup_states.color_scheme.open {
+    } else if app.popup_states.color_scheme.open {
         render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::ColorScheme);
-    }
-
-    if app.popup_states.time_selection.open {
+    } else if app.popup_states.time_selection.open {
         render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::TimeSelection);
-    }
-
-    if app.popup_states.word_number_selection.open {
+    } else if app.popup_states.word_number_selection.open {
         render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::WordNumberSelection);
+    } else if app.popup_states.settings.open {
+        render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::Settings);
     }
 }
 
@@ -748,7 +743,7 @@ fn create_config_line(app: &App, color_scheme: ColorScheme, button_states: &Butt
                 fg_colors[i] = ref_color;
         }
         spans.push(Span::styled(
-            if area.width < 120 {
+            if area.width < 100 {
                 format!(" {} ", button_state.short_name)
             } else {
                 format!(" {} ", button_state.display_name)
