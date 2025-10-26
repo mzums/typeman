@@ -95,6 +95,8 @@ pub fn render_app(frame: &mut Frame, app: &App) {
         render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::WordNumberSelection);
     } else if app.popup_states.batch_size_selection.open {
         render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::BatchSizeSelection);
+    } else if app.popup_states.top_words_selection.open {
+        render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::TopWordsSelection);
     } else if app.popup_states.settings.open {
         render_popup(frame, app, frame.area(), app.color_scheme, PopupContent::Settings);
     }
@@ -278,6 +280,8 @@ fn get_stats(app: &App, color_scheme: ColorScheme) -> (Line<'static>, Line<'stat
         "words".to_string()
     } else if app.quote {
         "quote".to_string()
+    } else if app.wiki_mode {
+        "wikipedia".to_string()
     } else {
         "practice".to_string()
     };

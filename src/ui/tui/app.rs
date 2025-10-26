@@ -16,6 +16,7 @@ use crate::button_states::{ButtonStates, ButtonState};
 use crate::ui::tui::popup::{PopupStates, PopupState, PopupContent};
 use crate::time_selection::TimeSelection;
 use crate::word_number_selection::WordNumberSelection;
+use crate::top_words_selection::TopWordsSelection;
 use crate::settings::Settings;
 
 
@@ -67,6 +68,7 @@ pub struct App {
     pub popup_states: PopupStates,
     pub popup_content: Option<PopupContent>,
     pub menu_buttons_times: HashMap<String, Instant>,
+    pub top_words: usize,
 }
 
 impl App {
@@ -91,7 +93,7 @@ impl App {
             word_mode: app_config.word_mode,
             quote: app_config.quote,
             wiki_mode: app_config.wiki_mode,
-            batch_size: 50,
+            batch_size: app_config.batch_size,
             selected_config: if app_config.time_mode { "time".into() }
                 else if app_config.word_mode { "words".into() }
                 else if app_config.quote { "quote".into() }
@@ -122,6 +124,7 @@ impl App {
                 word_number_selection: PopupState { open: false, selected: 0 },
                 settings: PopupState { open: false, selected: 0 },
                 batch_size_selection: PopupState { open: false, selected: 0 },
+                top_words_selection: PopupState { open: false, selected: 0 },
             },
             popup_content: None,
             menu_buttons_times: HashMap::from([
@@ -134,6 +137,7 @@ impl App {
                 ("numbers".to_string(), Instant::now() - Duration::from_secs(5)),
                 ("wiki".to_string(), Instant::now() - Duration::from_secs(5)),
             ]),
+            top_words: 500,
         }
     }
 
@@ -145,11 +149,11 @@ impl App {
             let level = practice::get_first_not_done();
             self.reference = practice::create_words(TYPING_LEVELS[level].1, 50);
         } else if self.time_mode {
-            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), self.batch_size);
         } else if self.wiki_mode {
             self.reference = utils::get_wiki_summary();
         } else {
-            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), usize::min(self.batch_size, self.word_number));
         }
    
         self.is_correct = vec![0; self.reference.chars().count()];
@@ -347,9 +351,9 @@ impl App {
                         self.popup_states.language.open = false;
                         if self.word_mode || self.time_mode {
                             if self.time_mode {
-                                self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                                self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), self.batch_size);
                             } else if self.word_mode {
-                                self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+                                self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), usize::min(self.batch_size, self.word_number));
                             }
                             self.is_correct = vec![0; self.reference.chars().count()];
                             self.pressed_vec.clear();
@@ -387,9 +391,9 @@ impl App {
                             self.word_number = schemes[self.popup_states.word_number_selection.selected].to_words() as usize;
                         }
                         if self.time_mode {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), self.batch_size);
                         } else if self.word_mode {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), usize::min(self.batch_size, self.word_number));
                         }
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pressed_vec.clear();
@@ -427,9 +431,49 @@ impl App {
                             self.batch_size = schemes[self.popup_states.batch_size_selection.selected].to_words() as usize;
                         }
                         if self.time_mode {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), self.batch_size);
                         } else if self.word_mode {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), usize::min(self.batch_size, self.word_number));
+                        }
+                        self.is_correct = vec![0; self.reference.chars().count()];
+                        self.pressed_vec.clear();
+                        self.pos1 = 0;
+                        self.words_done = 0;
+                        self.popup_states.batch_size_selection.open = false;
+                        self.save_config();
+                        return Ok(());
+                    }
+                    _ => return Ok(()),
+                }
+            }
+
+            if self.popup_states.top_words_selection.open {
+                let schemes = TopWordsSelection::all();
+                match key_event.code {
+                    KeyCode::Esc => {
+                        self.popup_states.top_words_selection.open = false;
+                        return Ok(());
+                    }
+                    KeyCode::Up => {
+                        self.popup_states.top_words_selection.selected -= 1;
+                        if self.popup_states.top_words_selection.selected > 0 {
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Down => {
+                        self.popup_states.top_words_selection.selected += 1;
+                        if self.popup_states.top_words_selection.selected < TopWordsSelection::count() - 1 {
+                        }
+                        return Ok(());
+                    }
+                    KeyCode::Enter => {
+                        if self.popup_states.top_words_selection.selected < schemes.len() {
+                            self.top_words = schemes[self.popup_states.top_words_selection.selected].to_words() as usize;
+                        }
+                        if self.time_mode {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), self.batch_size);
+                        } else if self.word_mode {
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), usize::min(self.batch_size, self.word_number));
                         }
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pressed_vec.clear();
@@ -475,6 +519,8 @@ impl App {
                             };
                         } else if self.popup_states.settings.selected == 2 {
                             self.popup_states.batch_size_selection.open = true;
+                        } else if self.popup_states.settings.selected == 3 {
+                            self.popup_states.top_words_selection.open = true;
                         }
                     }
                     _ => return Ok(()),
@@ -557,9 +603,9 @@ impl App {
                 KeyCode::Enter => {
                     if self.tab_pressed.elapsed() < Duration::from_secs(1) {
                         if self.word_mode {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), usize::min(self.batch_size, self.word_number));
                         } else if self.time_mode {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), self.batch_size);
                         } else if self.quote {
                             self.reference = utils::get_random_quote();
                             //self.word_number = self.reference.split_whitespace().count();
@@ -704,11 +750,11 @@ impl App {
                             self.reference = utils::get_random_quote();
                             //self.word_number = self.reference.split_whitespace().count();
                         } else if self.time_mode {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), self.batch_size);
                         } else if self.wiki_mode {
                             self.reference = utils::get_wiki_summary();
                         } else {
-                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+                            self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), usize::min(self.batch_size, self.word_number));
                         }
                         self.is_correct = vec![0; self.reference.chars().count()];
                         self.pressed_vec.clear();
@@ -854,9 +900,9 @@ impl App {
                         // Only generate new reference if we haven't reached target word count yet
                         if self.time_mode || self.word_mode {
                             if self.time_mode {
-                                self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), self.batch_size);
+                                self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), self.batch_size);
                             } else if self.word_mode {
-                                self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(500, self.language), usize::min(self.batch_size, self.word_number));
+                                self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), usize::min(self.batch_size, self.word_number));
                             }
                             self.is_correct = vec![0; self.reference.chars().count()];
                             self.pos1 = 0;
@@ -884,6 +930,7 @@ impl App {
             language: self.language,
             color_scheme: self.color_scheme,
             word_number: self.word_number,
+            top_words: self.top_words,
         };
         
         let _ = self.app_config.save();

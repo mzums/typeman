@@ -19,6 +19,7 @@ pub struct AppConfig {
     pub language: Language,
     pub color_scheme: ColorScheme,
     pub word_number: usize,
+    pub top_words: usize,
 }
 
 impl Default for AppConfig {
@@ -37,6 +38,7 @@ impl Default for AppConfig {
             language: Language::default(),
             color_scheme: ColorScheme::default(),
             word_number: 50,
+            top_words: 500,
         }
     }
 }

@@ -6,6 +6,7 @@ pub enum Settings {
     ColorScheme,
     Language,
     BatchSize,
+    TopWords,
 }
 
 impl Settings {
@@ -14,6 +15,7 @@ impl Settings {
             Settings::ColorScheme,
             Settings::Language,
             Settings::BatchSize,
+            Settings::TopWords,
         ]
     }
 
@@ -28,6 +30,7 @@ impl Display for Settings {
             Settings::ColorScheme => write!(f, "Color Scheme"),
             Settings::Language => write!(f, "Language"),
             Settings::BatchSize => write!(f, "Batch Size"),
+            Settings::TopWords => write!(f, "Top Words"),
         }
     }
 }

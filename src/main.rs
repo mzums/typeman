@@ -44,6 +44,7 @@ pub mod time_selection;
 pub mod word_number_selection;
 pub mod settings;
 pub mod batch_size_selection;
+pub mod top_words_selection;
 
 #[cfg(feature = "cli")]
 use crate::ui::cli::modes;
