@@ -9,31 +9,58 @@ pub enum PopupContent {
     ColorScheme,
 }
 
-pub enum PopupResult {
-    Language(Language),
-    ColorScheme(ColorScheme),
-}
-
-pub struct Popup {
-    content: PopupContent,
+pub struct PopupState {
     pub visible: bool,
-    selected: usize,
-    ignore_next_enter: bool,
+    pub selected: usize,
+    //ignore_next_enter: bool,
 }
 
-impl Popup {
-    pub fn new(content: PopupContent) -> Self {
+pub struct PopupStates {
+    pub language: PopupState,
+    pub color_scheme: PopupState,
+}
+
+pub trait PopupData {
+    fn title(&self) -> &'static str;
+    fn items(&self) -> Vec<String>;
+    fn selected_index<'a>(&self, popup_states: &'a PopupStates) -> &'a usize;
+}
+
+impl PopupData for PopupContent {
+    fn title(&self) -> &'static str {
+        match self {
+            PopupContent::Language => "Select Language",
+            PopupContent::ColorScheme => "Select Color Scheme",
+        }
+    }
+
+    fn items(&self) -> Vec<String> {
+        match self {
+            PopupContent::Language => Language::all().iter().map(|x| x.to_string()).collect(),
+            PopupContent::ColorScheme => ColorScheme::all().iter().map(|x| x.name().to_string()).collect(),
+        }
+    }
+
+    fn selected_index<'a>(&self, popup_states: &'a PopupStates) -> &'a usize {
+        match self {
+            PopupContent::Language => &popup_states.language.selected,
+            PopupContent::ColorScheme => &popup_states.color_scheme.selected,
+        }
+    }
+}
+
+impl PopupState {
+    pub fn new() -> Self {
         Self {
-            content,
             visible: false,
             selected: 0,
-            ignore_next_enter: false,
+            //ignore_next_enter: false,
         }
     }
 
     pub fn show(&mut self) {
         self.visible = true;
-        self.ignore_next_enter = true;
+        //self.ignore_next_enter = true;
     }
 
     pub fn hide(&mut self) {
@@ -43,20 +70,19 @@ impl Popup {
     pub fn draw(
         &mut self,
         font: &Option<Font>,
-        language: &mut Language,
         theme: &mut ColorScheme,
-        popup_recently_closed: &mut bool,
-    ) -> Option<PopupResult> {
+        content: PopupContent,
+    ) -> Option<PopupState> {
         if !self.visible {
             return None;
         }
 
-        if self.ignore_next_enter {
+        /*if self.ignore_next_enter {
             if is_key_pressed(KeyCode::Enter) {
                 return None;
             }
             self.ignore_next_enter = false;
-        }
+        }*/
 
         let screen_w = screen_width();
         let screen_h = screen_height();
@@ -74,7 +100,7 @@ impl Popup {
         utils::draw_rounded_rect(x, y, popup_w, popup_h, 20.0, bg_color);
         utils::draw_rounded_rect_lines(x, y, popup_w, popup_h, 20.0, 5.0, border_color);
 
-        let (title, items): (&str, Vec<String>) = match self.content {
+        let (title, items): (&str, Vec<String>) = match content {
             PopupContent::Language => (
                 "Select Language",
                 Language::all().iter().map(|l| l.to_string()).collect(),
@@ -144,15 +170,15 @@ impl Popup {
             self.selected += 1;
         }
 
-        if is_key_pressed(KeyCode::Enter) {
+        /*if is_key_pressed(KeyCode::Enter) {
             *popup_recently_closed = true;
             self.hide();
 
-            match self.content {
+            match content {
                 PopupContent::Language => {
                     let choice = Language::all()[self.selected];
                     *language = choice;
-                    return Some(PopupResult::Language(choice));
+                    return Some(PopupState::Language(choice));
                 }
                 PopupContent::ColorScheme => {
                     let choice = ColorScheme::all()[self.selected];
@@ -160,7 +186,7 @@ impl Popup {
                     return Some(PopupResult::ColorScheme(choice));
                 }
             }
-        }
+        }*/
 
         None
     }

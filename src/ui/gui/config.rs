@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use crate::language::Language;
 use crate::ui::gui::main;
-use crate::ui::gui::popup::Popup;
+use crate::ui::gui::popup::{PopupContent, PopupStates};
 use crate::{practice, utils};
 
 fn draw_toggle_button(
@@ -177,12 +177,11 @@ pub fn handle_settings_buttons(
     saved_results: &mut bool,
     error_positions: &mut Vec<bool>,
     language: &mut Language,
-    lang_popup: &mut Popup,
-    lang_popup_recently_closed: &mut bool,
-    theme_popup: &mut Popup,
-    theme_popup_recently_closed: &mut bool,
     color_scheme: &mut crate::color_scheme::ColorScheme,
     wiki_mode: &mut bool,
+    menu_buttons_times: &mut std::collections::HashMap<String, Instant>,
+    popup_states: &mut PopupStates,
+    top_words: usize,
 ) -> bool {
     let btn_y = screen_height() / 5.0;
     let btn_padding = if screen_width() > 800.0 {
@@ -222,10 +221,10 @@ pub fn handle_settings_buttons(
             } else {
                 "lang"
             },
-            lang_popup.visible,
+            popup_states.language.visible,
             true,
         ),
-        ("theme", "theme", theme_popup.visible, true),
+        ("theme", "theme", popup_states.color_scheme.visible, true),
         ("|", "|", divider, true),
         ("time", "time", *time_mode, true),
         ("words", "words", *word_mode, true),
@@ -252,11 +251,11 @@ pub fn handle_settings_buttons(
     ];
 
     if is_key_pressed(KeyCode::Up) {
-        if !lang_popup.visible && !theme_popup.visible {
+        if !popup_states.language.visible && !popup_states.color_scheme.visible {
             *config_opened = true;
         }
     } else if is_key_pressed(KeyCode::Down) {
-        if !lang_popup.visible && !theme_popup.visible {
+        if !popup_states.language.visible && !popup_states.color_scheme.visible {
             *config_opened = false;
         }
     } else if is_key_pressed(KeyCode::Left) {
@@ -315,9 +314,33 @@ pub fn handle_settings_buttons(
         }
     } else if is_key_pressed(KeyCode::Enter)
         && *config_opened
-        && !lang_popup.visible
-        && !theme_popup.visible
-    {
+        && !popup_states.language.visible
+        && !popup_states.color_scheme.visible
+        {
+        
+        if popup_states.language.visible {
+            *language = match popup_states.language.selected {
+                0 => Language::English,
+                1 => Language::Indonesian,
+                2 => Language::Italian,
+                _ => Language::English,
+            };
+            popup_states.language.visible = false;
+            if *word_mode || *time_mode {
+                if *time_mode {
+                    *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(top_words, *language), *batch_size);
+                } else if *word_mode {
+                    *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(top_words, *language), usize::min(*batch_size, *batch_size));
+                }
+                *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
+                *error_positions = vec![false; reference.chars().count()];
+                pressed_vec.clear();
+                *pos1 = 0;
+                *words_done = 0;
+            }
+            //save_config();
+        }
+
         update_config(
             &selected_config,
             punctuation,
@@ -331,24 +354,42 @@ pub fn handle_settings_buttons(
             selected_practice_level,
             practice_mode,
             language,
-            lang_popup,
-            theme_popup,
+            popup_states,
             wiki_mode,
         );
 
         if *quote {
             *reference = utils::get_random_quote();
+            if menu_buttons_times.get("time").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
+                //popup_states.time_selection.open = true;
+            }
+            if let Some(time) = menu_buttons_times.get_mut("quote") {
+                *time = Instant::now();
+            }
         } else if *practice_mode {
             *reference = practice::create_words(
                 practice::TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1,
                 *batch_size,
             );
+            if let Some(time) = menu_buttons_times.get_mut("practice") {
+                *time = Instant::now();
+            }
         } else if *wiki_mode {
             *reference = utils::get_wiki_summary();
+            if let Some(time) = menu_buttons_times.get_mut("wiki") {
+                *time = Instant::now();
+            }
         } else if *selected_config != "language" && *selected_config != "theme" {
             let updated_word_list = utils::read_first_n_words(500, *language);
             *reference =
                 utils::get_reference(*punctuation, *numbers, &updated_word_list, *batch_size);
+            
+            if let Some(time) = menu_buttons_times.get_mut("time") {
+                *time = Instant::now();
+            }
+            if let Some(time) = menu_buttons_times.get_mut("words") {
+                *time = Instant::now();
+            }
         }
         if selected_config != "language" && selected_config != "theme" {
             *is_correct = VecDeque::from(vec![0; reference.len()]);
@@ -411,8 +452,7 @@ pub fn handle_settings_buttons(
                 selected_practice_level,
                 practice_mode,
                 language,
-                lang_popup,
-                theme_popup,
+                popup_states,
                 wiki_mode,
             );
             if *quote {
@@ -440,8 +480,7 @@ pub fn handle_settings_buttons(
                 *practice_menu = true;
             } else {
                 let updated_word_list = utils::read_first_n_words(500, *language);
-                *reference =
-                    utils::get_reference(*punctuation, *numbers, &updated_word_list, *batch_size);
+                *reference = utils::get_reference(*punctuation, *numbers, &updated_word_list, *batch_size);
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
                 *error_positions = vec![false; is_correct.len()];
                 reset_game_state(
@@ -462,10 +501,10 @@ pub fn handle_settings_buttons(
             }
         }
     }
-    if lang_popup.visible {
-        lang_popup.draw(font, language, color_scheme, lang_popup_recently_closed);
-    } else if theme_popup.visible {
-        theme_popup.draw(font, language, color_scheme, theme_popup_recently_closed);
+    if popup_states.language.visible {
+        popup_states.language.draw(font, color_scheme, PopupContent::Language);
+    } else if popup_states.color_scheme.visible {
+        popup_states.color_scheme.draw(font, color_scheme, PopupContent::ColorScheme);
     }
 
     any_button_hovered
@@ -484,8 +523,7 @@ fn update_config(
     selected_practice_level: &mut Option<usize>,
     practice_mode: &mut bool,
     language: &mut Language,
-    lang_popup: &mut Popup,
-    theme_popup: &mut Popup,
+    popup_states: &mut PopupStates,
     wiki_mode: &mut bool,
 ) {
     match label {
@@ -561,10 +599,10 @@ fn update_config(
             *language = Language::Indonesian;
         }
         "language" => {
-            lang_popup.show();
+            popup_states.language.show();
         }
         "theme" => {
-            theme_popup.show();
+            popup_states.color_scheme.show();
         }
         _ => {}
     }

@@ -13,7 +13,7 @@ use crate::language::Language;
 use crate::color_scheme::ColorScheme;
 use crate::config::AppConfig;
 use crate::button_states::{ButtonStates, ButtonState};
-use crate::ui::tui::popup::{PopupStates, PopupState, PopupContent};
+use crate::ui::tui::popup::{PopupStates, PopupState};
 use crate::time_selection::TimeSelection;
 use crate::word_number_selection::WordNumberSelection;
 use crate::top_words_selection::TopWordsSelection;
@@ -66,7 +66,6 @@ pub struct App {
     pub leaderboard_selected: usize,
     pub button_states: ButtonStates,
     pub popup_states: PopupStates,
-    pub popup_content: Option<PopupContent>,
     pub menu_buttons_times: HashMap<String, Instant>,
     pub top_words: usize,
 }
@@ -126,7 +125,6 @@ impl App {
                 batch_size_selection: PopupState { open: false, selected: 0 },
                 top_words_selection: PopupState { open: false, selected: 0 },
             },
-            popup_content: None,
             menu_buttons_times: HashMap::from([
                 ("settings".to_string(), Instant::now() - Duration::from_secs(5)),
                 ("time".to_string(), Instant::now() - Duration::from_secs(5)),

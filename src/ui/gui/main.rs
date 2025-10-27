@@ -5,15 +5,17 @@ use miniquad::window::set_mouse_cursor;
 use std::collections::VecDeque;
 use std::thread;
 use std::time::{Duration, Instant};
+use std::collections::HashMap;
 
 use crate::color_scheme::ColorScheme;
 use crate::config::AppConfig;
 use crate::practice::{self, TYPING_LEVELS};
 use crate::ui::gui::config::{self, reset_game_state};
-use crate::ui::gui::popup::{Popup, PopupContent};
+use crate::ui::gui::popup::{PopupStates, PopupState};
 use crate::ui::gui::practice as gui_practice;
 use crate::ui::gui::results;
 use crate::utils;
+//use crate::ui::gui::popup::{PopupStates, PopupState};
 
 pub const MAIN_COLOR: macroquad::color::Color =
     macroquad::color::Color::from_rgba(255, 155, 0, 255);
@@ -82,12 +84,28 @@ pub async fn gui_main_async() {
     let mut selected_practice_level: Option<usize> = Some(app_config.selected_level);
     let mut saved_results = false;
 
-    let mut lang_popup = Popup::new(PopupContent::Language);
-    let mut lang_popup_recently_closed = false;
+    //let mut lang_popup = Popup::new(PopupContent::Language);
+    //let mut lang_popup_recently_closed = false;
 
-    let mut theme_popup = Popup::new(PopupContent::ColorScheme);
-    let mut theme_popup_recently_closed = false;
+    //let mut theme_popup = Popup::new(PopupContent::ColorScheme);
+    //let mut theme_popup_recently_closed = false;
     let mut color_scheme = app_config.color_scheme;
+
+    let mut menu_buttons_times: HashMap<String, Instant> = HashMap::from([
+        ("settings".to_string(), Instant::now() - Duration::from_secs(5)),
+        ("time".to_string(), Instant::now() - Duration::from_secs(5)),
+        ("words".to_string(), Instant::now() - Duration::from_secs(5)),
+        ("quote".to_string(), Instant::now() - Duration::from_secs(5)),
+        ("practice".to_string(), Instant::now() - Duration::from_secs(5)),
+        ("punctuation".to_string(), Instant::now() - Duration::from_secs(5)),
+        ("numbers".to_string(), Instant::now() - Duration::from_secs(5)),
+        ("wiki".to_string(), Instant::now() - Duration::from_secs(5)),
+    ]);
+
+    let mut popup_states: PopupStates = PopupStates {
+        language: PopupState { visible: false, selected: 0 },
+        color_scheme: PopupState { visible: false, selected: 0 },
+    };
 
     let words: Vec<&str> = reference.split_whitespace().collect();
     let average_word_length: f64 = if !words.is_empty() {
@@ -156,7 +174,7 @@ pub async fn gui_main_async() {
                 font_size,
                 start_x,
                 start_y,
-                lang_popup.visible,
+                popup_states.language.visible,
                 &color_scheme,
             );
 
@@ -192,42 +210,12 @@ pub async fn gui_main_async() {
                 &mut saved_results,
                 &mut error_positions,
                 &mut language,
-                &mut lang_popup,
-                &mut lang_popup_recently_closed,
-                &mut theme_popup,
-                &mut theme_popup_recently_closed,
                 &mut color_scheme,
                 &mut wiki_mode,
+                &mut menu_buttons_times,
+                &mut popup_states,
+                top_words,
             );
-            if lang_popup_recently_closed {
-                reference = if quote {
-                    utils::get_random_quote()
-                } else if practice_mode {
-                    practice::create_words(
-                        practice::TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1,
-                        batch_size,
-                    )
-                } else {
-                    let updated_word_list = utils::read_first_n_words(500, language);
-                    utils::get_reference(punctuation, numbers, &updated_word_list, batch_size)
-                };
-                lang_popup_recently_closed = false;
-                reset_game_state(
-                    &mut pressed_vec,
-                    &mut is_correct,
-                    &mut pos1,
-                    &mut timer,
-                    &mut start_time,
-                    &mut game_started,
-                    &mut game_over,
-                    &mut speed_per_second,
-                    &mut last_recorded_time,
-                    &mut words_done,
-                    &mut errors_per_second,
-                    &mut saved_results,
-                    &mut error_positions,
-                );
-            }
 
             set_mouse_cursor(if any_button_hovered {
                 CursorIcon::Pointer
@@ -511,8 +499,8 @@ pub async fn gui_main_async() {
             }
         }
         if is_key_pressed(KeyCode::Escape) {
-            if lang_popup.visible {
-                lang_popup.visible = false;
+            if popup_states.language.visible {
+                popup_states.language.visible = false;
             } else {
                 app_config = AppConfig {
                     punctuation: punctuation,
