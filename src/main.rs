@@ -66,6 +66,7 @@ typeman --cli -q
 typeman --cli -t=30 -n=500
 typeman --cli -w=50 -n=500
 typeman --cli -w=50 -n=500 -p -d
+typeman --cli --wiki
 typeman --gui
 typeman",
     long_about = "\n
@@ -120,6 +121,9 @@ pub struct Cli {
 
     #[arg(long = "cli", conflicts_with_all = &["tui", "gui"])]
     cli: bool,
+
+    #[arg(long = "wiki", conflicts_with_all = &["custom_file", "random_quote", "time_limit", "top_words", "word_number", "level", "tui"])]
+    wiki: bool,
 
     #[arg(
         long = "lang",
@@ -195,6 +199,8 @@ fn run_cli(args: &Cli) {
         modes::practice(args);
     } else if args.word_number.is_some() && args.time_limit.is_none() {
         modes::word_mode(args);
+    } else if args.wiki {
+        modes::wiki_mode();
     } else {
         modes::time_mode(args);
     }

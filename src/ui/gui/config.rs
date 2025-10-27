@@ -182,6 +182,7 @@ pub fn handle_settings_buttons(
     theme_popup: &mut Popup,
     theme_popup_recently_closed: &mut bool,
     color_scheme: &mut crate::color_scheme::ColorScheme,
+    wiki_mode: &mut bool,
 ) -> bool {
     let btn_y = screen_height() / 5.0;
     let btn_padding = if screen_width() > 800.0 {
@@ -230,6 +231,16 @@ pub fn handle_settings_buttons(
         ("words", "words", *word_mode, true),
         ("quote", "quote", *quote, true),
         ("practice", "practice", *practice_mode, true),
+        (
+            "wikipedia",
+            if screen_width() > screen_height() && screen_width() > 1500.0 {
+                "wikipedia"
+            } else {
+                "wiki"
+            },
+            *wiki_mode,
+            true,
+        ),
         ("|", "|", divider, true),
         ("15", "15", test_time == &15.0, *time_mode),
         ("30", "30", test_time == &30.0, *time_mode),
@@ -322,6 +333,7 @@ pub fn handle_settings_buttons(
             language,
             lang_popup,
             theme_popup,
+            wiki_mode,
         );
 
         if *quote {
@@ -331,6 +343,8 @@ pub fn handle_settings_buttons(
                 practice::TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1,
                 *batch_size,
             );
+        } else if *wiki_mode {
+            *reference = utils::get_wiki_summary();
         } else if *selected_config != "language" && *selected_config != "theme" {
             let updated_word_list = utils::read_first_n_words(500, *language);
             *reference =
@@ -399,6 +413,7 @@ pub fn handle_settings_buttons(
                 language,
                 lang_popup,
                 theme_popup,
+                wiki_mode,
             );
             if *quote {
                 *reference = utils::get_random_quote();
@@ -471,6 +486,7 @@ fn update_config(
     language: &mut Language,
     lang_popup: &mut Popup,
     theme_popup: &mut Popup,
+    wiki_mode: &mut bool,
 ) {
     match label {
         "punctuation" => {
@@ -509,6 +525,13 @@ fn update_config(
             *word_mode = false;
             *practice_menu = true;
             *selected_practice_level = Some(practice::get_first_not_done());
+        }
+        "wikipedia" => {
+            *wiki_mode = true;
+            *time_mode = false;
+            *word_mode = false;
+            *practice_mode = false;
+            *quote = false;
         }
         "15" => {
             *test_time = 15.0;

@@ -16,6 +16,15 @@ fn get_language_from_args(args: &Cli) -> Language {
         .unwrap_or_default()
 }
 
+pub fn wiki_mode() {
+    println!("Starting Wikipedia mode test");
+    
+    let reference = utils::get_wiki_summary();
+    let mut start_time: Option<Instant> = None;
+    let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
+
+    cli::main::type_loop(&reference, None, &mut start_time, None, &mut is_correct, "wiki");
+}
 
 pub fn word_mode(args: &Cli) {
     println!("Starting common words test with specified word number");

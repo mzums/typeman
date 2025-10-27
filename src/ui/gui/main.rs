@@ -38,8 +38,9 @@ pub async fn gui_main_async() {
     let mut word_mode = app_config.word_mode;
     let mut language = app_config.language;
     let mut practice_mode = app_config.practice_mode;
+    let mut wiki_mode = app_config.wiki_mode;
 
-    if !time_mode && !word_mode && !quote && !practice_mode {
+    if !time_mode && !word_mode && !quote && !practice_mode && !wiki_mode {
         time_mode = true;
     }
 
@@ -126,6 +127,7 @@ pub async fn gui_main_async() {
             max_width,
             quote,
             word_mode,
+            wiki_mode,
         );
 
         let mut chars_in_line: Vec<i32> = vec![];
@@ -195,6 +197,7 @@ pub async fn gui_main_async() {
                 &mut theme_popup,
                 &mut theme_popup_recently_closed,
                 &mut color_scheme,
+                &mut wiki_mode,
             );
             if lang_popup_recently_closed {
                 reference = if quote {
@@ -330,7 +333,7 @@ pub async fn gui_main_async() {
                     50,
                     &color_scheme,
                 );
-            } else if quote {
+            } else if quote || wiki_mode{
                 draw_word_count(
                     Some(&font.clone()),
                     font_size,
@@ -525,6 +528,7 @@ pub async fn gui_main_async() {
                     language: language,
                     color_scheme: color_scheme,
                     word_number: app_config.word_number,
+                    top_words: top_words,
                 };
                 let _ = app_config.save();
 
@@ -555,6 +559,8 @@ pub async fn gui_main_async() {
                 );
             } else if quote {
                 reference = utils::get_random_quote();
+            } else if wiki_mode {
+                reference = utils::get_wiki_summary();
             } else {
                 let updated_word_list = utils::read_first_n_words(500, language);
                 reference =
@@ -746,6 +752,7 @@ pub fn create_lines(
     max_width: f32,
     quote: bool,
     word_mode: bool,
+    wiki_mode: bool,
 ) -> Vec<String> {
     let mut lines = Vec::new();
     let mut current_line = String::new();
@@ -761,7 +768,7 @@ pub fn create_lines(
         if dims.width > max_width && !current_line.is_empty() {
             current_line += " ";
             lines.push(current_line.clone());
-            if lines.len() >= 5 && !quote && !word_mode {
+            if lines.len() >= 5 && !quote && !word_mode && !wiki_mode {
                 if no_words < words.len() {
                     let char_indices = reference.char_indices();
                     let mut end_idx = 0;
@@ -787,7 +794,7 @@ pub fn create_lines(
             current_line = test_line;
         }
         no_words += 1;
-        if lines.len() >= 5 && !quote && !word_mode {
+        if lines.len() >= 5 && !quote && !word_mode && !wiki_mode {
             break;
         }
     }

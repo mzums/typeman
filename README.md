@@ -74,7 +74,8 @@ Additional action needed for succesfull install
 - **quote**: random quote
 - **punctuation**: punctuation in word number and time modes
 - **digits**: digits  in word and time modes
-- **level** - practice level
+- **level**: practice level
+- **wikipedia**: wikipedia snippets
 
 ## Commands:
 - `typeman` - TUI
@@ -86,6 +87,7 @@ Additional action needed for succesfull install
     - `typeman --cli -w=50 -n=500 -p -d` - 50 random words from 500 most used english words with punctuation and digits
     - `typeman --cli -l` - list all practice levels
     - `typeman --cli -l=1` - practice first level
+    - `typeman --cli --wiki` - wikipedia mode
 
 ---
 
@@ -94,5 +96,6 @@ Additional action needed for succesfull install
 - https://github.com/JackShannon/1000-most-common-words/blob/master/1000-common-english-words.txt
 - Indonesian common words compiled from various online dictionaries and frequency lists
 - https://fonts.google.com/specimen/Roboto+Mono?preview.text=Whereas%20recognition%20of%20the%20inherent%20dignity
+- Wikipedia
 
 ### Special thanks to [piter231](https://github.com/piter231/) for testing!
