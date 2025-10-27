@@ -501,6 +501,8 @@ pub async fn gui_main_async() {
         if is_key_pressed(KeyCode::Escape) {
             if popup_states.language.visible {
                 popup_states.language.visible = false;
+            } else if popup_states.color_scheme.visible {
+                popup_states.color_scheme.visible = false;
             } else {
                 app_config = AppConfig {
                     punctuation: punctuation,
@@ -815,6 +817,7 @@ pub fn handle_input(
             || ch == '\u{f703}'
             || ch == '\u{f704}'
             || ch == '\u{f705}'
+            || ch == '\u{1b}' // esc
         {
             // Arrow keys
             return false;

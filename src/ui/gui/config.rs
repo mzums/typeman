@@ -3,10 +3,33 @@ use macroquad::prelude::*;
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
+use crate::color_scheme::ColorScheme;
 use crate::language::Language;
 use crate::ui::gui::main;
 use crate::ui::gui::popup::{PopupContent, PopupStates};
 use crate::{practice, utils};
+use crate::config::AppConfig;
+
+fn save_config(punctuation: bool, numbers: bool, time_mode: bool, word_mode: bool, quote: bool, test_time: f32, batch_size: usize, practice_mode: bool, wiki_mode: bool, language: Language, color_scheme: ColorScheme, word_number: usize, top_words: usize, selected_practice_level: Option<usize>) {
+    let app_config = AppConfig {
+        punctuation: punctuation,
+        numbers: numbers,
+        time_mode: time_mode,
+        word_mode: word_mode,
+        quote: quote,
+        practice_mode: practice_mode,
+        wiki_mode: wiki_mode,
+        batch_size: batch_size,
+        test_time: test_time,
+        selected_level: selected_practice_level.unwrap_or(1),
+        language: language,
+        color_scheme: color_scheme,
+        word_number: word_number,
+        top_words: top_words,
+    };
+
+    let _ = app_config.save();
+}
 
 fn draw_toggle_button(
     x: f32,
@@ -183,6 +206,7 @@ pub fn handle_settings_buttons(
     popup_states: &mut PopupStates,
     top_words: usize,
 ) -> bool {
+
     let btn_y = screen_height() / 5.0;
     let btn_padding = if screen_width() > 800.0 {
         font_size as f32 * 0.7
@@ -314,10 +338,8 @@ pub fn handle_settings_buttons(
         }
     } else if is_key_pressed(KeyCode::Enter)
         && *config_opened
-        && !popup_states.language.visible
-        && !popup_states.color_scheme.visible
         {
-        
+       
         if popup_states.language.visible {
             *language = match popup_states.language.selected {
                 0 => Language::English,
@@ -326,6 +348,7 @@ pub fn handle_settings_buttons(
                 _ => Language::English,
             };
             popup_states.language.visible = false;
+            popup_states.language.hide();
             if *word_mode || *time_mode {
                 if *time_mode {
                     *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(top_words, *language), *batch_size);
@@ -338,7 +361,23 @@ pub fn handle_settings_buttons(
                 *pos1 = 0;
                 *words_done = 0;
             }
-            //save_config();
+            return false;
+        } else if popup_states.color_scheme.visible {
+            *color_scheme = match popup_states.color_scheme.selected {
+                0 => ColorScheme::Default,
+                1 => ColorScheme::Dark,
+                2 => ColorScheme::Light,
+                3 => ColorScheme::Monochrome,
+                4 => ColorScheme::Ocean,
+                5 => ColorScheme::OceanDark,
+                6 => ColorScheme::Forest,
+                7 => ColorScheme::ForestDark,
+                8 => ColorScheme::Pink,
+                _ => ColorScheme::Default,
+            };
+            popup_states.color_scheme.visible = false;
+            popup_states.color_scheme.hide();
+            return false;
         }
 
         update_config(
@@ -357,6 +396,8 @@ pub fn handle_settings_buttons(
             popup_states,
             wiki_mode,
         );
+
+        save_config(*punctuation, *numbers, *time_mode, *word_mode, *quote, *test_time, *batch_size, *practice_mode, *wiki_mode, *language, *color_scheme, *batch_size, top_words, *selected_practice_level);
 
         if *quote {
             *reference = utils::get_random_quote();
@@ -437,8 +478,6 @@ pub fn handle_settings_buttons(
         }
 
         if clicked && *label != "|" && *label != "language" {
-            println!("Clicked button: {}", label);
-
             update_config(
                 label,
                 punctuation,
@@ -599,7 +638,8 @@ fn update_config(
             *language = Language::Indonesian;
         }
         "language" => {
-            popup_states.language.show();
+            //popup_states.language.show();
+            popup_states.language.visible = true;
         }
         "theme" => {
             popup_states.color_scheme.show();
