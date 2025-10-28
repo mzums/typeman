@@ -264,22 +264,14 @@ pub fn handle_settings_buttons(
             *wiki_mode,
             true,
         ),
-        ("|", "|", divider, true),
-        ("15", "15", test_time == &15.0, *time_mode),
-        ("30", "30", test_time == &30.0, *time_mode),
-        ("60", "60", test_time == &60.0, *time_mode),
-        ("120", "120", test_time == &120.0, *time_mode),
-        ("25", "25", *batch_size == 25, *word_mode),
-        ("50", "50", *batch_size == 50, *word_mode),
-        ("100", "100", *batch_size == 100, *word_mode),
     ];
 
     if is_key_pressed(KeyCode::Up) {
-        if !popup_states.language.visible && !popup_states.color_scheme.visible {
+        if !popup_states.language.visible && !popup_states.color_scheme.visible && !popup_states.time_selection.visible && !popup_states.word_number_selection.visible {
             *config_opened = true;
         }
     } else if is_key_pressed(KeyCode::Down) {
-        if !popup_states.language.visible && !popup_states.color_scheme.visible {
+        if !popup_states.language.visible && !popup_states.color_scheme.visible && !popup_states.time_selection.visible && !popup_states.word_number_selection.visible {
             *config_opened = false;
         }
     } else if is_key_pressed(KeyCode::Left) {
@@ -339,6 +331,8 @@ pub fn handle_settings_buttons(
     } else if is_key_pressed(KeyCode::Enter)
         && *config_opened
         {
+
+            println!("{}", batch_size);
        
         if popup_states.language.visible {
             *language = match popup_states.language.selected {
@@ -378,6 +372,31 @@ pub fn handle_settings_buttons(
             popup_states.color_scheme.visible = false;
             popup_states.color_scheme.hide();
             return false;
+        } else if popup_states.time_selection.visible {
+            *test_time = match popup_states.time_selection.selected {
+                0 => 15.0,
+                1 => 30.0,
+                2 => 60.0,
+                3 => 120.0,
+                _ => 30.0,
+            };
+            *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(top_words, *language), *batch_size);
+            popup_states.time_selection.visible = false;
+            popup_states.time_selection.hide();
+            return false;
+        } else if popup_states.word_number_selection.visible {
+            *batch_size = match popup_states.word_number_selection.selected {
+                0 => 25,
+                1 => 50,
+                2 => 100,
+                3 => 200,
+                4 => 500,
+                _ => 50,
+            };
+            *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(top_words, *language), *batch_size);
+            popup_states.word_number_selection.visible = false;
+            popup_states.word_number_selection.hide();
+            return false;
         }
 
         update_config(
@@ -387,8 +406,6 @@ pub fn handle_settings_buttons(
             time_mode,
             word_mode,
             quote,
-            test_time,
-            batch_size,
             practice_menu,
             selected_practice_level,
             practice_mode,
@@ -401,12 +418,6 @@ pub fn handle_settings_buttons(
 
         if *quote {
             *reference = utils::get_random_quote();
-            if menu_buttons_times.get("time").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
-                //popup_states.time_selection.open = true;
-            }
-            if let Some(time) = menu_buttons_times.get_mut("quote") {
-                *time = Instant::now();
-            }
         } else if *practice_mode {
             *reference = practice::create_words(
                 practice::TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1,
@@ -424,9 +435,17 @@ pub fn handle_settings_buttons(
             let updated_word_list = utils::read_first_n_words(500, *language);
             *reference =
                 utils::get_reference(*punctuation, *numbers, &updated_word_list, *batch_size);
-            
+        }
+        if *selected_config == "time" {
+            if menu_buttons_times.get("time").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
+                popup_states.time_selection.visible = true;
+            }
             if let Some(time) = menu_buttons_times.get_mut("time") {
                 *time = Instant::now();
+            }
+        } else if *selected_config == "words" {
+            if menu_buttons_times.get("words").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
+                popup_states.word_number_selection.visible = true;
             }
             if let Some(time) = menu_buttons_times.get_mut("words") {
                 *time = Instant::now();
@@ -485,8 +504,6 @@ pub fn handle_settings_buttons(
                 time_mode,
                 word_mode,
                 quote,
-                test_time,
-                batch_size,
                 practice_menu,
                 selected_practice_level,
                 practice_mode,
@@ -544,6 +561,10 @@ pub fn handle_settings_buttons(
         popup_states.language.draw(font, color_scheme, PopupContent::Language);
     } else if popup_states.color_scheme.visible {
         popup_states.color_scheme.draw(font, color_scheme, PopupContent::ColorScheme);
+    } else if popup_states.time_selection.visible {
+        popup_states.time_selection.draw(font, color_scheme, PopupContent::TimeSelection);
+    } else if popup_states.word_number_selection.visible {
+        popup_states.word_number_selection.draw(font, color_scheme, PopupContent::WordNumberSelection);
     }
 
     any_button_hovered
@@ -556,8 +577,6 @@ fn update_config(
     time_mode: &mut bool,
     word_mode: &mut bool,
     quote: &mut bool,
-    test_time: &mut f32,
-    batch_size: &mut usize,
     practice_menu: &mut bool,
     selected_practice_level: &mut Option<usize>,
     practice_mode: &mut bool,
@@ -610,27 +629,6 @@ fn update_config(
             *practice_mode = false;
             *quote = false;
         }
-        "15" => {
-            *test_time = 15.0;
-        }
-        "30" => {
-            *test_time = 30.0;
-        }
-        "60" => {
-            *test_time = 60.0;
-        }
-        "120" => {
-            *test_time = 120.0;
-        }
-        "25" => {
-            *batch_size = 25;
-        }
-        "50" => {
-            *batch_size = 50;
-        }
-        "100" => {
-            *batch_size = 100;
-        }
         "english" => {
             *language = Language::English;
         }
@@ -638,7 +636,6 @@ fn update_config(
             *language = Language::Indonesian;
         }
         "language" => {
-            //popup_states.language.show();
             popup_states.language.visible = true;
         }
         "theme" => {

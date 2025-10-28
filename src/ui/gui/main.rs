@@ -105,6 +105,8 @@ pub async fn gui_main_async() {
     let mut popup_states: PopupStates = PopupStates {
         language: PopupState { visible: false, selected: 0 },
         color_scheme: PopupState { visible: false, selected: 0 },
+        time_selection: PopupState { visible: false, selected: 0 },
+        word_number_selection: PopupState { visible: false, selected: 0 },
     };
 
     let words: Vec<&str> = reference.split_whitespace().collect();
@@ -503,6 +505,10 @@ pub async fn gui_main_async() {
                 popup_states.language.visible = false;
             } else if popup_states.color_scheme.visible {
                 popup_states.color_scheme.visible = false;
+            } else if popup_states.time_selection.visible {
+                popup_states.time_selection.visible = false;
+            } else if popup_states.word_number_selection.visible {
+                popup_states.word_number_selection.visible = false;
             } else {
                 app_config = AppConfig {
                     punctuation: punctuation,
@@ -651,7 +657,7 @@ fn draw_shortcut_info(
         ]
     } else if practice_mode {
         vec![
-            "↑ to navigate to config, ← → to change settings (or click)",
+            "↑ to navigate to config, ← → to change settings, ↵ - apply config (or click)",
             "Tab + Enter - reset",
         ]
     } else if game_over {

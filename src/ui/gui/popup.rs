@@ -2,11 +2,14 @@ use macroquad::prelude::*;
 
 use crate::color_scheme::ColorScheme;
 use crate::language::Language;
+use crate::time_selection::TimeSelection;
 use crate::utils;
 
 pub enum PopupContent {
     Language,
     ColorScheme,
+    TimeSelection,
+    WordNumberSelection,
 }
 
 pub struct PopupState {
@@ -18,6 +21,8 @@ pub struct PopupState {
 pub struct PopupStates {
     pub language: PopupState,
     pub color_scheme: PopupState,
+    pub time_selection: PopupState,
+    pub word_number_selection: PopupState,
 }
 
 pub trait PopupData {
@@ -31,6 +36,8 @@ impl PopupData for PopupContent {
         match self {
             PopupContent::Language => "Select Language",
             PopupContent::ColorScheme => "Select Color Scheme",
+            PopupContent::TimeSelection => "Select Time",
+            PopupContent::WordNumberSelection => "Select Number of Words",
         }
     }
 
@@ -38,6 +45,8 @@ impl PopupData for PopupContent {
         match self {
             PopupContent::Language => Language::all().iter().map(|x| x.to_string()).collect(),
             PopupContent::ColorScheme => ColorScheme::all().iter().map(|x| x.name().to_string()).collect(),
+            PopupContent::TimeSelection => TimeSelection::all().iter().map(|x| x.to_string()).collect(),
+            PopupContent::WordNumberSelection => vec!["25".to_string(), "50".to_string(), "100".to_string(), "200".to_string(), "500".to_string()],
         }
     }
 
@@ -45,6 +54,8 @@ impl PopupData for PopupContent {
         match self {
             PopupContent::Language => &popup_states.language.selected,
             PopupContent::ColorScheme => &popup_states.color_scheme.selected,
+            PopupContent::TimeSelection => &popup_states.time_selection.selected,
+            PopupContent::WordNumberSelection => &popup_states.word_number_selection.selected,
         }
     }
 }
@@ -54,13 +65,11 @@ impl PopupState {
         Self {
             visible: false,
             selected: 0,
-            //ignore_next_enter: false,
         }
     }
 
     pub fn show(&mut self) {
         self.visible = true;
-        //self.ignore_next_enter = true;
     }
 
     pub fn hide(&mut self) {
@@ -76,13 +85,6 @@ impl PopupState {
         if !self.visible {
             return None;
         }
-
-        /*if self.ignore_next_enter {
-            if is_key_pressed(KeyCode::Enter) {
-                return None;
-            }
-            self.ignore_next_enter = false;
-        }*/
 
         let screen_w = screen_width();
         let screen_h = screen_height();
@@ -100,19 +102,7 @@ impl PopupState {
         utils::draw_rounded_rect(x, y, popup_w, popup_h, 20.0, bg_color);
         utils::draw_rounded_rect_lines(x, y, popup_w, popup_h, 20.0, 5.0, border_color);
 
-        let (title, items): (&str, Vec<String>) = match content {
-            PopupContent::Language => (
-                "Select Language",
-                Language::all().iter().map(|l| l.to_string()).collect(),
-            ),
-            PopupContent::ColorScheme => (
-                "Select Theme",
-                ColorScheme::all()
-                    .iter()
-                    .map(|c| c.name().to_string())
-                    .collect(),
-            ),
-        };
+        let (title, items) = (content.title(), content.items());
 
         let title_size = measure_text(title, font.as_ref(), 24, 1.0);
         draw_text_ex(
@@ -169,24 +159,6 @@ impl PopupState {
         if is_key_pressed(KeyCode::Down) && self.selected + 1 < items.len() {
             self.selected += 1;
         }
-
-        /*if is_key_pressed(KeyCode::Enter) {
-            *popup_recently_closed = true;
-            self.hide();
-
-            match content {
-                PopupContent::Language => {
-                    let choice = Language::all()[self.selected];
-                    *language = choice;
-                    return Some(PopupState::Language(choice));
-                }
-                PopupContent::ColorScheme => {
-                    let choice = ColorScheme::all()[self.selected];
-                    *theme = choice;
-                    return Some(PopupResult::ColorScheme(choice));
-                }
-            }
-        }*/
 
         None
     }
