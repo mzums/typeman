@@ -271,7 +271,6 @@ pub async fn gui_main_async() {
                 timer = start_time.elapsed();
                 if (timer.as_secs_f32() >= test_time && time_mode) || (pos1 >= reference.chars().count() && (wiki_mode || quote)) || (words_done >= word_number)
                 {
-                    println!("Game Over Triggered 2");
                     game_over = true;
                 }
             }
@@ -420,47 +419,6 @@ pub async fn gui_main_async() {
                 &mut saved_results,
                 &color_scheme,
             );
-
-            if is_key_pressed(KeyCode::Q) {
-                if practice_menu {
-                    practice_menu = false;
-                    practice_mode = false;
-                    game_over = false;
-                    time_mode = true;
-                    reset_game_state(
-                        &mut pressed_vec,
-                        &mut is_correct,
-                        &mut pos1,
-                        &mut timer,
-                        &mut start_time,
-                        &mut game_started,
-                        &mut game_over,
-                        &mut speed_per_second,
-                        &mut last_recorded_time,
-                        &mut words_done,
-                        &mut errors_per_second,
-                        &mut saved_results,
-                        &mut error_positions,
-                    );
-                    reset_game_state(
-                        &mut pressed_vec,
-                        &mut is_correct,
-                        &mut pos1,
-                        &mut timer,
-                        &mut start_time,
-                        &mut game_started,
-                        &mut game_over,
-                        &mut speed_per_second,
-                        &mut last_recorded_time,
-                        &mut words_done,
-                        &mut errors_per_second,
-                        &mut saved_results,
-                        &mut error_positions,
-                    );
-                }
-            } else {
-                let _pressed = get_char_pressed();
-            }
         } else if practice_menu {
             let level = gui_practice::display_practice_menu(
                 Some(font.clone()),
@@ -509,20 +467,62 @@ pub async fn gui_main_async() {
             }
         }
         if is_key_pressed(KeyCode::Escape) {
-            if popup_states.language.visible {
+            if practice_menu {
+                practice_menu = false;
+                practice_mode = false;
+                game_over = false;
+                time_mode = true;
+                reset_game_state(
+                    &mut pressed_vec,
+                    &mut is_correct,
+                    &mut pos1,
+                    &mut timer,
+                    &mut start_time,
+                    &mut game_started,
+                    &mut game_over,
+                    &mut speed_per_second,
+                    &mut last_recorded_time,
+                    &mut words_done,
+                    &mut errors_per_second,
+                    &mut saved_results,
+                    &mut error_positions,
+                );
+                reset_game_state(
+                    &mut pressed_vec,
+                    &mut is_correct,
+                    &mut pos1,
+                    &mut timer,
+                    &mut start_time,
+                    &mut game_started,
+                    &mut game_over,
+                    &mut speed_per_second,
+                    &mut last_recorded_time,
+                    &mut words_done,
+                    &mut errors_per_second,
+                    &mut saved_results,
+                    &mut error_positions,
+                );
+            } else if popup_states.language.visible {
                 popup_states.language.visible = false;
+                config_opened = false;
             } else if popup_states.color_scheme.visible {
                 popup_states.color_scheme.visible = false;
+                config_opened = false;
             } else if popup_states.time_selection.visible {
                 popup_states.time_selection.visible = false;
+                config_opened = false;
             } else if popup_states.word_number_selection.visible {
                 popup_states.word_number_selection.visible = false;
+                config_opened = false;
             } else if popup_states.settings.visible {
                 popup_states.settings.visible = false;
+                config_opened = false;
             } else if popup_states.batch_size_selection.visible {
                 popup_states.batch_size_selection.visible = false;
+                config_opened = false;
             } else if popup_states.top_words_selection.visible {
                 popup_states.top_words_selection.visible = false;
+                config_opened = false;
             } else {
                 app_config = AppConfig {
                     punctuation: punctuation,
@@ -581,7 +581,7 @@ pub async fn gui_main_async() {
             thread::sleep(time::Duration::from_millis(80));
         }
 
-        if pos1 >= reference.chars().count() && time_mode && !game_over {
+        if pos1 >= reference.chars().count() && (time_mode || word_mode) && !game_over {
             words_done += 1;
             reference = utils::get_reference(
                 punctuation,
@@ -667,7 +667,6 @@ fn draw_shortcut_info(
 
         vec![
             "↑ or ↓ to navigate, ↵ to select (or click)",
-            "q - quit menu",
         ]
     } else if practice_mode {
         vec![

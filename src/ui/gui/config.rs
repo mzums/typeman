@@ -136,7 +136,6 @@ pub fn update_game_state(
     if *game_started && !*game_over {
         *timer = start_time.elapsed();
         if (timer.as_secs_f32() >= test_time && time_mode) || (*pos1 >= reference.chars().count() && (wiki_mode || quote)) || (*words_done >= word_number)  {
-            println!("Game Over Triggered");
             *game_over = true;
         }
     }
@@ -230,9 +229,14 @@ pub fn handle_settings_buttons(
                 "..."
             },
             *punctuation,
+            true,
+        ),
+        (
+            "|",
+            "|",
+            divider,
             !*quote && !*practice_mode,
         ),
-        ("|", "|", divider, true),
         (
             "punctuation",
             if screen_width() > screen_height() && screen_width() > 1500.0 {
@@ -337,8 +341,6 @@ pub fn handle_settings_buttons(
     } else if is_key_pressed(KeyCode::Enter)
         && *config_opened
         {
-
-        println!("{}", popup_states.batch_size_selection.visible);
        
         if popup_states.language.visible {
             *language = match popup_states.language.selected {
@@ -429,6 +431,11 @@ pub fn handle_settings_buttons(
                 3 => 1000,
                 _ => 500,
             };
+            if *time_mode {
+                *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(*top_words, *language), *batch_size);
+            } else if *word_mode {
+                *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(*top_words, *language), usize::min(*batch_size, 100));
+            }
             popup_states.top_words_selection.visible = false;
             popup_states.top_words_selection.hide();
             return false;
