@@ -3,6 +3,7 @@ use macroquad::prelude::*;
 use crate::color_scheme::ColorScheme;
 use crate::language::Language;
 use crate::time_selection::TimeSelection;
+use crate::settings::Settings;
 use crate::utils;
 
 pub enum PopupContent {
@@ -10,6 +11,9 @@ pub enum PopupContent {
     ColorScheme,
     TimeSelection,
     WordNumberSelection,
+    Settings,
+    BatchSizeSelection,
+    TopWordsSelection,
 }
 
 pub struct PopupState {
@@ -23,6 +27,9 @@ pub struct PopupStates {
     pub color_scheme: PopupState,
     pub time_selection: PopupState,
     pub word_number_selection: PopupState,
+    pub settings: PopupState,
+    pub batch_size_selection: PopupState,
+    pub top_words_selection: PopupState,
 }
 
 pub trait PopupData {
@@ -38,6 +45,9 @@ impl PopupData for PopupContent {
             PopupContent::ColorScheme => "Select Color Scheme",
             PopupContent::TimeSelection => "Select Time",
             PopupContent::WordNumberSelection => "Select Number of Words",
+            PopupContent::Settings => "Select Setting",
+            PopupContent::BatchSizeSelection => "Select Batch Size",
+            PopupContent::TopWordsSelection => "Select Top Words",
         }
     }
 
@@ -47,6 +57,9 @@ impl PopupData for PopupContent {
             PopupContent::ColorScheme => ColorScheme::all().iter().map(|x| x.name().to_string()).collect(),
             PopupContent::TimeSelection => TimeSelection::all().iter().map(|x| x.to_string()).collect(),
             PopupContent::WordNumberSelection => vec!["25".to_string(), "50".to_string(), "100".to_string(), "200".to_string(), "500".to_string()],
+            PopupContent::Settings => Settings::all().iter().map(|x| x.to_string()).collect(),
+            PopupContent::BatchSizeSelection => vec!["10".to_string(), "25".to_string(), "50".to_string(), "100".to_string(), "200".to_string()],
+            PopupContent::TopWordsSelection => vec!["100".to_string(), "200".to_string(), "500".to_string(), "1000".to_string()],
         }
     }
 
@@ -56,6 +69,9 @@ impl PopupData for PopupContent {
             PopupContent::ColorScheme => &popup_states.color_scheme.selected,
             PopupContent::TimeSelection => &popup_states.time_selection.selected,
             PopupContent::WordNumberSelection => &popup_states.word_number_selection.selected,
+            PopupContent::Settings => &popup_states.settings.selected,
+            PopupContent::BatchSizeSelection => &popup_states.batch_size_selection.selected,
+            PopupContent::TopWordsSelection => &popup_states.top_words_selection.selected,
         }
     }
 }

@@ -111,6 +111,9 @@ pub fn update_game_state(
     errors_this_second: &mut f64,
     practice_mode: &mut bool,
     practice_menu: bool,
+    wiki_mode: bool,
+    quote: bool,
+    word_number: usize,
 ) {
     if !*game_started
         && main::handle_input(
@@ -132,7 +135,8 @@ pub fn update_game_state(
 
     if *game_started && !*game_over {
         *timer = start_time.elapsed();
-        if (timer.as_secs_f32() >= test_time && time_mode) || *pos1 >= reference.chars().count() {
+        if (timer.as_secs_f32() >= test_time && time_mode) || (*pos1 >= reference.chars().count() && (wiki_mode || quote)) || (*words_done >= word_number)  {
+            println!("Game Over Triggered");
             *game_over = true;
         }
     }
@@ -204,7 +208,8 @@ pub fn handle_settings_buttons(
     wiki_mode: &mut bool,
     menu_buttons_times: &mut std::collections::HashMap<String, Instant>,
     popup_states: &mut PopupStates,
-    top_words: usize,
+    top_words: &mut usize,
+    word_number: &mut usize,
 ) -> bool {
 
     let btn_y = screen_height() / 5.0;
@@ -217,6 +222,17 @@ pub fn handle_settings_buttons(
     let mut total_width = 0.0;
 
     let mut button_states = vec![
+        (
+            "settings",
+            if screen_width() > screen_height() && screen_width() > 1500.0 {
+                "settings"
+            } else {
+                "..."
+            },
+            *punctuation,
+            !*quote && !*practice_mode,
+        ),
+        ("|", "|", divider, true),
         (
             "punctuation",
             if screen_width() > screen_height() && screen_width() > 1500.0 {
@@ -238,18 +254,6 @@ pub fn handle_settings_buttons(
             !*quote && !*practice_mode,
         ),
         ("|", "|", divider, true),
-        (
-            "language",
-            if screen_width() > screen_height() && screen_width() > 1500.0 {
-                "language"
-            } else {
-                "lang"
-            },
-            popup_states.language.visible,
-            true,
-        ),
-        ("theme", "theme", popup_states.color_scheme.visible, true),
-        ("|", "|", divider, true),
         ("time", "time", *time_mode, true),
         ("words", "words", *word_mode, true),
         ("quote", "quote", *quote, true),
@@ -266,12 +270,14 @@ pub fn handle_settings_buttons(
         ),
     ];
 
+    let popup_opened = popup_states.language.visible || popup_states.color_scheme.visible || popup_states.time_selection.visible || popup_states.word_number_selection.visible || popup_states.settings.visible || popup_states.batch_size_selection.visible || popup_states.top_words_selection.visible;
+
     if is_key_pressed(KeyCode::Up) {
-        if !popup_states.language.visible && !popup_states.color_scheme.visible && !popup_states.time_selection.visible && !popup_states.word_number_selection.visible {
+        if !popup_opened {
             *config_opened = true;
         }
     } else if is_key_pressed(KeyCode::Down) {
-        if !popup_states.language.visible && !popup_states.color_scheme.visible && !popup_states.time_selection.visible && !popup_states.word_number_selection.visible {
+        if !popup_opened {
             *config_opened = false;
         }
     } else if is_key_pressed(KeyCode::Left) {
@@ -332,7 +338,7 @@ pub fn handle_settings_buttons(
         && *config_opened
         {
 
-            println!("{}", batch_size);
+        println!("{}", popup_states.batch_size_selection.visible);
        
         if popup_states.language.visible {
             *language = match popup_states.language.selected {
@@ -345,9 +351,9 @@ pub fn handle_settings_buttons(
             popup_states.language.hide();
             if *word_mode || *time_mode {
                 if *time_mode {
-                    *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(top_words, *language), *batch_size);
+                    *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(*top_words, *language), *batch_size);
                 } else if *word_mode {
-                    *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(top_words, *language), usize::min(*batch_size, *batch_size));
+                    *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(*top_words, *language), usize::min(*batch_size, *batch_size));
                 }
                 *is_correct = VecDeque::from(vec![0; reference.chars().count()]);
                 *error_positions = vec![false; reference.chars().count()];
@@ -378,14 +384,16 @@ pub fn handle_settings_buttons(
                 1 => 30.0,
                 2 => 60.0,
                 3 => 120.0,
+                4 => 300.0,
+                5 => 600.0,
                 _ => 30.0,
             };
-            *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(top_words, *language), *batch_size);
+            *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(*top_words, *language), *batch_size);
             popup_states.time_selection.visible = false;
             popup_states.time_selection.hide();
             return false;
         } else if popup_states.word_number_selection.visible {
-            *batch_size = match popup_states.word_number_selection.selected {
+            *word_number = match popup_states.word_number_selection.selected {
                 0 => 25,
                 1 => 50,
                 2 => 100,
@@ -393,10 +401,54 @@ pub fn handle_settings_buttons(
                 4 => 500,
                 _ => 50,
             };
-            *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(top_words, *language), *batch_size);
+            *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(*top_words, *language), usize::min(*batch_size, 100));
             popup_states.word_number_selection.visible = false;
             popup_states.word_number_selection.hide();
             return false;
+        } else if popup_states.batch_size_selection.visible {
+            *batch_size = match popup_states.batch_size_selection.selected {
+                0 => 10,
+                1 => 25,
+                2 => 50,
+                3 => 100,
+                _ => 50,
+            };
+            if *time_mode {
+                *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(*top_words, *language), *batch_size);
+            } else if *word_mode {
+                *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(*top_words, *language), usize::min(*batch_size, 100));
+            }
+            popup_states.batch_size_selection.visible = false;
+            popup_states.batch_size_selection.hide();
+            return false;
+        } else if popup_states.top_words_selection.visible {
+            *top_words = match popup_states.top_words_selection.selected {
+                0 => 100,
+                1 => 200,
+                2 => 500,
+                3 => 1000,
+                _ => 500,
+            };
+            popup_states.top_words_selection.visible = false;
+            popup_states.top_words_selection.hide();
+            return false;
+        } else if popup_states.settings.visible {
+            if popup_states.settings.selected == 0 {
+                popup_states.color_scheme.visible = true;
+                let schemes = ColorScheme::all();
+                popup_states.color_scheme.selected = schemes.iter().position(|&s| s == *color_scheme).unwrap_or(0);
+            } else if popup_states.settings.selected == 1 {
+                popup_states.language.visible = true;
+                popup_states.language.selected = match language {
+                    Language::English => 0,
+                    Language::Indonesian => 1,
+                    Language::Italian=> 2,
+                };
+            } else if popup_states.settings.selected == 2 {
+                popup_states.batch_size_selection.visible = true;
+            } else if popup_states.settings.selected == 3 {
+                popup_states.top_words_selection.visible = true;
+            }
         }
 
         update_config(
@@ -414,7 +466,7 @@ pub fn handle_settings_buttons(
             wiki_mode,
         );
 
-        save_config(*punctuation, *numbers, *time_mode, *word_mode, *quote, *test_time, *batch_size, *practice_mode, *wiki_mode, *language, *color_scheme, *batch_size, top_words, *selected_practice_level);
+        save_config(*punctuation, *numbers, *time_mode, *word_mode, *quote, *test_time, *batch_size, *practice_mode, *wiki_mode, *language, *color_scheme, *batch_size, *top_words, *selected_practice_level);
 
         if *quote {
             *reference = utils::get_random_quote();
@@ -450,7 +502,29 @@ pub fn handle_settings_buttons(
             if let Some(time) = menu_buttons_times.get_mut("words") {
                 *time = Instant::now();
             }
+        } else if *selected_config == "batch_size" {
+            if menu_buttons_times.get("batch_size").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
+                popup_states.batch_size_selection.visible = true;
+            }
+            if let Some(time) = menu_buttons_times.get_mut("batch_size") {
+                *time = Instant::now();
+            }
+        } else if *selected_config == "top_words" {
+            if menu_buttons_times.get("top_words").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
+                popup_states.top_words_selection.visible = true;
+            }
+            if let Some(time) = menu_buttons_times.get_mut("top_words") {
+                *time = Instant::now();
+            }
+        } else if *selected_config == "settings" {
+            if menu_buttons_times.get("settings").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
+                popup_states.settings.visible = true;
+            }
+            if let Some(time) = menu_buttons_times.get_mut("settings") {
+                *time = Instant::now();
+            }
         }
+
         if selected_config != "language" && selected_config != "theme" {
             *is_correct = VecDeque::from(vec![0; reference.len()]);
             *error_positions = vec![false; is_correct.len()];
@@ -565,6 +639,12 @@ pub fn handle_settings_buttons(
         popup_states.time_selection.draw(font, color_scheme, PopupContent::TimeSelection);
     } else if popup_states.word_number_selection.visible {
         popup_states.word_number_selection.draw(font, color_scheme, PopupContent::WordNumberSelection);
+    } else if popup_states.batch_size_selection.visible {
+        popup_states.batch_size_selection.draw(font, color_scheme, PopupContent::BatchSizeSelection);
+    } else if popup_states.top_words_selection.visible {
+        popup_states.top_words_selection.draw(font, color_scheme, PopupContent::TopWordsSelection);
+    } else if popup_states.settings.visible {
+        popup_states.settings.draw(font, color_scheme, PopupContent::Settings);
     }
 
     any_button_hovered
@@ -640,6 +720,9 @@ fn update_config(
         }
         "theme" => {
             popup_states.color_scheme.show();
+        }
+        "settings" => {
+            popup_states.settings.show();
         }
         _ => {}
     }

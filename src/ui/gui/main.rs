@@ -50,9 +50,10 @@ pub async fn gui_main_async() {
     let title_font = load_ttf_font_from_bytes(ROBOTO_MONO).unwrap();
     let emoji_font = load_ttf_font_from_bytes(DEJAVU).unwrap();
 
-    let top_words = 500;
+    let mut top_words = app_config.top_words;
     let word_list = utils::read_first_n_words(top_words as usize, language);
     let mut batch_size = app_config.batch_size;
+    let mut word_number = app_config.word_number;
 
     let mut reference = utils::get_reference(punctuation, false, &word_list, batch_size);
 
@@ -107,6 +108,9 @@ pub async fn gui_main_async() {
         color_scheme: PopupState { visible: false, selected: 0 },
         time_selection: PopupState { visible: false, selected: 0 },
         word_number_selection: PopupState { visible: false, selected: 0 },
+        settings: PopupState { visible: false, selected: 0 },
+        batch_size_selection: PopupState { visible: false, selected: 0 },
+        top_words_selection: PopupState { visible: false, selected: 0 },
     };
 
     let words: Vec<&str> = reference.split_whitespace().collect();
@@ -216,7 +220,8 @@ pub async fn gui_main_async() {
                 &mut wiki_mode,
                 &mut menu_buttons_times,
                 &mut popup_states,
-                top_words,
+                &mut top_words,
+                &mut word_number,
             );
 
             set_mouse_cursor(if any_button_hovered {
@@ -240,6 +245,9 @@ pub async fn gui_main_async() {
                 &mut errors_this_second,
                 &mut practice_mode,
                 practice_menu,
+                wiki_mode,
+                quote,
+                word_number,
             );
 
             if !game_started
@@ -259,11 +267,11 @@ pub async fn gui_main_async() {
                 game_started = true;
             }
 
-            if (game_started || words_done == batch_size) && !game_over {
+            if (game_started || words_done == word_number) && !game_over {
                 timer = start_time.elapsed();
-                if (timer.as_secs_f32() >= test_time - 0.2 && time_mode)
-                    || pos1 >= reference.chars().count()
+                if (timer.as_secs_f32() >= test_time && time_mode) || (pos1 >= reference.chars().count() && (wiki_mode || quote)) || (words_done >= word_number)
                 {
+                    println!("Game Over Triggered 2");
                     game_over = true;
                 }
             }
@@ -310,7 +318,7 @@ pub async fn gui_main_async() {
                     start_x,
                     start_y,
                     &mut words_done,
-                    batch_size,
+                    word_number,
                     &color_scheme,
                 );
             } else if practice_mode {
@@ -509,6 +517,12 @@ pub async fn gui_main_async() {
                 popup_states.time_selection.visible = false;
             } else if popup_states.word_number_selection.visible {
                 popup_states.word_number_selection.visible = false;
+            } else if popup_states.settings.visible {
+                popup_states.settings.visible = false;
+            } else if popup_states.batch_size_selection.visible {
+                popup_states.batch_size_selection.visible = false;
+            } else if popup_states.top_words_selection.visible {
+                popup_states.top_words_selection.visible = false;
             } else {
                 app_config = AppConfig {
                     punctuation: punctuation,

@@ -159,7 +159,7 @@ impl App {
         
         while !self.exit {
             self.button_states = ButtonStates {
-                settings: ButtonState::new("settings", "settings", "⚙", false, true),
+                settings: ButtonState::new("settings", "settings", "...", false, true),
                 divider0: ButtonState::new("|", "|", "|", true, true),
                 punctuation: ButtonState::new("punctuation", "! punctuation", "! punct", self.punctuation, !self.quote && !self.practice_mode),
                 numbers: ButtonState::new("numbers", "# numbers", "# num", self.numbers, !self.quote && !self.practice_mode),
