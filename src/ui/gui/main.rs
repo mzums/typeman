@@ -120,6 +120,8 @@ pub async fn gui_main_async() {
         5.0
     };
 
+    println!("{word_number}");
+
     loop {
         clear_background(color_scheme.bg_color());
         let mut max_width = f32::min(
@@ -186,6 +188,7 @@ pub async fn gui_main_async() {
 
             let any_button_hovered = config::handle_settings_buttons(
                 &Option::Some(font.clone()),
+                &emoji_font,
                 &word_list,
                 &mut punctuation,
                 &mut numbers,
@@ -262,6 +265,7 @@ pub async fn gui_main_async() {
                     &mut error_positions,
                     practice_mode,
                     practice_menu,
+                    game_over,
                 )
             {
                 game_started = true;
@@ -287,18 +291,21 @@ pub async fn gui_main_async() {
                 color_scheme,
             );
 
-            handle_input(
-                &reference,
-                &mut pressed_vec,
-                &mut is_correct,
-                &mut pos1,
-                &mut words_done,
-                &mut errors_this_second,
-                &mut config_opened,
-                &mut error_positions,
-                practice_mode,
-                practice_menu,
-            );
+            if !game_over {
+                handle_input(
+                    &reference,
+                    &mut pressed_vec,
+                    &mut is_correct,
+                    &mut pos1,
+                    &mut words_done,
+                    &mut errors_this_second,
+                    &mut config_opened,
+                    &mut error_positions,
+                    practice_mode,
+                    practice_menu,
+                    game_over,
+                );
+            }
 
             if time_mode {
                 draw_timer(
@@ -471,7 +478,7 @@ pub async fn gui_main_async() {
                 practice_menu = false;
                 practice_mode = false;
                 game_over = false;
-                time_mode = true;
+                //time_mode = true;
                 reset_game_state(
                     &mut pressed_vec,
                     &mut is_correct,
@@ -537,7 +544,7 @@ pub async fn gui_main_async() {
                     selected_level: selected_practice_level.unwrap_or(0),
                     language: language,
                     color_scheme: color_scheme,
-                    word_number: app_config.word_number,
+                    word_number: word_number,
                     top_words: top_words,
                 };
                 let _ = app_config.save();
@@ -657,7 +664,7 @@ fn draw_shortcut_info(
     let mut next_y = y;
     let lines = if practice_menu {
         let text_w = measure_text(
-            "↑ or ↓ to navigate, ↵ to select (or click)",
+            "↑ or ↓ to navigate to config, ← → to change settings, ↵ - apply config (or click)",
             font,
             font_size as u16,
             1.0,
@@ -667,10 +674,12 @@ fn draw_shortcut_info(
 
         vec![
             "↑ or ↓ to navigate, ↵ to select (or click)",
+            "+ - double Enter to view more options"
         ]
     } else if practice_mode {
         vec![
-            "↑ to navigate to config, ← → to change settings, ↵ - apply config (or click)",
+            "↑ or ↓ to navigate to config, ← → to change settings, ↵ - apply config (or click)",
+            "+ - double Enter to view more options",
             "Tab + Enter - reset",
         ]
     } else if game_over {
@@ -678,7 +687,8 @@ fn draw_shortcut_info(
         vec!["Tab + Enter - reset"]
     } else {
         vec![
-            "↑ to navigate to config, ← → to change settings (or click)",
+            "↑ or ↓ to navigate to config, ← → to change settings, ↵ - apply config (or click)",
+            "+ - double Enter to view more options",
             "Tab + Enter - reset",
         ]
     };
@@ -827,9 +837,13 @@ pub fn handle_input(
     error_positions: &mut Vec<bool>,
     practice_mode: bool,
     practice_menu: bool,
+    game_over: bool,
 ) -> bool {
     let pressed = get_char_pressed();
     if let Some(ch) = pressed {
+        if game_over {
+            return true;
+        }
         if ch == '\u{f700}'
             || ch == '\u{f701}'
             || ch == '\u{f702}'

@@ -37,6 +37,7 @@ fn draw_toggle_button(
     btn_padding: f32,
     display_name: &str,
     font: &Option<Font>,
+    _emoji_font: Font,
     is_active: bool,
     visible: bool,
     font_size: u16,
@@ -127,6 +128,7 @@ pub fn update_game_state(
             &mut vec![false; reference.chars().count()],
             *practice_mode,
             practice_menu,
+            *game_over,
         )
     {
         *game_started = true;
@@ -173,6 +175,7 @@ pub fn reset_game_state(
 
 pub fn handle_settings_buttons(
     font: &Option<Font>,
+    emoji_font: &Font,
     _word_list: &[String],
     punctuation: &mut bool,
     numbers: &mut bool,
@@ -228,14 +231,14 @@ pub fn handle_settings_buttons(
             } else {
                 "..."
             },
-            *punctuation,
+            popup_states.settings.visible,
             true,
         ),
         (
             "|",
             "|",
             divider,
-            !*quote && !*practice_mode,
+            !*quote && !*practice_mode && !*wiki_mode,
         ),
         (
             "punctuation",
@@ -245,7 +248,7 @@ pub fn handle_settings_buttons(
                 "! punct"
             },
             *punctuation,
-            !*quote && !*practice_mode,
+            !*quote && !*practice_mode && !*wiki_mode,
         ),
         (
             "numbers",
@@ -255,11 +258,11 @@ pub fn handle_settings_buttons(
                 "# num"
             },
             *numbers,
-            !*quote && !*practice_mode,
+            !*quote && !*practice_mode && !*wiki_mode,
         ),
         ("|", "|", divider, true),
-        ("time", "time", *time_mode, true),
-        ("words", "words", *word_mode, true),
+        ("time", "+ time", *time_mode, true),
+        ("words", " words", *word_mode, true),
         ("quote", "quote", *quote, true),
         ("practice", "practice", *practice_mode, true),
         (
@@ -397,6 +400,7 @@ pub fn handle_settings_buttons(
             *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(*top_words, *language), *batch_size);
             popup_states.time_selection.visible = false;
             popup_states.time_selection.hide();
+            save_config(*punctuation, *numbers, *time_mode, *word_mode, *quote, *test_time, *batch_size, *practice_mode, *wiki_mode, *language, *color_scheme, *word_number, *top_words, *selected_practice_level);
             return false;
         } else if popup_states.word_number_selection.visible {
             *word_number = match popup_states.word_number_selection.selected {
@@ -410,6 +414,7 @@ pub fn handle_settings_buttons(
             *reference = utils::get_reference(*punctuation, *numbers, &utils::read_first_n_words(*top_words, *language), usize::min(*batch_size, 100));
             popup_states.word_number_selection.visible = false;
             popup_states.word_number_selection.hide();
+            save_config(*punctuation, *numbers, *time_mode, *word_mode, *quote, *test_time, *batch_size, *practice_mode, *wiki_mode, *language, *color_scheme, *word_number, *top_words, *selected_practice_level);
             return false;
         } else if popup_states.batch_size_selection.visible {
             *batch_size = match popup_states.batch_size_selection.selected {
@@ -479,7 +484,7 @@ pub fn handle_settings_buttons(
             );
         }
 
-        save_config(*punctuation, *numbers, *time_mode, *word_mode, *quote, *test_time, *batch_size, *practice_mode, *wiki_mode, *language, *color_scheme, *batch_size, *top_words, *selected_practice_level);
+        save_config(*punctuation, *numbers, *time_mode, *word_mode, *quote, *test_time, *batch_size, *practice_mode, *wiki_mode, *language, *color_scheme, *word_number, *top_words, *selected_practice_level);
 
         if !popup_states.settings.visible {
             if *quote {
@@ -574,6 +579,7 @@ pub fn handle_settings_buttons(
             btn_padding,
             display_name,
             font,
+            emoji_font.clone(),
             is_active,
             *visible,
             font_size,
@@ -683,23 +689,23 @@ fn update_config(
     match label {
         "punctuation" => {
             *punctuation = !*punctuation;
-            *quote = false;
         }
         "numbers" => {
             *numbers = !*numbers;
-            *quote = false;
         }
         "time" => {
             *time_mode = true;
             *word_mode = false;
             *quote = false;
             *practice_mode = false;
+            *wiki_mode = false;
         }
         "words" => {
             *word_mode = true;
             *time_mode = false;
             *quote = false;
             *practice_mode = false;
+            *wiki_mode = false;
         }
         "quote" => {
             *quote = true;
@@ -708,6 +714,7 @@ fn update_config(
             *time_mode = false;
             *word_mode = false;
             *practice_mode = false;
+            *wiki_mode = false;
         }
         "practice" => {
             *quote = false;
