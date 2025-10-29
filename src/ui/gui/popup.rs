@@ -106,7 +106,7 @@ impl PopupState {
         let screen_h = screen_height();
 
         let popup_w = screen_w * 0.3;
-        let popup_h = screen_h * 0.3;
+        let popup_h = f32::max(screen_h * 0.3, 450.0);
         let x = (screen_w - popup_w) / 2.0;
         let y = (screen_h - popup_h) / 2.0;
 

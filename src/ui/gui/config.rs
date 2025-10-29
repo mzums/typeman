@@ -289,26 +289,28 @@ pub fn handle_settings_buttons(
             return false;
         }
 
-        for (i, (label, _display_name, _state_val, visible)) in button_states.iter().enumerate() {
-            if *visible && *selected_config == *label {
-                let mut j = if i == 0 {
-                    button_states.len() - 1
-                } else {
-                    i - 1
-                };
-
-                while j != i {
-                    if button_states[j].3 && button_states[j].0 != "|" {
-                        *selected_config = button_states[j].0.to_string();
-                        break;
-                    }
-                    j = if j == 0 {
+        if !popup_states.settings.visible {
+            for (i, (label, _display_name, _state_val, visible)) in button_states.iter().enumerate() {
+                if *visible && *selected_config == *label {
+                    let mut j = if i == 0 {
                         button_states.len() - 1
                     } else {
-                        j - 1
+                        i - 1
                     };
+    
+                    while j != i {
+                        if button_states[j].3 && button_states[j].0 != "|" {
+                            *selected_config = button_states[j].0.to_string();
+                            break;
+                        }
+                        j = if j == 0 {
+                            button_states.len() - 1
+                        } else {
+                            j - 1
+                        };
+                    }
+                    break;
                 }
-                break;
             }
         }
     } else if is_key_pressed(KeyCode::Right) {
@@ -316,26 +318,28 @@ pub fn handle_settings_buttons(
             return false;
         }
 
-        for (i, (label, _display_name, _state_val, visible)) in button_states.iter().enumerate() {
-            if *visible && *selected_config == *label {
-                let mut next = if i == button_states.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                };
-
-                while next != i {
-                    if button_states[next].3 && button_states[next].0 != "|" {
-                        *selected_config = button_states[next].0.to_string();
-                        break;
-                    }
-                    next = if next == button_states.len() - 1 {
+        if !popup_states.settings.visible  {
+            for (i, (label, _display_name, _state_val, visible)) in button_states.iter().enumerate() {
+                if *visible && *selected_config == *label {
+                    let mut next = if i == button_states.len() - 1 {
                         0
                     } else {
-                        next + 1
+                        i + 1
                     };
+    
+                    while next != i {
+                        if button_states[next].3 && button_states[next].0 != "|" {
+                            *selected_config = button_states[next].0.to_string();
+                            break;
+                        }
+                        next = if next == button_states.len() - 1 {
+                            0
+                        } else {
+                            next + 1
+                        };
+                    }
+                    break;
                 }
-                break;
             }
         }
     } else if is_key_pressed(KeyCode::Enter)
@@ -458,78 +462,83 @@ pub fn handle_settings_buttons(
             }
         }
 
-        update_config(
-            &selected_config,
-            punctuation,
-            numbers,
-            time_mode,
-            word_mode,
-            quote,
-            practice_menu,
-            selected_practice_level,
-            practice_mode,
-            language,
-            popup_states,
-            wiki_mode,
-        );
+        if !popup_states.settings.visible {
+            update_config(
+                &selected_config,
+                punctuation,
+                numbers,
+                time_mode,
+                word_mode,
+                quote,
+                practice_menu,
+                selected_practice_level,
+                practice_mode,
+                language,
+                popup_states,
+                wiki_mode,
+            );
+        }
 
         save_config(*punctuation, *numbers, *time_mode, *word_mode, *quote, *test_time, *batch_size, *practice_mode, *wiki_mode, *language, *color_scheme, *batch_size, *top_words, *selected_practice_level);
 
-        if *quote {
-            *reference = utils::get_random_quote();
-        } else if *practice_mode {
-            *reference = practice::create_words(
-                practice::TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1,
-                *batch_size,
-            );
-            if let Some(time) = menu_buttons_times.get_mut("practice") {
-                *time = Instant::now();
+        if !popup_states.settings.visible {
+            if *quote {
+                *reference = utils::get_random_quote();
+            } else if *practice_mode {
+                *reference = practice::create_words(
+                    practice::TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1,
+                    *batch_size,
+                );
+                if let Some(time) = menu_buttons_times.get_mut("practice") {
+                    *time = Instant::now();
+                }
+            } else if *wiki_mode {
+                *reference = utils::get_wiki_summary();
+                if let Some(time) = menu_buttons_times.get_mut("wiki") {
+                    *time = Instant::now();
+                }
+            } else if *selected_config != "language" && *selected_config != "theme" {
+                let updated_word_list = utils::read_first_n_words(500, *language);
+                *reference =
+                    utils::get_reference(*punctuation, *numbers, &updated_word_list, *batch_size);
             }
-        } else if *wiki_mode {
-            *reference = utils::get_wiki_summary();
-            if let Some(time) = menu_buttons_times.get_mut("wiki") {
-                *time = Instant::now();
+            if *selected_config == "time" {
+                if menu_buttons_times.get("time").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
+                    popup_states.time_selection.visible = true;
+                }
+                if let Some(time) = menu_buttons_times.get_mut("time") {
+                    *time = Instant::now();
+                }
+            } else if *selected_config == "words" {
+                if menu_buttons_times.get("words").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
+                    popup_states.word_number_selection.visible = true;
+                }
+                if let Some(time) = menu_buttons_times.get_mut("words") {
+                    *time = Instant::now();
+                }
+            } else if *selected_config == "batch_size" {
+                if menu_buttons_times.get("batch_size").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
+                    popup_states.batch_size_selection.visible = true;
+                }
+                if let Some(time) = menu_buttons_times.get_mut("batch_size") {
+                    *time = Instant::now();
+                }
+            } else if *selected_config == "top_words" {
+                if menu_buttons_times.get("top_words").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
+                    popup_states.top_words_selection.visible = true;
+                }
+                if let Some(time) = menu_buttons_times.get_mut("top_words") {
+                    *time = Instant::now();
+                }
+            } else if *selected_config == "settings" {
+                if menu_buttons_times.get("settings").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
+                    popup_states.settings.visible = true;
+                }
+                if let Some(time) = menu_buttons_times.get_mut("settings") {
+                    *time = Instant::now();
+                }
             }
-        } else if *selected_config != "language" && *selected_config != "theme" {
-            let updated_word_list = utils::read_first_n_words(500, *language);
-            *reference =
-                utils::get_reference(*punctuation, *numbers, &updated_word_list, *batch_size);
-        }
-        if *selected_config == "time" {
-            if menu_buttons_times.get("time").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
-                popup_states.time_selection.visible = true;
-            }
-            if let Some(time) = menu_buttons_times.get_mut("time") {
-                *time = Instant::now();
-            }
-        } else if *selected_config == "words" {
-            if menu_buttons_times.get("words").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
-                popup_states.word_number_selection.visible = true;
-            }
-            if let Some(time) = menu_buttons_times.get_mut("words") {
-                *time = Instant::now();
-            }
-        } else if *selected_config == "batch_size" {
-            if menu_buttons_times.get("batch_size").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
-                popup_states.batch_size_selection.visible = true;
-            }
-            if let Some(time) = menu_buttons_times.get_mut("batch_size") {
-                *time = Instant::now();
-            }
-        } else if *selected_config == "top_words" {
-            if menu_buttons_times.get("top_words").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
-                popup_states.top_words_selection.visible = true;
-            }
-            if let Some(time) = menu_buttons_times.get_mut("top_words") {
-                *time = Instant::now();
-            }
-        } else if *selected_config == "settings" {
-            if menu_buttons_times.get("settings").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
-                popup_states.settings.visible = true;
-            }
-            if let Some(time) = menu_buttons_times.get_mut("settings") {
-                *time = Instant::now();
-            }
+
         }
 
         if selected_config != "language" && selected_config != "theme" {

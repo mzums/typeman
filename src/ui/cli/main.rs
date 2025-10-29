@@ -79,10 +79,10 @@ pub fn type_loop(reference: &str, time_limit: Option<u64>, start_time: &mut Opti
 
         let byte_opt = poll_input();
         if byte_opt.is_none() {
-            if let Some(limit) = time_limit
-                && start_time.is_some() && start_time.unwrap().elapsed().as_secs() >= limit {
-                    break;
-                }
+            let limit = time_limit.unwrap_or(30);
+            if start_time.is_some() && start_time.unwrap().elapsed().as_secs() >= limit {
+                break;
+            }
             std::thread::sleep(std::time::Duration::from_millis(10));
             continue;
         }
