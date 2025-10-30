@@ -138,7 +138,6 @@ pub fn update_game_state(
     if *game_started && !*game_over {
         *timer = start_time.elapsed();
         if (timer.as_secs_f32() >= test_time && time_mode) || (*pos1 >= reference.chars().count() && (wiki_mode || quote)) || (*words_done >= word_number && !wiki_mode && !quote)  {
-            println!("{word_number}");
             *game_over = true;
         }
     }

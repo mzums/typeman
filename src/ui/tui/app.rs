@@ -61,14 +61,11 @@ pub struct App {
     pub language: Language,
     pub color_scheme: ColorScheme,
     pub word_number: usize,
+    pub top_words: usize,
     pub app_config: AppConfig,
-    pub leaderboard_open: bool,
-    pub leaderboard_entries: Vec<crate::leaderboard::LeaderboardEntry>,
-    pub leaderboard_selected: usize,
     pub button_states: ButtonStates,
     pub popup_states: PopupStates,
     pub menu_buttons_times: HashMap<String, Instant>,
-    pub top_words: usize,
     pub leaderboard: LeaderboardData,
 }
 
@@ -113,10 +110,8 @@ impl App {
             language: app_config.language,
             color_scheme: app_config.color_scheme,
             word_number: app_config.word_number,
+            top_words: app_config.top_words,
             app_config,
-            leaderboard_open: false,
-            leaderboard_entries: crate::leaderboard::load_entries().unwrap_or_default(),
-            leaderboard_selected: 0,
             button_states: ButtonStates::new(),
             popup_states: PopupStates {
                 language: PopupState { open: false, selected: 0 },
@@ -137,7 +132,6 @@ impl App {
                 ("numbers".to_string(), Instant::now() - Duration::from_secs(5)),
                 ("wiki".to_string(), Instant::now() - Duration::from_secs(5)),
             ]),
-            top_words: 500,
             leaderboard: LeaderboardData {
                 open: false,
                 entries: crate::leaderboard::load_entries().unwrap_or_default(),
@@ -533,21 +527,21 @@ impl App {
             }
 
             // Handle leaderboard if it's open
-            if self.leaderboard_open {
+            if self.leaderboard.open {
                 match key_event.code {
                     KeyCode::Esc => {
-                        self.leaderboard_open = false;
+                        self.leaderboard.open = false;
                         return Ok(());
                     }
                     KeyCode::Up => {
-                        if self.leaderboard_selected > 0 {
-                            self.leaderboard_selected -= 1;
+                        if self.leaderboard.selected > 0 {
+                            self.leaderboard.selected -= 1;
                         }
                         return Ok(());
                     }
                     KeyCode::Down => {
-                        if self.leaderboard_selected < self.leaderboard_entries.len().saturating_sub(1) {
-                            self.leaderboard_selected += 1;
+                        if self.leaderboard.selected < self.leaderboard.entries.len().saturating_sub(1) {
+                            self.leaderboard.selected += 1;
                         }
                         return Ok(());
                     }
@@ -557,7 +551,7 @@ impl App {
                     }
                     KeyCode::Char('l') | KeyCode::Char('L') => {
                         if self.tab_pressed.elapsed() < Duration::from_secs(1) {
-                            self.leaderboard_open = false;
+                            self.leaderboard.open = false;
                             self.tab_pressed = Instant::now() - Duration::from_secs(5);
                         }
                         return Ok(());
@@ -839,12 +833,12 @@ impl App {
                 KeyCode::Char(ch) => {
                     // Handle Tab+L leaderboard toggle
                     if (ch == 'l' || ch == 'L') && self.tab_pressed.elapsed() < Duration::from_secs(1) {
-                        self.leaderboard_open = !self.leaderboard_open;
+                        self.leaderboard.open = !self.leaderboard.open;
                         self.tab_pressed = Instant::now() - Duration::from_secs(5);
                         // Reload entries when opening leaderboard
-                        if self.leaderboard_open {
-                            self.leaderboard_entries = crate::leaderboard::load_entries().unwrap_or_default();
-                            self.leaderboard_selected = 0;
+                        if self.leaderboard.open {
+                            self.leaderboard.entries = crate::leaderboard::load_entries().unwrap_or_default();
+                            self.leaderboard.selected = 0;
                         }
                         return Ok(());
                     }
@@ -1022,7 +1016,7 @@ impl App {
             
             // Always update in-memory entries to ensure synchronization
             // This ensures the leaderboard immediately reflects the latest game results
-            self.leaderboard_entries = crate::leaderboard::load_entries().unwrap_or_default();
+            self.leaderboard.entries = crate::leaderboard::load_entries().unwrap_or_default();
         }
     }
 }

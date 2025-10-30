@@ -55,7 +55,21 @@ pub async fn gui_main_async() {
     let mut batch_size = app_config.batch_size;
     let mut word_number = app_config.word_number;
 
-    let mut reference = utils::get_reference(punctuation, false, &word_list, batch_size);
+    let updated_word_list = utils::read_first_n_words(500, language);
+    let mut selected_practice_level: Option<usize> = Some(app_config.selected_level);
+
+    let mut reference = if practice_mode {
+        practice::create_words(
+            TYPING_LEVELS[selected_practice_level.unwrap_or(0)].1,
+            50,
+        )
+    } else if quote {
+        utils::get_random_quote()
+    } else if wiki_mode {
+        utils::get_wiki_summary()
+    } else {
+        utils::get_reference(punctuation, false, &updated_word_list, batch_size)
+    };
 
     let mut pressed_vec: Vec<char> = vec![];
     let mut is_correct: VecDeque<i32> = VecDeque::from(vec![0; reference.len()]);
@@ -82,7 +96,6 @@ pub async fn gui_main_async() {
 
     let mut practice_menu = false;
     let mut scroll_offset: f32 = 0.0;
-    let mut selected_practice_level: Option<usize> = Some(app_config.selected_level);
     let mut saved_results = false;
 
     //let mut lang_popup = Popup::new(PopupContent::Language);
@@ -223,7 +236,7 @@ pub async fn gui_main_async() {
                 &mut popup_states,
                 &mut top_words,
                 &mut word_number,
-            );
+           );
 
             set_mouse_cursor(if any_button_hovered {
                 CursorIcon::Pointer
@@ -273,7 +286,6 @@ pub async fn gui_main_async() {
                 timer = start_time.elapsed();
                 if (timer.as_secs_f32() >= test_time && time_mode) || (pos1 >= reference.chars().count() && (wiki_mode || quote)) || (words_done >= word_number && !wiki_mode && !quote)
                 {
-                    println!("{word_number}");
                     game_over = true;
                 }
             }
@@ -556,7 +568,7 @@ pub async fn gui_main_async() {
                     word_mode: word_mode,
                     quote: quote,
                     practice_mode: practice_mode,
-                    wiki_mode: app_config.wiki_mode,
+                    wiki_mode: wiki_mode,
                     batch_size: batch_size,
                     test_time: test_time,
                     selected_level: selected_practice_level.unwrap_or(0),

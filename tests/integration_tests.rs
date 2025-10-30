@@ -53,10 +53,10 @@ fn test_app_state_integration() {
     let app = App::new();
     
     // Verify leaderboard fields exist and are initialized
-    assert!(!app.leaderboard_open); // Should start closed
-    assert_eq!(app.leaderboard_selected, 0); // Should start at first entry
+    assert!(!app.leaderboard.open); // Should start closed
+    assert_eq!(app.leaderboard.selected, 0); // Should start at first entry
     // leaderboard_entries should be a vector (length >= 0)
-    //assert!(app.leaderboard_entries.len() >= 0);
+    //assert!(app.leaderboard.entries.len() >= 0);
 }
 
 #[test]

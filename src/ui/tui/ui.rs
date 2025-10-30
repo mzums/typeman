@@ -56,7 +56,7 @@ pub fn render_app(frame: &mut Frame, app: &App) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Min(0),
-            if app.leaderboard_open {
+            if app.leaderboard.open {
                 Constraint::Length(1)
             } else if app.game_state == GameState::Results {
                 Constraint::Length(2)
@@ -66,7 +66,7 @@ pub fn render_app(frame: &mut Frame, app: &App) {
         ])
         .split(frame.area());
 
-    if app.leaderboard_open {
+    if app.leaderboard.open {
         render_leaderboard(frame, chunks[0], app, app.color_scheme);
     } else if app.game_state == GameState::Results {
         render_results(frame, chunks[0], app, app.color_scheme);
@@ -78,9 +78,9 @@ pub fn render_app(frame: &mut Frame, app: &App) {
     render_instructions(
         frame,
         chunks[1],
-        app.game_state != GameState::Results && !app.practice_menu && !app.leaderboard_open,
+        app.game_state != GameState::Results && !app.practice_menu && !app.leaderboard.open,
         app.practice_menu,
-        app.leaderboard_open,
+        app.leaderboard.open,
         app.color_scheme,
     );
 
@@ -918,7 +918,7 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
     let inner_area = block.inner(area);
     frame.render_widget(block, area);
 
-    if app.leaderboard_entries.is_empty() {
+    if app.leaderboard.entries.is_empty() {
         let empty_text =
             Paragraph::new("No typing test results yet.\nComplete a test to see your scores here!")
                 .style(Style::default().fg(color_scheme.ref_color()))
@@ -945,28 +945,28 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
     let max_visible_rows = available_height as usize;
 
     // Calculate scroll offset to keep selected item visible
-    let scroll_offset = if app.leaderboard_entries.len() <= max_visible_rows {
+    let scroll_offset = if app.leaderboard.entries.len() <= max_visible_rows {
         0
-    } else if app.leaderboard_selected < max_visible_rows / 2 {
+    } else if app.leaderboard.selected < max_visible_rows / 2 {
         0
-    } else if app.leaderboard_selected
+    } else if app.leaderboard.selected
         >= app
-            .leaderboard_entries
+            .leaderboard.entries
             .len()
             .saturating_sub(max_visible_rows / 2)
     {
-        app.leaderboard_entries
+        app.leaderboard.entries
             .len()
             .saturating_sub(max_visible_rows)
     } else {
-        app.leaderboard_selected
+        app.leaderboard.selected
             .saturating_sub(max_visible_rows / 2)
     };
 
     // Create table rows for visible entries only
     let mut rows = Vec::new();
     let visible_entries = app
-        .leaderboard_entries
+        .leaderboard.entries
         .iter()
         .enumerate()
         .skip(scroll_offset)
@@ -1005,7 +1005,7 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
             Language::Italian => "IT",
         };
 
-        let row_style = if i == app.leaderboard_selected {
+        let row_style = if i == app.leaderboard.selected {
             Style::default()
                 .bg(color_scheme.dimmer_main())
                 .fg(color_scheme.bg_color())
@@ -1047,11 +1047,11 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
     frame.render_widget(table, inner_area);
 
     // Show scroll indicators if there are more entries than visible
-    if app.leaderboard_entries.len() > max_visible_rows {
+    if app.leaderboard.entries.len() > max_visible_rows {
         let scroll_info = format!(
             "{}/{}",
-            app.leaderboard_selected + 1,
-            app.leaderboard_entries.len()
+            app.leaderboard.selected + 1,
+            app.leaderboard.entries.len()
         );
         let scroll_indicator = Paragraph::new(scroll_info)
             .style(Style::default().fg(color_scheme.dimmer_main()))
