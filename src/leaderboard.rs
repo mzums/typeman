@@ -14,6 +14,12 @@ struct LeaderboardCache {
     cached_at: Instant,
 }
 
+pub struct LeaderboardData {
+    pub open: bool,
+    pub entries: Vec<LeaderboardEntry>,
+    pub selected: usize,
+}
+
 impl LeaderboardCache {
     /// Check if cache is still valid (less than 30 seconds old and file hasn't changed)
     fn is_valid(&self, file_path: &PathBuf) -> bool {
@@ -107,6 +113,7 @@ pub enum TestType {
     Word(usize),
     Quote,
     Practice(usize),
+    Wiki,
 }
 
 #[derive(Debug)]

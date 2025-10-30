@@ -281,7 +281,7 @@ fn get_stats(app: &App, color_scheme: ColorScheme) -> (Line<'static>, Line<'stat
     } else if app.quote {
         "quote".to_string()
     } else if app.wiki_mode {
-        "wikipedia".to_string()
+        "wiki".to_string()
     } else {
         "practice".to_string()
     };
@@ -995,6 +995,7 @@ fn render_leaderboard(frame: &mut Frame, area: Rect, app: &App, color_scheme: Co
             crate::leaderboard::TestType::Word(words) => format!("{}w", words),
             crate::leaderboard::TestType::Quote => "Quote".to_string(),
             crate::leaderboard::TestType::Practice(level) => format!("L{}", level),
+            crate::leaderboard::TestType::Wiki => "Wiki".to_string(),
         };
 
         // Format language

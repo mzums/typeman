@@ -120,8 +120,6 @@ pub async fn gui_main_async() {
         5.0
     };
 
-    println!("{word_number}");
-
     loop {
         clear_background(color_scheme.bg_color());
         let mut max_width = f32::min(
@@ -273,8 +271,9 @@ pub async fn gui_main_async() {
 
             if (game_started || words_done == word_number) && !game_over {
                 timer = start_time.elapsed();
-                if (timer.as_secs_f32() >= test_time && time_mode) || (pos1 >= reference.chars().count() && (wiki_mode || quote)) || (words_done >= word_number)
+                if (timer.as_secs_f32() >= test_time && time_mode) || (pos1 >= reference.chars().count() && (wiki_mode || quote)) || (words_done >= word_number && !wiki_mode && !quote)
                 {
+                    println!("{word_number}");
                     game_over = true;
                 }
             }
@@ -393,12 +392,27 @@ pub async fn gui_main_async() {
                 last_recorded_time += Duration::from_secs(1);
             }
         } else if game_over {
+            handle_input(
+                &reference,
+                &mut pressed_vec,
+                &mut is_correct,
+                &mut pos1,
+                &mut words_done,
+                &mut errors_this_second,
+                &mut config_opened,
+                &mut error_positions,
+                practice_mode,
+                practice_menu,
+                game_over,
+            );
             let mode = if time_mode {
                 "time".to_string()
             } else if word_mode {
                 "word".to_string()
             } else if quote {
                 "quote".to_string()
+            } else if wiki_mode {
+                "wiki".to_string()
             } else {
                 "practice".to_string()
             };
@@ -469,6 +483,10 @@ pub async fn gui_main_async() {
                 is_correct = VecDeque::from(vec![0; reference.len()]);
                 error_positions = vec![false; is_correct.len()];
                 practice_mode = true;
+                wiki_mode = false;
+                time_mode = false;
+                word_mode = false;
+                quote = false;
                 practice_menu = false;
                 config_opened = false;
             }

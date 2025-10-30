@@ -18,6 +18,7 @@ use crate::time_selection::TimeSelection;
 use crate::word_number_selection::WordNumberSelection;
 use crate::top_words_selection::TopWordsSelection;
 use crate::settings::Settings;
+use crate::leaderboard::LeaderboardData;
 
 
 #[derive(PartialEq, Eq)]
@@ -68,6 +69,7 @@ pub struct App {
     pub popup_states: PopupStates,
     pub menu_buttons_times: HashMap<String, Instant>,
     pub top_words: usize,
+    pub leaderboard: LeaderboardData,
 }
 
 impl App {
@@ -136,6 +138,11 @@ impl App {
                 ("wiki".to_string(), Instant::now() - Duration::from_secs(5)),
             ]),
             top_words: 500,
+            leaderboard: LeaderboardData {
+                open: false,
+                entries: crate::leaderboard::load_entries().unwrap_or_default(),
+                selected: 0,
+            },
         }
     }
 
@@ -161,8 +168,8 @@ impl App {
             self.button_states = ButtonStates {
                 settings: ButtonState::new("settings", "settings", "...", false, true),
                 divider0: ButtonState::new("|", "|", "|", true, true),
-                punctuation: ButtonState::new("punctuation", "! punctuation", "! punct", self.punctuation, !self.quote && !self.practice_mode),
-                numbers: ButtonState::new("numbers", "# numbers", "# num", self.numbers, !self.quote && !self.practice_mode),
+                punctuation: ButtonState::new("punctuation", "! punctuation", "! punct", self.punctuation, !self.quote && !self.practice_mode && !self.wiki_mode),
+                numbers: ButtonState::new("numbers", "# numbers", "# num", self.numbers, !self.quote && !self.practice_mode && !self.wiki_mode),
                 divider1: ButtonState::new("|", "|", "|", true, self.time_mode || self.word_mode),
                 time: ButtonState::new("time", "⌄ time", "⌄ time", self.time_mode, true),
                 words: ButtonState::new("words", "⌄ words", "⌄ words", self.word_mode, true),
@@ -632,6 +639,7 @@ impl App {
                         self.time_mode = false;
                         self.word_mode = false;
                         self.quote = false;
+                        self.wiki_mode = false;
                         //self.batch_size = 50;
                         self.pressed_vec.clear();
                         self.pos1 = 0;
@@ -704,6 +712,7 @@ impl App {
                                 self.time_mode = false;
                                 self.word_mode = false;
                                 self.wiki_mode = true;
+                                self.practice_mode = false;
                             }
                             "language" => {
                                 self.popup_states.language.open = true;
@@ -961,6 +970,8 @@ impl App {
                 crate::leaderboard::TestType::Word(self.word_number)
             } else if self.quote {
                 crate::leaderboard::TestType::Quote
+            } else if self.wiki_mode {
+                crate::leaderboard::TestType::Wiki
             } else {
                 crate::leaderboard::TestType::Time(30) // Default fallback
             };
@@ -974,6 +985,7 @@ impl App {
                           else if self.time_mode { "time".to_string() }
                           else if self.word_mode { "word".to_string() }
                           else if self.quote { "quote".to_string() }
+                          else if self.wiki_mode { "wiki".to_string() }
                           else { "time".to_string() },
                 word_count: self.words_done, // Actual completed words
                 test_duration: elapsed,
