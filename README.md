@@ -7,24 +7,46 @@ Typing speed test with practice mode in GUI, TUI and CLI
 ![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
 
 <br>
-<img src="screenshots/image.png" alt="Alt Text" width="700">
 <br>
-<img src="screenshots/image-5.png" alt="Alt Text" width="700">
+<img src="screenshots/image-3.png" alt="Alt Text" width="400">
+<img src="screenshots/image-1.png" alt="Alt Text" width="400">
 <br>
-<img src="screenshots/image-4.png" alt="Alt Text" width="700">
+<img src="screenshots/image-9.png" alt="Alt Text" width="400">
+<img src="screenshots/image-10.png" alt="Alt Text" width="400">
 <br>
-<img src="screenshots/image-1.png" alt="Alt Text" width="700">
+<img src="screenshots/image-11.png" alt="Alt Text" width="700">  
+<br>
+<br>
+<details>
+<summary> Additional screenshots</summary>
+
+<br>
+<img src="screenshots/image-6.png" alt="Alt Text" width="700">
+<br>
+<img src="screenshots/image-7.png" alt="Alt Text" width="700">
+<br>
+<img src="screenshots/image-8.png" alt="Alt Text" width="700">
 <br>
 <img src="screenshots/image-2.png" alt="Alt Text" width="700">
 <br>
-<img src="screenshots/image-3.png" alt="Alt Text" width="700">  
+<img src="screenshots/image-4.png" alt="Alt Text" width="700">
+<br>
+<img src="screenshots/image-5.png" alt="Alt Text" width="700">
+
+</details>
+<br>
+
 
 ## Installation
 
 ### Crates.io:
 #### Install the default version (all modes: CLI, GUI, TUI):
     cargo install typeman
-#### You can also install only the modes you want by using `--no-default-features` and specifying features::
+
+> [!NOTE]  
+> GUI feature msy be too heavy for your needs, in this case follow information below
+
+#### You can also install only the modes you want by using `--no-default-features` and specifying features:
 - **only TUI**:   
     ```
     cargo install typeman --no-default-features --features tui
@@ -66,6 +88,7 @@ Additional action needed for succesfull install
 - theme selection
 - local leaderboard
 - saving user interface preferences 
+- top words and batch size preferences
 
 ## CLI parameters:
 - **word number**: number of displayed words

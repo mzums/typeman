@@ -221,7 +221,7 @@ pub async fn gui_main_async() {
                 &mut last_recorded_time,
                 &mut words_done,
                 &mut errors_per_second,
-                u16::max((font_size / 1.5) as u16, 15),
+                u16::max((font_size / 1.2) as u16, 15),
                 &mut config_opened,
                 &mut selected_config,
                 &mut practice_menu,
@@ -551,14 +551,14 @@ pub async fn gui_main_async() {
             } else if popup_states.word_number_selection.visible {
                 popup_states.word_number_selection.visible = false;
                 config_opened = false;
-            } else if popup_states.settings.visible {
-                popup_states.settings.visible = false;
-                config_opened = false;
             } else if popup_states.batch_size_selection.visible {
                 popup_states.batch_size_selection.visible = false;
                 config_opened = false;
             } else if popup_states.top_words_selection.visible {
                 popup_states.top_words_selection.visible = false;
+                config_opened = false;
+            } else if popup_states.settings.visible {
+                popup_states.settings.visible = false;
                 config_opened = false;
             } else {
                 app_config = AppConfig {

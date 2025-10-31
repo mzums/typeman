@@ -118,16 +118,19 @@ impl PopupState {
         utils::draw_rounded_rect(x, y, popup_w, popup_h, 20.0, bg_color);
         utils::draw_rounded_rect_lines(x, y, popup_w, popup_h, 20.0, 5.0, border_color);
 
+        let font_size1 = if screen_h < 800.0 { 20 } else { 24 };
+        let font_size2 = if screen_h < 800.0 { 16 } else { 20 };
+
         let (title, items) = (content.title(), content.items());
 
-        let title_size = measure_text(title, font.as_ref(), 24, 1.0);
+        let title_size = measure_text(title, font.as_ref(), font_size1, 1.0);
         draw_text_ex(
             title,
             x + (popup_w - title_size.width) / 2.0,
             y + 50.0,
             TextParams {
                 font: font.as_ref(),
-                font_size: 24,
+                font_size: font_size1,
                 font_scale: 1.0,
                 color: ref_color,
                 ..Default::default()
@@ -147,7 +150,7 @@ impl PopupState {
                     rect.y + rect.h - 8.0,
                     TextParams {
                         font: font.as_ref(),
-                        font_size: 20,
+                        font_size: font_size2,
                         font_scale: 1.0,
                         color: bg_color,
                         ..Default::default()
@@ -160,7 +163,7 @@ impl PopupState {
                     rect.y + rect.h - 8.0,
                     TextParams {
                         font: font.as_ref(),
-                        font_size: 20,
+                        font_size: font_size2,
                         font_scale: 1.0,
                         color: ref_color,
                         ..Default::default()

@@ -118,7 +118,9 @@ pub fn render_popup(frame: &mut Frame, app: &App, area: Rect, color_scheme: Colo
     let ref_color = color_scheme.ref_color();
     let border_color = color_scheme.border_color();
 
-    let popup_area = centered_rect(30, 30, area);
+    let percent_y = if area.height < 25 && app.popup_states.color_scheme.open { 80 } else if area.height < 40 && app.popup_states.color_scheme.open { 50 } else { 30 };
+
+    let popup_area = centered_rect(30, percent_y, area);
     frame.render_widget(ratatui::widgets::Clear, popup_area);
 
     let items: Vec<ListItem> = content
