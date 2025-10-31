@@ -8,12 +8,15 @@ Typing speed test with practice mode in GUI, TUI and CLI
 
 <br>
 <br>
+<p float="left">
 <img src="screenshots/image-3.png" alt="Alt Text" width="400">
 <img src="screenshots/image-1.png" alt="Alt Text" width="400">
-<br>
+</p>
+
+<p float="left">
 <img src="screenshots/image-9.png" alt="Alt Text" width="400">
 <img src="screenshots/image-10.png" alt="Alt Text" width="400">
-<br>
+</p>
 <img src="screenshots/image-11.png" alt="Alt Text" width="700">  
 <br>
 <br>
@@ -23,13 +26,13 @@ Typing speed test with practice mode in GUI, TUI and CLI
 <br>
 <img src="screenshots/image-6.png" alt="Alt Text" width="700">
 <br>
+<img src="screenshots/image-4.png" alt="Alt Text" width="700">
+<br>
 <img src="screenshots/image-7.png" alt="Alt Text" width="700">
 <br>
 <img src="screenshots/image-8.png" alt="Alt Text" width="700">
 <br>
 <img src="screenshots/image-2.png" alt="Alt Text" width="700">
-<br>
-<img src="screenshots/image-4.png" alt="Alt Text" width="700">
 <br>
 <img src="screenshots/image-5.png" alt="Alt Text" width="700">
 
