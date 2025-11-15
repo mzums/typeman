@@ -607,7 +607,6 @@ impl App {
                             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), self.batch_size);
                         } else if self.quote {
                             self.reference = utils::get_random_quote();
-                            //self.word_number = self.reference.split_whitespace().count();
                         } else if self.practice_mode {
                             self.reference = practice::create_words(TYPING_LEVELS[self.selected_level].1, 50);
                         } else if self.wiki_mode {
@@ -634,7 +633,6 @@ impl App {
                         self.word_mode = false;
                         self.quote = false;
                         self.wiki_mode = false;
-                        //self.batch_size = 50;
                         self.pressed_vec.clear();
                         self.pos1 = 0;
                         self.words_done = 0;
@@ -662,7 +660,6 @@ impl App {
                                 self.quote = false;
                                 self.practice_mode = false;
                                 self.wiki_mode = false;
-                                //self.batch_size = 50;
                                 self.practice_mode = false;
                                 if let Some(time) = self.menu_buttons_times.get_mut("time") {
                                     *time = Instant::now();
@@ -672,9 +669,6 @@ impl App {
                                 if self.menu_buttons_times.get("words").map_or(true, |&t| t.elapsed() <= Duration::from_millis(500)) {
                                     self.popup_states.word_number_selection.open = true;
                                 }
-                                /*if !self.word_mode {
-                                    self.batch_size = 50;
-                                }*/
                                 self.time_mode = false;
                                 self.word_mode = true;
                                 self.wiki_mode = false;
@@ -749,12 +743,11 @@ impl App {
                         }
                         if self.selected_config == "quote" {
                             self.reference = utils::get_random_quote();
-                            //self.word_number = self.reference.split_whitespace().count();
                         } else if self.time_mode {
                             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), self.batch_size);
                         } else if self.wiki_mode {
                             self.reference = utils::get_wiki_summary();
-                        } else {
+                        } else if !self.popup_states.settings.open {
                             self.reference = utils::get_reference(self.punctuation, self.numbers, &utils::read_first_n_words(self.top_words, self.language), usize::min(self.batch_size, self.word_number));
                         }
                         self.is_correct = vec![0; self.reference.chars().count()];
@@ -770,7 +763,6 @@ impl App {
                         self.tab_pressed = Instant::now() - Duration::from_secs(5);
                         self.correct_count = 0;
                         self.error_count = 0;
-                        //self.config = false;
                         self.save_config();
                     }
                 }
@@ -846,8 +838,6 @@ impl App {
                     if self.practice_menu && ch == 'q' {
                         self.practice_menu = false;
                         self.practice_mode = false;
-                        //self.time_mode = true;
-                        //self.selected_config = "time".into();
                         return Ok(());
                     }
                     if self.is_correct[0] == 0 && ch == ' ' {

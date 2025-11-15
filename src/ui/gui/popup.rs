@@ -19,7 +19,6 @@ pub enum PopupContent {
 pub struct PopupState {
     pub visible: bool,
     pub selected: usize,
-    //ignore_next_enter: bool,
 }
 
 pub struct PopupStates {

@@ -15,7 +15,7 @@ use crate::ui::gui::popup::{PopupStates, PopupState};
 use crate::ui::gui::practice as gui_practice;
 use crate::ui::gui::results;
 use crate::utils;
-//use crate::ui::gui::popup::{PopupStates, PopupState};
+
 
 pub const MAIN_COLOR: macroquad::color::Color =
     macroquad::color::Color::from_rgba(255, 155, 0, 255);
@@ -98,11 +98,6 @@ pub async fn gui_main_async() {
     let mut scroll_offset: f32 = 0.0;
     let mut saved_results = false;
 
-    //let mut lang_popup = Popup::new(PopupContent::Language);
-    //let mut lang_popup_recently_closed = false;
-
-    //let mut theme_popup = Popup::new(PopupContent::ColorScheme);
-    //let mut theme_popup_recently_closed = false;
     let mut color_scheme = app_config.color_scheme;
 
     let mut menu_buttons_times: HashMap<String, Instant> = HashMap::from([
@@ -508,7 +503,7 @@ pub async fn gui_main_async() {
                 practice_menu = false;
                 practice_mode = false;
                 game_over = false;
-                //time_mode = true;
+
                 reset_game_state(
                     &mut pressed_vec,
                     &mut is_correct,

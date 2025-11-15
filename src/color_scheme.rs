@@ -160,7 +160,7 @@ impl ColorScheme {
 
     pub fn correct_color<C: From<MyColor>>(&self) -> C {
         match self {
-            ColorScheme::Default => MyColor::new(200, 255, 255, 255),
+            ColorScheme::Default => MyColor::new(210, 200, 200, 255),
             ColorScheme::Dark => MyColor::new(200, 255, 255, 255),
             ColorScheme::Light => MyColor::new(150, 200, 150, 255),
             ColorScheme::Monochrome => MyColor::new(200, 255, 255, 255),

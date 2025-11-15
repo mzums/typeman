@@ -47,7 +47,7 @@ Typing speed test with practice mode in GUI, TUI and CLI
     cargo install typeman
 
 > [!NOTE]  
-> GUI feature msy be too heavy for your needs, in this case follow information below
+> GUI feature may be too heavy for your needs, in this case follow instructions below
 
 #### You can also install only the modes you want by using `--no-default-features` and specifying features:
 - **only TUI**:   
