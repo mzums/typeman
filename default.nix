@@ -6,11 +6,14 @@ in
     version = manifest.version;
     cargoLock.lockFile = ./Cargo.lock;
     src = pkgs.lib.cleanSource ./.;
+    nativeBuildInputs = with pkgs; [
+      pkg-config
+      writableTmpDirAsHomeHook
+    ];
     buildInputs = with pkgs; [
       fontconfig
       alsa-lib
       libx11
       libxkbcommon
     ];
-    nativeBuildInputs = with pkgs; [pkg-config];
   }
